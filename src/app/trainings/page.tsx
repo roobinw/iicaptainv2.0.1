@@ -44,11 +44,10 @@ export default function TrainingsPage() {
       if (error.code === 'failed-precondition') {
         description = "Query requires an index. Please ensure the necessary Firestore index is created and active. Check FIRESTORE_SETUP_AND_STRUCTURE.md for details.";
       } else if (error.code === 'permission-denied') {
-        description = "Permission denied. Check Firestore security rules.";
+        description = "Permission denied. Check Firestore security rules and console for details.";
       } else if (error.message) {
-        // Use a more generic message if the error message itself might be too technical or sensitive
-        description = "An unexpected error occurred while fetching trainings."; 
-        console.error("Detailed error message:", error.message); // Log the specific message for developers
+        description = "An unexpected error occurred. Check console for details."; 
+        console.error("Detailed error message:", error.message); 
       }
       toast({ title: "Error Fetching Trainings", description, variant: "destructive" });
     } finally {
@@ -63,7 +62,7 @@ export default function TrainingsPage() {
       setTrainings([]);
       setIsLoadingData(false);
     }
-  }, [authLoading, user, currentTeam, forceUpdateCounter]); // Removed toast from dependencies as it's stable
+  }, [authLoading, user, currentTeam, forceUpdateCounter]); 
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.hash === "#add" && user?.role === "admin") {
@@ -84,7 +83,8 @@ export default function TrainingsPage() {
       setForceUpdateCounter(prev => prev + 1);
       setIsAddTrainingDialogOpen(false);
     } catch (error: any) {
-      toast({ title: "Error adding training", description: error.message || "Could not add training.", variant: "destructive" });
+      console.error("Detailed error adding training:", error);
+      toast({ title: "Error adding training", description: error.message || "Could not add training. Check console for details.", variant: "destructive" });
     }
   };
 
@@ -106,7 +106,8 @@ export default function TrainingsPage() {
       setIsAddTrainingDialogOpen(false);
       setEditingTraining(null);
     } catch (error: any) {
-      toast({ title: "Error updating training", description: error.message || "Could not update training.", variant: "destructive" });
+      console.error("Detailed error updating training:", error);
+      toast({ title: "Error updating training", description: error.message || "Could not update training. Check console for details.", variant: "destructive" });
     }
   };
 
@@ -121,7 +122,8 @@ export default function TrainingsPage() {
       toast({ title: "Training Deleted", description: "The training session has been removed.", variant: "destructive" });
       setForceUpdateCounter(prev => prev + 1);
     } catch (error: any) {
-      toast({ title: "Error deleting training", description: error.message || "Could not delete training.", variant: "destructive" });
+      console.error("Detailed error deleting training:", error);
+      toast({ title: "Error deleting training", description: `Could not delete training: ${error.message || 'Unknown error'}. Check browser console for more details.`, variant: "destructive" });
     }
   };
 
@@ -141,7 +143,7 @@ export default function TrainingsPage() {
         toast({ title: "Order Updated", description: "Training order saved." });
       } catch (error) {
         console.error("Error updating training order:", error);
-        toast({ title: "Error", description: "Could not save training order.", variant: "destructive" });
+        toast({ title: "Error", description: "Could not save training order. Check console for details.", variant: "destructive" });
         fetchTrainings(user.teamId); 
       }
     }
