@@ -1,0 +1,156 @@
+
+"use client";
+
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
+import { Icons } from "@/components/icons";
+import { PanelLeft } from "lucide-react";
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: keyof typeof Icons;
+  adminOnly?: boolean;
+}
+
+const navItems: NavItem[] = [
+  { href: "/dashboard", label: "Dashboard", icon: "Dashboard" },
+  { href: "/matches", label: "Matches", icon: "Matches" },
+  { href: "/trainings", label: "Trainings", icon: "Trainings" },
+  { href: "/players", label: "Players", icon: "Players" },
+];
+
+export function AppLayout({ children }: { children: ReactNode }) {
+  const { user, logout, isLoading } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Icons.Dashboard className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    // This should ideally be handled by middleware or route protection
+    // For client-side, redirect if not logged in
+    if (typeof window !== 'undefined') {
+       router.push("/login");
+    }
+    return null; 
+  }
+  
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  }
+
+  const sidebarContent = (
+    <nav className="grid items-start gap-2 text-sm font-medium">
+      {navItems.map((item) => {
+        if (item.adminOnly && user?.role !== "admin") {
+          return null;
+        }
+        const IconComponent = Icons[item.icon];
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              pathname === item.href
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                : "text-sidebar-foreground"
+            )}
+          >
+            <IconComponent className="h-4 w-4" />
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+
+  return (
+    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+      <div className="hidden border-r bg-sidebar md:block">
+        <div className="flex h-full max-h-screen flex-col gap-2">
+          <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+            <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
+              <Icons.TeamLogo />
+              <span className="">TeamEase</span>
+            </Link>
+          </div>
+          <div className="flex-1 overflow-auto py-2 px-2">
+            {sidebarContent}
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-col">
+        <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0 md:hidden"
+              >
+                <PanelLeft className="h-5 w-5" />
+                <span className="sr-only">Toggle navigation menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="flex flex-col bg-sidebar p-0 text-sidebar-foreground">
+               <div className="flex h-14 items-center border-b px-4">
+                <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
+                  <Icons.TeamLogo />
+                  <span className="">TeamEase</span>
+                </Link>
+              </div>
+              <div className="flex-1 overflow-auto py-2 px-2">{sidebarContent}</div>
+            </SheetContent>
+          </Sheet>
+          <div className="w-full flex-1">
+            {/* Optional: Add search or other header elements here */}
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" size="icon" className="rounded-full">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar" />
+                  <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                </Avatar>
+                <span className="sr-only">Toggle user menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => router.push('/settings')}>Settings</DropdownMenuItem>
+              <DropdownMenuItem>Support</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </header>
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background overflow-auto">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
