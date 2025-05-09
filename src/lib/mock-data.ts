@@ -134,4 +134,3 @@ export const updatePlayerAttendance = (
     eventList[eventIndex].attendance[playerId] = status;
   }
 };
-
