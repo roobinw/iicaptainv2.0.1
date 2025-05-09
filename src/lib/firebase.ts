@@ -13,19 +13,35 @@ const firebaseConfig = {
   // measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID // Optional
 };
 
-// Initialize Firebase
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
+let app: FirebaseApp | undefined;
+let auth: Auth | undefined;
+let db: Firestore | undefined;
 
 if (typeof window !== 'undefined') { // Ensure Firebase is initialized only on the client-side
+  if (!firebaseConfig.apiKey) {
+    console.error(
+      "Firebase API Key is missing or invalid. " +
+      "Please set NEXT_PUBLIC_FIREBASE_API_KEY in your .env.local file. " +
+      "Refer to .env.example for the required Firebase environment variables."
+    );
+    // Not throwing an error here to let Firebase SDK attempt initialization and provide its own error,
+    // which might be more specific if the key is present but malformed.
+  }
+  
+  // Attempt to initialize Firebase even if API key check fails,
+  // to allow Firebase SDK's own error reporting to take precedence.
+  try {
     app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     auth = getAuth(app);
     db = getFirestore(app);
+  } catch (error) {
+      console.error("Error initializing Firebase. Ensure your Firebase configuration in .env.local is correct:", error);
+      // This catch block provides context if initializeApp or getAuth fails.
+  }
 } else {
-    // Provide placeholder initializations for server-side or handle as needed
-    // This basic setup assumes client-side Firebase usage primarily for Auth and Firestore UI interactions
-    // For server-side Firebase (e.g., Admin SDK), a different setup is required.
+    // Server-side: app, auth, db will remain undefined.
+    // Server-side Firebase usage (e.g., Admin SDK) would require a different setup
+    // and typically not be initialized in this client-focused file.
 }
 
 
