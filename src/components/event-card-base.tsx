@@ -63,13 +63,11 @@ export function EventCardBase({
         })
         .catch(err => {
           console.error(`Failed to fetch team members for ${eventType} card:`, err);
-          // Fallback: use item.attendance directly if member fetch fails, clear memberList
           setMemberList([]);
           setCurrentAttendance(item.attendance || {});
         })
         .finally(() => setIsLoadingMembers(false));
     } else {
-      // No teamId, clear members and use item's attendance
       setMemberList([]);
       setCurrentAttendance(item.attendance || {});
       setIsLoadingMembers(false);
@@ -93,16 +91,18 @@ export function EventCardBase({
           .catch(err => console.error("Failed to fetch team members on dialog open:", err))
           .finally(() => setIsLoadingMembers(false));
       } else {
+        // Refresh attendance state from item prop when dialog opens, but prioritize existing local state if any
         const initialAttendanceFromItem = item.attendance || {};
         const refreshedAttendance: Record<string, AttendanceStatus> = {};
         memberList.forEach(member => {
-            refreshedAttendance[member.uid] = initialAttendanceFromItem[member.uid] || 'present';
+            // Use current local state if it exists for this member, otherwise use item prop or default.
+            refreshedAttendance[member.uid] = currentAttendance[member.uid] || initialAttendanceFromItem[member.uid] || 'present';
         });
-        setCurrentAttendance(prev => ({...refreshedAttendance, ...prev}));
+        setCurrentAttendance(refreshedAttendance);
         setIsLoadingMembers(false); 
       }
     }
-  }, [isAttendanceDialogOpen, currentUser?.teamId, item.attendance, memberList]);
+  }, [isAttendanceDialogOpen, currentUser?.teamId, item.attendance ]); // Removed memberList dependency to prevent potential loops.
 
 
   const isAdmin = currentUser?.role === "admin";
@@ -110,10 +110,6 @@ export function EventCardBase({
   const handleAttendanceChange = (memberId: string, status: AttendanceStatus) => {
     setCurrentAttendance(prev => ({ ...prev, [memberId]: status }));
     if (setForceUpdateList) {
-      // No need to increment, just re-setting the parent's state item from child will trigger re-render.
-      // However, if parent specifically relies on counter for other effects, keep it.
-      // For simple list refresh on attendance change this might be overkill if parent re-fetches data.
-      // Assuming setForceUpdateList *is* a counter for now as per its name.
       setForceUpdateList(val => val + 1); 
     }
   };
@@ -153,13 +149,13 @@ export function EventCardBase({
         </div>
       </CardHeader>
       <CardContent className="flex-grow">
-        <p className="text-sm text-muted-foreground">
-            Attendance: {isLoadingMembers && memberList.length === 0 ? ( // Show skeleton only if list is empty and loading
+        <div className="text-sm text-muted-foreground"> {/* Changed <p> to <div> */}
+            Attendance: {isLoadingMembers && memberList.length === 0 ? ( 
                 <Skeleton className="h-4 w-20 inline-block" />
             ) : (
                 <span className="font-semibold text-primary">{presentCount} / {memberList.length}</span>
             )} members present.
-        </p>
+        </div>
       </CardContent>
       <CardFooter className="border-t pt-4">
         <Dialog open={isAttendanceDialogOpen} onOpenChange={setIsAttendanceDialogOpen}>
@@ -208,11 +204,11 @@ export function EventCardBase({
                         </div>
                       </div>
                        <AttendanceToggler 
-                           item={{...item, attendance: currentAttendance}} // Pass the locally managed attendance
+                           item={{...item, attendance: currentAttendance}} 
                            player={member} 
                            eventType={eventType} 
                            onAttendanceChange={handleAttendanceChange}
-                           setForceUpdate={setForceUpdateList} // Pass this down if AttendanceToggler also needs to trigger parent refresh
+                           setForceUpdate={setForceUpdateList} 
                        />
                     </div>
                   ))}
@@ -227,4 +223,3 @@ export function EventCardBase({
     </Card>
   );
 }
-
