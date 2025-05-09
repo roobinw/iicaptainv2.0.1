@@ -6,14 +6,14 @@ import type { User, UserRole } from '@/types';
 import {
   collection,
   doc,
-  setDoc, // Changed from addDoc for specific UID usage
+  setDoc,
   getDoc,
   getDocs,
   updateDoc,
   deleteDoc,
   query,
   where,
-  Timestamp,
+  type Timestamp, // Explicitly import Timestamp
   serverTimestamp,
   orderBy,
 } from 'firebase/firestore';
@@ -22,7 +22,8 @@ const processTimestamp = (timestamp: Timestamp | undefined): string | undefined 
   return timestamp ? timestamp.toDate().toISOString() : undefined;
 };
 
-const fromFirestoreUser = (docSnap: any): User => {
+const fromFirestoreUser = (docSnap: any): User | null => {
+  if (!docSnap.exists()) return null;
   const data = docSnap.data();
   return {
     id: docSnap.id, 
@@ -31,28 +32,29 @@ const fromFirestoreUser = (docSnap: any): User => {
     email: data.email,
     role: data.role,
     avatarUrl: data.avatarUrl,
-    teamId: data.teamId, // Include teamId
-    createdAt: processTimestamp(data.createdAt),
+    teamId: data.teamId,
+    createdAt: processTimestamp(data.createdAt as Timestamp | undefined),
   } as User;
 };
 
 export const getUserProfile = async (uid: string): Promise<User | null> => {
   if (!db) {
-    console.error("Firestore not initialized");
+    console.error("Firestore not initialized in getUserProfile");
+    return null;
+  }
+  if (!uid) {
+    console.warn("getUserProfile called with no UID");
     return null;
   }
   const userDocRef = doc(db, 'users', uid);
   const userDocSnap = await getDoc(userDocRef);
-  if (userDocSnap.exists()) {
-    return fromFirestoreUser(userDocSnap);
-  }
-  return null;
+  return fromFirestoreUser(userDocSnap);
 };
 
-// Get all users belonging to a specific team
+// Get all users (admins and players) for a specific team
 export const getAllUsersByTeam = async (teamId: string): Promise<User[]> => {
    if (!db) {
-    console.error("Firestore not initialized");
+    console.error("Firestore not initialized in getAllUsersByTeam");
     return [];
   }
   if (!teamId) {
@@ -62,13 +64,13 @@ export const getAllUsersByTeam = async (teamId: string): Promise<User[]> => {
   const usersCol = collection(db, 'users');
   const q = query(usersCol, where('teamId', '==', teamId), orderBy('name', 'asc'));
   const userSnapshot = await getDocs(q);
-  return userSnapshot.docs.map(fromFirestoreUser);
+  return userSnapshot.docs.map(docSnap => fromFirestoreUser(docSnap)).filter(user => user !== null) as User[];
 };
 
-// Get players (role 'player') for a specific team
+// Get only players (role 'player') for a specific team
 export const getPlayersByTeam = async (teamId: string): Promise<User[]> => {
   if (!db) {
-    console.error("Firestore not initialized");
+    console.error("Firestore not initialized in getPlayersByTeam");
     return [];
   }
    if (!teamId) {
@@ -78,17 +80,17 @@ export const getPlayersByTeam = async (teamId: string): Promise<User[]> => {
   const usersCol = collection(db, 'users');
   const q = query(usersCol, where('teamId', '==', teamId), where('role', '==', 'player'), orderBy('name', 'asc'));
   const playerSnapshot = await getDocs(q);
-  return playerSnapshot.docs.map(fromFirestoreUser);
+  return playerSnapshot.docs.map(docSnap => fromFirestoreUser(docSnap)).filter(user => user !== null) as User[];
 };
 
 // Admin adding a player profile to their team.
-// This still creates a profile without auth credentials.
+// This creates a user profile document, distinct from Firebase Auth users.
 export const addPlayerProfileToTeam = async (
-  playerData: Omit<User, 'id' | 'avatarUrl' | 'createdAt' | 'uid' | 'teamId'>, 
+  playerData: Pick<User, 'name' | 'email' | 'role'>, // Role is now explicit
   teamId: string
 ): Promise<string> => {
   if (!db) {
-    console.error("Firestore not initialized");
+    console.error("Firestore not initialized in addPlayerProfileToTeam");
     throw new Error("Firestore not initialized");
   }
   if (!teamId) {
@@ -96,37 +98,60 @@ export const addPlayerProfileToTeam = async (
     throw new Error("TeamId is required.");
   }
   
-  // For manually added profiles, we might generate a UID or expect one.
-  // For simplicity, let's use a generated ID for the document and a placeholder for uid.
-  // This distinguishes them from auth users.
-  const newPlayerUid = `manual-${Date.now()}`;
-  const userRef = doc(db, 'users', newPlayerUid); // Use generated UID for doc ID
+  // For manually added profiles, create a unique ID.
+  // Using Firestore's auto-generated ID for the document.
+  const usersCollectionRef = collection(db, 'users');
+  const newPlayerDocRef = doc(usersCollectionRef); // Creates a ref with a new auto-generated ID
 
-  await setDoc(userRef, {
-    ...playerData,
-    uid: newPlayerUid, // Store the generated UID in the document
+  const newProfileData: Omit<User, 'id' | 'createdAt'> & { createdAt: any } = {
+    uid: newPlayerDocRef.id, // Use the Firestore document ID as the UID for these non-auth profiles
+    name: playerData.name,
+    email: playerData.email.toLowerCase(), // Store email in lowercase
+    role: playerData.role || 'player', // Default to player if not specified, but form should provide it
     teamId: teamId,
-    role: 'player' as UserRole, // Default role for manually added profiles
-    avatarUrl: playerData.avatarUrl || `https://picsum.photos/seed/${playerData.email}/80/80`,
+    avatarUrl: `https://picsum.photos/seed/${playerData.email.toLowerCase()}/80/80`,
     createdAt: serverTimestamp(),
-  });
-  return userRef.id; // This is newPlayerUid
+  };
+
+  await setDoc(newPlayerDocRef, newProfileData);
+  return newPlayerDocRef.id; 
 };
 
-export const updateUserProfile = async (uid: string, data: Partial<Omit<User, 'id' | 'email' | 'createdAt'>>): Promise<void> => {
+// Allows updating user profile fields. Email is usually not updated here if it's linked to Firebase Auth.
+// UID (document ID) should not be changed.
+export const updateUserProfile = async (uid: string, data: Partial<Omit<User, 'id' | 'uid' | 'email' | 'createdAt'>>): Promise<void> => {
    if (!db) {
-    console.error("Firestore not initialized");
+    console.error("Firestore not initialized in updateUserProfile");
     throw new Error("Firestore not initialized");
   }
+  if (!uid) {
+    throw new Error("User UID is required to update profile.");
+  }
   const userDocRef = doc(db, 'users', uid);
-  const { uid: _uid, email: _email, createdAt: _createdAt, id: _id, ...updateData } = data as any;
+  // Ensure sensitive fields like email (if auth linked), uid, id, createdAt are not directly updatable by client like this.
+  // The 'data' param should only contain fields that are safe to update.
+  const { teamId, role, name, avatarUrl } = data; 
+  const updateData: Partial<User> = {};
+  if (teamId !== undefined) updateData.teamId = teamId;
+  if (role !== undefined) updateData.role = role;
+  if (name !== undefined) updateData.name = name;
+  if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+
+  if (Object.keys(updateData).length === 0) {
+    console.warn("updateUserProfile called with no data to update for UID:", uid);
+    return;
+  }
+  
   await updateDoc(userDocRef, updateData);
 };
 
 export const deleteUserProfile = async (uid: string): Promise<void> => {
    if (!db) {
-    console.error("Firestore not initialized");
+    console.error("Firestore not initialized in deleteUserProfile");
     throw new Error("Firestore not initialized");
+  }
+  if (!uid) {
+    throw new Error("User UID is required to delete profile.");
   }
   const userDocRef = doc(db, 'users', uid);
   await deleteDoc(userDocRef);

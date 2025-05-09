@@ -8,35 +8,33 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { format, parseISO, isAfter, isEqual } from "date-fns";
 import { useEffect, useState } from "react";
-import type { Match, Training, User, Team } from "@/types"; // Import Team
+import type { Match, Training, User } from "@/types";
 import { getMatches } from "@/services/matchService";
 import { getTrainings } from "@/services/trainingService";
-import { getPlayersByTeam } from "@/services/userService"; // Updated to getPlayersByTeam
+import { getPlayersByTeam } from "@/services/userService";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
-  const { user, currentTeam, isLoading: authIsLoading } = useAuth(); // Get currentTeam
+  const { user, currentTeam, isLoading: authIsLoading } = useAuth();
   const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([]);
   const [upcomingTrainings, setUpcomingTrainings] = useState<Training[]>([]);
   const [totalPlayers, setTotalPlayers] = useState(0);
-  // Team name now comes from currentTeam context
-  // const [teamName, setTeamName] = useState("Your Team"); 
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
-    // Ensure user, teamId, and currentTeam are available before fetching
+    // Wait for auth context to resolve and ensure user & teamId are present
     if (authIsLoading || !user || !user.teamId || !currentTeam) {
-        // If still loading or user/team info not ready, set loading true or wait.
-        // If not loading and info is missing, it might be an error state or redirect handled by AuthProvider.
-        if (!authIsLoading && (!user || !user.teamId)) {
-          setIsLoadingData(false); // Not loading data if essential info is missing post-auth check
-        } else {
-          setIsLoadingData(true);
-        }
-        return;
+      if (!authIsLoading && (!user || !user.teamId || !currentTeam )) {
+        // If auth is done but essential info is missing, services can't be called.
+        // AuthProvider should handle redirection in such cases.
+        setIsLoadingData(false); 
+      } else {
+        setIsLoadingData(true); // Still waiting for auth or team context
+      }
+      return;
     }
     
-    const teamId = user.teamId; // Or currentTeam.id
+    const teamId = user.teamId;
 
     const fetchData = async () => {
       setIsLoadingData(true);
@@ -49,7 +47,8 @@ export default function DashboardPage() {
             const matchDate = parseISO(match.date);
             return isAfter(matchDate, today) || isEqual(matchDate, today);
           })
-          .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
+          // Sort by order first, then date if order is same or undefined
+          .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime())
           .slice(0, 2);
         setUpcomingMatches(futureMatches);
 
@@ -59,15 +58,16 @@ export default function DashboardPage() {
             const trainingDate = parseISO(training.date);
             return isAfter(trainingDate, today) || isEqual(trainingDate, today);
           })
-          .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
+          .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime())
           .slice(0, 2);
         setUpcomingTrainings(futureTrainings);
         
-        const players = await getPlayersByTeam(teamId); // Use getPlayersByTeam
+        const players = await getPlayersByTeam(teamId);
         setTotalPlayers(players.length);
 
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
+        // Optionally, show a toast to the user
       } finally {
         setIsLoadingData(false);
       }
@@ -84,12 +84,11 @@ export default function DashboardPage() {
             <Skeleton className="h-9 w-64 mb-2" />
             <Skeleton className="h-5 w-80" />
           </div>
-          { user?.role === 'admin' && (
-            <div className="flex gap-2">
-                <Skeleton className="h-10 w-32" />
-                <Skeleton className="h-10 w-36" />
-            </div>
-        )}
+          {/* Skeleton for admin buttons if role check is needed during loading */}
+          <div className="flex gap-2">
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-10 w-36" />
+          </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1,2,3].map(i => (
@@ -113,7 +112,7 @@ export default function DashboardPage() {
     );
   }
     
-  // AuthProvider handles redirect if user or teamId is missing after loading
+  // AuthProvider handles redirect if user, user.teamId, or currentTeam is missing after loading
   if (!user || !user.teamId || !currentTeam) {
     return (
          <div className="flex h-full items-center justify-center">
@@ -201,7 +200,7 @@ export default function DashboardPage() {
                   <p className="text-sm text-muted-foreground">
                     {format(parseISO(match.date), "EEEE, MMMM dd, yyyy")} at {match.time}
                   </p>
-                  <p className="text-sm text-muted-foreground">Location: {match.location}</p>
+                  {match.location && <p className="text-sm text-muted-foreground">Location: {match.location}</p>}
                 </div>
               ))
             ) : (

@@ -17,20 +17,16 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { User, UserRole } from "@/types";
 
-// Schema for adding/editing a player profile.
-// UID, teamId are handled by service/parent. Role is included if admin can change it.
 const playerSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  email: z.string().email({ message: "Invalid email address." }),
-  // Role might be editable by admin for existing users within their team.
-  role: z.enum(["admin", "player"], { required_error: "Role is required." }), 
+  email: z.string().email({ message: "Invalid email address." }).transform(value => value.toLowerCase()),
+  role: z.enum(["admin", "player"] as [UserRole, ...UserRole[]], { required_error: "Role is required." }), 
 });
 
 type PlayerFormValues = z.infer<typeof playerSchema>;
 
 interface AddPlayerFormProps {
-  // onSubmit data type matches the form values. UID and teamId are handled by parent or service.
-  onSubmit: (data: PlayerFormValues & { avatarUrl?: string }) => void; 
+  onSubmit: (data: PlayerFormValues) => void; // Changed to match PlayerFormValues
   initialData?: User | null;
   onClose: () => void;
 }
@@ -45,13 +41,14 @@ export function AddPlayerForm({ onSubmit, initialData, onClose }: AddPlayerFormP
     } : {
       name: "",
       email: "",
-      role: "player", // Default to 'player' for new profiles added by admin
+      role: "player", 
     },
   });
 
   const handleSubmit = (data: PlayerFormValues) => {
-    // Pass avatarUrl if it's part of initialData, otherwise service might generate one.
-    onSubmit({ ...data, avatarUrl: initialData?.avatarUrl }); 
+    // The onSubmit prop now expects PlayerFormValues directly.
+    // The service addPlayerProfileToTeam will handle avatarUrl generation.
+    onSubmit(data); 
   };
 
   return (
@@ -77,14 +74,15 @@ export function AddPlayerForm({ onSubmit, initialData, onClose }: AddPlayerFormP
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                {/* For adding new manual profiles, email should be editable.
-                    For editing existing auth users, email is usually not changed here.
-                    If initialData and initialData.uid suggests an auth user, disable.
-                    Currently, addPlayerProfileToTeam creates a 'manual' UID.
+                {/* Email for manually added profiles is editable. 
+                    If editing an existing auth user profile (not typical here), it would be disabled.
+                    This form is for adding/editing profiles within the team context.
                 */}
-                <Input type="email" placeholder="player@example.com" {...field} disabled={!!initialData && !!initialData.uid && !initialData.uid.startsWith('manual-')} />
+                <Input type="email" placeholder="player@example.com" {...field} 
+                       disabled={!!initialData && !!initialData.uid && !initialData.uid.startsWith('manual-')} />
               </FormControl>
-              {initialData && !!initialData.uid && !initialData.uid.startsWith('manual-') && <p className="text-xs text-muted-foreground">Email cannot be changed for existing authenticated users here.</p>}
+              {initialData && !!initialData.uid && !initialData.uid.startsWith('manual-') && 
+                <p className="text-xs text-muted-foreground">Email of existing authenticated users cannot be changed here.</p>}
               <FormMessage />
             </FormItem>
           )}

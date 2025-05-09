@@ -7,68 +7,69 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Icons } from "@/components/icons";
 import { PlayerCard } from "@/components/player-card";
 import { AddPlayerForm } from "@/components/add-player-form";
-import type { User } from "@/types";
+import type { User, UserRole } from "@/types";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getAllUsersByTeam, addPlayerProfileToTeam, updateUserProfile, deleteUserProfile } from "@/services/userService"; 
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PlayersPage() {
-  const { user: currentUser, isLoading: authLoading } = useAuth();
+  const { user: currentUser, isLoading: authLoading, currentTeam } = useAuth();
   const { toast } = useToast();
   const [players, setPlayers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
+
 
   const fetchPlayers = async (teamId: string) => {
-    setIsLoading(true);
+    setIsLoadingData(true);
     try {
-      // Fetches all users for the current team, admin can then see/manage roles
       const fetchedPlayers = await getAllUsersByTeam(teamId); 
       setPlayers(fetchedPlayers);
     } catch (error) {
       console.error("Error fetching players:", error);
       toast({ title: "Error", description: "Could not fetch players for your team.", variant: "destructive" });
     } finally {
-      setIsLoading(false);
+      setIsLoadingData(false);
     }
   };
 
   useEffect(() => {
-    if (!authLoading && currentUser && currentUser.teamId) {
+    if (!authLoading && currentUser && currentUser.teamId && currentTeam) {
         fetchPlayers(currentUser.teamId);
-    } else if (!authLoading && !currentUser) {
+    } else if (!authLoading && (!currentUser || !currentUser.teamId || !currentTeam)) {
         setPlayers([]);
-        setIsLoading(false);
+        setIsLoadingData(false);
     }
-  }, [authLoading, currentUser]);
+  }, [authLoading, currentUser, currentTeam, forceUpdateCounter, toast]);
 
   useEffect(() => {
-    if (window.location.hash === "#add" && currentUser?.role === "admin") {
+    if (typeof window !== 'undefined' && window.location.hash === "#add" && currentUser?.role === "admin") {
       setIsAddPlayerDialogOpen(true);
       setEditingPlayer(null);
       window.location.hash = "";
     }
   }, [currentUser?.role]);
 
-  const handleAddPlayer = async (data: Omit<User, "id" | "avatarUrl" | "createdAt" | "uid" | "teamId" | "role"> & { avatarUrl?: string }) => {
+  const handleAddPlayer = async (data: Pick<User, 'name' | 'email' | 'role'>) => {
     if (!currentUser?.teamId) {
         toast({ title: "Error", description: "Team information is missing.", variant: "destructive"});
         return;
     }
-    const newPlayerData = { ...data }; // role will be 'player' by default in service
-
     try {
-      await addPlayerProfileToTeam(newPlayerData, currentUser.teamId);
+      // addPlayerProfileToTeam now expects role directly
+      await addPlayerProfileToTeam(data, currentUser.teamId);
       toast({ title: "Player Profile Added", description: `${data.name} has been added to your team.` });
-      if (currentUser.teamId) fetchPlayers(currentUser.teamId); 
+      setForceUpdateCounter(prev => prev + 1);
       setIsAddPlayerDialogOpen(false);
     } catch (error: any) {
       console.error("Error adding player:", error);
-      toast({ title: "Error", description: error.message || "Could not add player.", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Could not add player profile.", variant: "destructive" });
     }
   };
 
@@ -77,13 +78,22 @@ export default function PlayersPage() {
     setIsAddPlayerDialogOpen(true);
   };
 
-  const handleUpdatePlayer = async (data: Omit<User, "id" | "avatarUrl" | "createdAt" | "uid" | "teamId"> & { avatarUrl?: string }) => {
-    if (!editingPlayer || !editingPlayer.uid || !currentUser?.teamId) return;
+  const handleUpdatePlayer = async (data: Pick<User, 'name' | 'email' | 'role' | 'avatarUrl'>) => {
+    if (!editingPlayer || !editingPlayer.uid || !currentUser?.teamId) {
+        toast({ title: "Error", description: "Player or team information missing for update.", variant: "destructive"});
+        return;
+    }
     try {
-      // Ensure role is part of the data passed to updateUserProfile if it's editable in the form
-      await updateUserProfile(editingPlayer.uid, data); 
+      // updateUserProfile takes UID and a partial User object.
+      // Email is usually not updated for auth users here, but role and name are common.
+      const updatePayload: Partial<Omit<User, 'id' | 'uid' | 'email' | 'createdAt'>> = {
+        name: data.name,
+        role: data.role,
+        // avatarUrl: data.avatarUrl, // If avatarUrl is part of the form and updatable
+      };
+      await updateUserProfile(editingPlayer.uid, updatePayload); 
       toast({ title: "Player Updated", description: `${data.name}'s details have been updated.` });
-      if (currentUser.teamId) fetchPlayers(currentUser.teamId);
+      setForceUpdateCounter(prev => prev + 1);
       setIsAddPlayerDialogOpen(false);
       setEditingPlayer(null);
     } catch (error: any) {
@@ -101,14 +111,14 @@ export default function PlayersPage() {
       toast({ title: "Action Denied", description: "You cannot delete your own profile.", variant: "destructive"});
       return;
     }
-    if (!window.confirm(`Are you sure you want to remove ${playerToDelete.name}'s profile? This does not delete their authentication account if they have one.`)) return;
+    if (!window.confirm(`Are you sure you want to remove ${playerToDelete.name}'s profile? This does not delete their authentication account if they have one, only their profile in this team.`)) return;
     
     try {
-      await deleteUserProfile(playerToDelete.uid); // Deletes from 'users' collection
-      toast({ title: "Player Profile Removed", description: "The player's profile has been removed.", variant: "destructive" });
-      if (currentUser.teamId) fetchPlayers(currentUser.teamId);
+      await deleteUserProfile(playerToDelete.uid);
+      toast({ title: "Player Profile Removed", description: `${playerToDelete.name}'s profile has been removed.`, variant: "destructive" });
+      setForceUpdateCounter(prev => prev + 1);
     } catch (error: any) {
-      console.error("Error deleting player:", error);
+      console.error("Error deleting player profile:", error);
       toast({ title: "Error", description: error.message || "Could not remove player profile.", variant: "destructive" });
     }
   };
@@ -120,11 +130,25 @@ export default function PlayersPage() {
   
   const isAdmin = currentUser?.role === "admin";
 
-  if (isLoading || authLoading) {
-    return <div className="flex h-full items-center justify-center"><p>Loading players...</p></div>;
+  if (authLoading || isLoadingData) {
+     return (
+        <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <Skeleton className="h-9 w-48 mb-1" />
+                    <Skeleton className="h-5 w-64" />
+                </div>
+                {isAdmin && <Skeleton className="h-10 w-44" />}
+            </div>
+            <Skeleton className="h-10 w-full" />
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {[1,2,3,4].map(i => <Skeleton key={i} className="h-72 w-full rounded-lg" />)}
+            </div>
+        </div>
+    );
   }
-  if (!currentUser || !currentUser.teamId) {
-    return <div className="flex h-full items-center justify-center"><p>Please log in and ensure you are part of a team to view players.</p></div>;
+  if (!currentUser || !currentUser.teamId || !currentTeam) {
+    return <div className="flex h-full items-center justify-center"><p>Loading team data or redirecting...</p></div>;
   }
 
   return (
@@ -133,7 +157,7 @@ export default function PlayersPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Team Members</h1>
           <p className="text-muted-foreground">
-            Manage your team roster.
+            Manage the roster for {currentTeam.name}.
           </p>
         </div>
         {isAdmin && (
@@ -150,7 +174,7 @@ export default function PlayersPage() {
               <DialogHeader>
                 <DialogTitle>{editingPlayer ? "Edit Player Profile" : "Add New Player Profile"}</DialogTitle>
                 <DialogDescription>
-                  {editingPlayer ? "Update player profile details." : "Enter the new player's information. This creates a profile in your team."}
+                  {editingPlayer ? "Update player profile details." : "Enter the new player's information to add them to your team."}
                 </DialogDescription>
               </DialogHeader>
               <AddPlayerForm 
@@ -177,7 +201,7 @@ export default function PlayersPage() {
           />
         </div>
 
-      {filteredPlayers.length === 0 && !isLoading ? (
+      {filteredPlayers.length === 0 ? (
         <Card className="col-span-full">
             <CardHeader>
                 <CardTitle>No Players Found</CardTitle>
@@ -193,7 +217,7 @@ export default function PlayersPage() {
                         It looks a bit lonely here.
                     </p>
                     {isAdmin && !searchTerm && (
-                        <Button className="mt-4" onClick={() => setIsAddPlayerDialogOpen(true)}>
+                        <Button className="mt-4" onClick={() => {setEditingPlayer(null); setIsAddPlayerDialogOpen(true);}}>
                             <Icons.Add className="mr-2 h-4 w-4" /> Add First Player Profile
                         </Button>
                     )}
@@ -206,8 +230,8 @@ export default function PlayersPage() {
             <PlayerCard 
               key={player.uid} 
               player={player} 
-              onEdit={isAdmin ? handleEditPlayer : undefined} // Only pass onEdit if admin
-              onDelete={isAdmin ? () => handleDeletePlayer(player) : undefined} // Only pass onDelete if admin
+              onEdit={isAdmin ? handleEditPlayer : undefined} 
+              onDelete={isAdmin ? () => handleDeletePlayer(player) : undefined}
             />
           ))}
         </div>

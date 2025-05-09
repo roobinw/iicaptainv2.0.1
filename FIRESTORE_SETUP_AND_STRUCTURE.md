@@ -44,8 +44,8 @@ This is a top-level collection where each document represents a unique team.
         *   `attendance`: (Map) Stores player attendance.
             *   Keys: Player Firebase Auth UIDs (String).
             *   Values: (String) "present", "absent", "excused", or "unknown".
-            *   Example: `{"playerUid1": "present", "playerUid2": "absent"}`
-        *   `order`: (Number, optional) For drag-and-drop reordering of matches.
+            *   Example: `{"firebaseUserUid1": "present", "firebaseUserUid2": "absent"}`
+        *   `order`: (Number, optional) For drag-and-drop reordering of matches. Initialized to current list length.
 
 *   **Subcollection of `teams/{teamId}`: `trainings`**
     *   Stores all training sessions for a specific team.
@@ -56,7 +56,7 @@ This is a top-level collection where each document represents a unique team.
         *   `location`: (String) Location of the training session.
         *   `description`: (String, optional) Additional details about the training.
         *   `attendance`: (Map) Stores player attendance (same structure as in `matches`).
-        *   `order`: (Number, optional) For drag-and-drop reordering of training sessions.
+        *   `order`: (Number, optional) For drag-and-drop reordering of training sessions. Initialized to current list length.
 
 ### Collection: `users`
 
@@ -64,9 +64,9 @@ This is a top-level collection where each document represents a user profile.
 
 *   **Document ID:** Should be the Firebase Auth UID of the user.
 *   **Fields:**
-    *   `uid`: (String) The Firebase Auth UID (can be the same as the document ID, useful for querying).
+    *   `uid`: (String) The Firebase Auth UID (same as the document ID, useful for querying).
     *   `name`: (String) Full name of the user.
-    *   `email`: (String) Email address of the user (should be stored in lowercase for consistency).
+    *   `email`: (String) Email address of the user (stored in lowercase).
     *   `role`: (String) User's role within their team. Can be "admin" or "player".
     *   `teamId`: (String) The ID of the team (from the `teams` collection) that this user belongs to. This is crucial for multi-tenancy.
     *   `avatarUrl`: (String, optional) URL to the user's profile picture.
@@ -79,7 +79,7 @@ This is a top-level collection where each document represents a user profile.
 {
   "name": "The Roaring Lions",
   "ownerUid": "firebaseUserUidAbc",
-  "createdAt": "October 26, 2023 at 10:00:00 AM UTC+2" // Firestore Timestamp
+  "createdAt": "October 26, 2023 at 10:00:00 AM UTC+2" 
 }
 ```
 
@@ -91,14 +91,14 @@ This is a top-level collection where each document represents a user profile.
   "opponent": "The Sharks",
   "location": "Community Stadium",
   "attendance": {
-    "playerUidXyz": "present",
-    "playerUidPqr": "excused"
+    "playerFirebaseUidXyz": "present",
+    "playerFirebaseUidPqr": "excused"
   },
   "order": 0
 }
 ```
 
-**Example `users` document (`/users/firebaseUserUidAbc`):**
+**Example `users` document (`/users/firebaseUserUidAbc` where `firebaseUserUidAbc` is the Firebase Auth UID):**
 ```json
 {
   "uid": "firebaseUserUidAbc",
@@ -107,75 +107,125 @@ This is a top-level collection where each document represents a user profile.
   "role": "admin",
   "teamId": "uniqueTeamId123",
   "avatarUrl": "https://picsum.photos/seed/jane.doe@example.com/80/80",
-  "createdAt": "October 26, 2023 at 09:55:00 AM UTC+2" // Firestore Timestamp
+  "createdAt": "October 26, 2023 at 09:55:00 AM UTC+2"
 }
 ```
 
 ## 4. Initial Data and Security Rules
 
 *   **Initial Data:**
-    *   When a new user signs up through the app, their user profile (`users` document) and a new team (`teams` document) are created automatically if they are the first user creating a team.
-    *   Admins can add other players to their team via the app, which will create corresponding `users` documents.
-    *   Matches and Trainings are added by team admins through the app.
-    *   You generally do not need to add data manually to Firestore unless for testing or specific migration scenarios.
+    *   When a new user signs up via the app, they also provide a **Team Name**.
+    *   The app then:
+        1.  Creates their Firebase Authentication account.
+        2.  Creates a new team document in the `teams` collection with the provided name and sets the new user as `ownerUid`.
+        3.  Creates their user profile document in the `users` collection, linking them to the newly created `teamId` and assigning them the `role: "admin"`.
+    *   Admins can then add other player profiles to their team via the "Players" page in the app. This creates `users` documents for those players, with `role: "player"` and the admin's `teamId`.
+    *   Matches and Trainings are added by team admins through the app into their respective team's subcollections.
 
 *   **Firestore Security Rules (VERY IMPORTANT):**
-    *   The default security rules (especially in "Production mode") are very restrictive. You **must** configure Firestore Security Rules to allow your application to read and write data appropriately while protecting user and team data.
-    *   Security rules are crucial for enforcing multi-tenancy (e.g., a user can only access data for their own team) and role-based access (e.g., only an admin can create matches).
-    *   A conceptual example of security rules that align with this structure:
-        ```firestore-rules
-        rules_version = '2';
-        service cloud.firestore {
-          match /databases/{database}/documents {
+    *   Default security rules (especially in "Production mode") are highly restrictive. You **must** configure Firestore Security Rules.
+    *   These rules enforce multi-tenancy (a user can only access data for their own team) and role-based access (only an admin can create/modify team-wide data like matches or other player profiles within their team).
 
-            // Helper function to get user's teamId and role
-            function getUserData(userId) {
-              return get(/databases/$(database)/documents/users/$(userId)).data;
-            }
-            function isSignedIn() {
-              return request.auth != null;
-            }
-            function isUserTeamMember(teamId) {
-              return isSignedIn() && getUserData(request.auth.uid).teamId == teamId;
-            }
-            function isUserTeamAdmin(teamId) {
-              return isUserTeamMember(teamId) && getUserData(request.auth.uid).role == 'admin';
-            }
+    **Example Security Rules:**
+    ```firestore-rules
+    rules_version = '2';
+    service cloud.firestore {
+      match /databases/{database}/documents {
 
-            // Teams collection
-            match /teams/{teamId} {
-              allow read: if isUserTeamMember(teamId);
-              allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
-              allow update: if isUserTeamAdmin(teamId) && request.resource.data.ownerUid == resource.data.ownerUid; // Prevent ownerUid change by client
-              // Delete usually handled by backend/admin functions
-            }
-
-            // Users collection
-            match /users/{userId} {
-              allow read: if isSignedIn(); // Or more restrictive: isUserTeamMember(resource.data.teamId)
-              allow create: if isSignedIn() && request.auth.uid == userId; // User creating their own profile
-              allow update: if isSignedIn() &&
-                               (request.auth.uid == userId || // Own profile (restrict fields like role/teamId via rules on request.resource.data)
-                                (isUserTeamAdmin(resource.data.teamId) && request.resource.data.teamId == resource.data.teamId)); // Admin updating users in their team
-              allow delete: if isUserTeamAdmin(resource.data.teamId) && request.auth.uid != userId; // Admin deleting others in their team
-            }
-
-            // Matches subcollection
-            match /teams/{teamId}/matches/{matchId} {
-              allow read: if isUserTeamMember(teamId);
-              allow create, update, delete: if isUserTeamAdmin(teamId);
-            }
-
-            // Trainings subcollection
-            match /teams/{teamId}/trainings/{trainingId} {
-              allow read: if isUserTeamMember(teamId);
-              allow create, update, delete: if isUserTeamAdmin(teamId);
-            }
-          }
+        // Helper function to get requesting user's data (role, teamId)
+        function getUserData() {
+          return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
         }
-        ```
+
+        // Helper: Is the user signed in?
+        function isSignedIn() {
+          return request.auth != null;
+        }
+
+        // Helper: Does the requesting user belong to the specified teamId?
+        function isUserTeamMember(teamId) {
+          return isSignedIn() && getUserData().teamId == teamId;
+        }
+
+        // Helper: Is the requesting user an admin of the specified teamId?
+        function isUserTeamAdmin(teamId) {
+          return isUserTeamMember(teamId) && getUserData().role == 'admin';
+        }
+        
+        // Helper: Is the user creating their own document?
+        function isOwner(userId) {
+          return request.auth != null && request.auth.uid == userId;
+        }
+
+        // Teams collection
+        match /teams/{teamId} {
+          // Any authenticated user who is part of this team can read team details.
+          allow read: if isUserTeamMember(teamId);
+          // Only an authenticated user can create a team, and they must be its owner.
+          // teamId in request.resource.data should match what's being created.
+          allow create: if isSignedIn() && request.auth.uid == request.resource.data.ownerUid;
+          // Only an admin of this team can update its name (ownerUid should not be changed by client).
+          allow update: if isUserTeamAdmin(teamId) && request.resource.data.ownerUid == resource.data.ownerUid;
+          // Deleting teams is typically a backend/admin function, not client-side.
+          allow delete: if false; 
+        }
+
+        // Users collection
+        match /users/{userId} {
+          // Any signed-in user can read any user profile (e.g., to see names for attendance).
+          // Or, more restrictively: if isUserTeamMember(resource.data.teamId) (only see users in your own team).
+          // For simplicity, allowing any signed-in user to read profiles.
+          allow read: if isSignedIn();
+
+          // A user can create their own profile document.
+          // This is handled during signup where teamId and role are also set.
+          allow create: if isOwner(userId) && 
+                          request.resource.data.uid == userId &&
+                          request.resource.data.email != null && // ensure basic fields
+                          request.resource.data.name != null &&
+                          request.resource.data.role != null &&
+                          request.resource.data.teamId != null; 
+                          // teamId and role validity checked during team creation by admin on signup.
+
+          // A user can update their own profile (e.g., name, avatarUrl).
+          // An admin can update profiles of users within their own team.
+          // Critical fields like 'role' and 'teamId' should be protected from arbitrary client-side changes by non-admins or on self-update.
+          allow update: if isSignedIn() &&
+                          (
+                            (isOwner(userId) && 
+                              !(request.resource.data.role != resource.data.role || // prevent self-role change
+                                request.resource.data.teamId != resource.data.teamId || // prevent self-teamId change
+                                request.resource.data.email != resource.data.email    // prevent email change
+                               )) || 
+                            (isUserTeamAdmin(resource.data.teamId) && // Admin updating others in their team
+                             request.resource.data.teamId == resource.data.teamId && // Ensure admin isn't changing target's teamId
+                             userId != request.auth.uid // Admin cannot change their own role/teamId this way
+                            ) 
+                          );
+          
+          // An admin can delete user profiles from their team (except their own).
+          allow delete: if isUserTeamAdmin(resource.data.teamId) && userId != request.auth.uid;
+        }
+
+        // Matches subcollection (nested under a specific team)
+        match /teams/{teamId}/matches/{matchId} {
+          // Any member of this team can read matches.
+          allow read: if isUserTeamMember(teamId);
+          // Only an admin of this team can create, update, or delete matches.
+          allow create, update, delete: if isUserTeamAdmin(teamId);
+        }
+
+        // Trainings subcollection (nested under a specific team)
+        match /teams/{teamId}/trainings/{trainingId} {
+          // Any member of this team can read trainings.
+          allow read: if isUserTeamMember(teamId);
+          // Only an admin of this team can create, update, or delete trainings.
+          allow create, update, delete: if isUserTeamAdmin(teamId);
+        }
+      }
+    }
+    ```
     *   **Test your security rules thoroughly** using the Firebase console's Rules Playground before deploying your app widely.
 
-By following this structure and implementing robust security rules, your TeamEase application will have a solid foundation for managing team data securely and efficiently.
-The existing application code in `src/services/` is designed to work with this Firestore structure.
-    
+By following this structure and implementing robust security rules, your TeamEase application will have a solid foundation for managing team data securely and efficiently for multiple teams.
+The application code in `src/services/` is designed to work with this Firestore structure.

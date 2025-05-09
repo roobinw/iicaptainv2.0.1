@@ -14,17 +14,20 @@ import { useToast } from "@/hooks/use-toast";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableItem } from '@/components/sortable-item';
-import { addMatch, getMatches, updateMatch, deleteMatch, updateMatchesOrder } from "@/services/matchService"; // Added updateMatchesOrder
-import { parseISO } from "date-fns";
+import { addMatch, getMatches, updateMatch, deleteMatch, updateMatchesOrder } from "@/services/matchService";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MatchesPage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, currentTeam } = useAuth();
   const { toast } = useToast();
   const [matches, setMatches] = useState<Match[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [isAddMatchDialogOpen, setIsAddMatchDialogOpen] = useState(false);
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
-  const [forceUpdateList, setForceUpdateList] = useState(0); 
+  // forceUpdateList can be removed if optimistic updates are sufficient or if specific state changes trigger re-renders.
+  // For now, keeping it to ensure list re-fetches after mutations.
+  const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
+
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -34,40 +37,42 @@ export default function MatchesPage() {
   );
 
   const fetchMatches = async (teamId: string) => {
-    setIsLoading(true);
+    setIsLoadingData(true);
     try {
       const fetchedMatches = await getMatches(teamId);
-      fetchedMatches.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || new Date(a.date).getTime() - new Date(b.date).getTime());
+      // Sorting is now handled by getMatches query by default (order, then date/time)
       setMatches(fetchedMatches);
     } catch (error) {
       console.error("Error fetching matches:", error);
       toast({ title: "Error", description: "Could not fetch matches.", variant: "destructive" });
     } finally {
-      setIsLoading(false);
+      setIsLoadingData(false);
     }
   };
-
+  
   useEffect(() => {
-    if(!authLoading && user && user.teamId) {
+    if (!authLoading && user && user.teamId && currentTeam) {
         fetchMatches(user.teamId);
-    } else if (!authLoading && !user) {
-      // User not logged in, AuthProvider should redirect. Clear data or show message.
+    } else if (!authLoading && (!user || !user.teamId || !currentTeam)) {
+      // User not logged in, or no team context, AuthProvider should redirect. Clear data.
       setMatches([]);
-      setIsLoading(false);
+      setIsLoadingData(false);
     }
-  }, [authLoading, user, forceUpdateList]);
+     // Add forceUpdateCounter to dependencies to refetch when it changes
+  }, [authLoading, user, currentTeam, forceUpdateCounter, toast]);
 
 
   useEffect(() => {
-    if (window.location.hash === "#add" && user?.role === "admin") {
+    // Open dialog if #add is in URL and user is admin
+    if (typeof window !== 'undefined' && window.location.hash === "#add" && user?.role === "admin") {
       setIsAddMatchDialogOpen(true);
       setEditingMatch(null); 
-      window.location.hash = ""; 
+      window.location.hash = ""; // Clear hash to prevent re-opening on refresh
     }
-  }, [user?.role]);
+  }, [user?.role]); // Re-run when user role might change
 
 
-  const handleAddMatch = async (data: Omit<Match, "id" | "attendance">) => {
+  const handleAddMatch = async (data: Omit<Match, "id" | "attendance" | "order">) => {
     if (!user?.teamId) {
         toast({ title: "Error", description: "Team information is missing.", variant: "destructive"});
         return;
@@ -75,7 +80,7 @@ export default function MatchesPage() {
     try {
       await addMatch(user.teamId, data);
       toast({ title: "Match Added", description: `Match against ${data.opponent} scheduled.` });
-      setForceUpdateList(prev => prev + 1); 
+      setForceUpdateCounter(prev => prev + 1); 
       setIsAddMatchDialogOpen(false);
     } catch (error: any) {
       toast({ title: "Error adding match", description: error.message || "Could not add match.", variant: "destructive" });
@@ -87,16 +92,17 @@ export default function MatchesPage() {
     setIsAddMatchDialogOpen(true);
   };
 
-  const handleUpdateMatch = async (data: Omit<Match, "id" | "attendance">) => {
-    if (!editingMatch || !user?.teamId) {
+  const handleUpdateMatch = async (data: Omit<Match, "id" | "attendance" | "order">) => {
+    if (!editingMatch || !editingMatch.id || !user?.teamId) {
         toast({ title: "Error", description: "Cannot update match. Missing information.", variant: "destructive"});
         return;
     }
     try {
-      const updateData = { ...data, date: typeof data.date === 'string' ? data.date : (data.date as Date).toISOString().split('T')[0] };
-      await updateMatch(user.teamId, editingMatch.id, updateData as Partial<Omit<Match, 'id'>>);
-      toast({ title: "Match Updated", description: `Match against ${data.opponent} updated.` });
-      setForceUpdateList(prev => prev + 1); 
+      // Ensure date is string "yyyy-MM-dd", other fields as is from form
+      const updatePayload = { ...data, date: typeof data.date === 'string' ? data.date : (data.date as Date).toISOString().split('T')[0] };
+      await updateMatch(user.teamId, editingMatch.id, updatePayload);
+      toast({ title: "Match Updated", description: `Match against data.opponent updated.` });
+      setForceUpdateCounter(prev => prev + 1);
       setIsAddMatchDialogOpen(false);
       setEditingMatch(null);
     } catch (error: any) {
@@ -113,7 +119,7 @@ export default function MatchesPage() {
     try {
       await deleteMatch(user.teamId, matchId);
       toast({ title: "Match Deleted", description: "The match has been removed.", variant: "destructive" });
-      setForceUpdateList(prev => prev + 1); 
+      setForceUpdateCounter(prev => prev + 1);
     } catch (error: any) {
       toast({ title: "Error deleting match", description: error.message || "Could not delete match.", variant: "destructive" });
     }
@@ -124,29 +130,44 @@ export default function MatchesPage() {
     if (over && active.id !== over.id && user?.teamId) {
       const oldIndex = matches.findIndex(item => item.id === active.id);
       const newIndex = matches.findIndex(item => item.id === over.id);
-      const newOrder = arrayMove(matches, oldIndex, newIndex);
-      setMatches(newOrder); // Update UI immediately
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const newOrderedMatches = arrayMove(matches, oldIndex, newIndex);
+      setMatches(newOrderedMatches); // Optimistic UI update
 
       try {
         // Persist the new order to Firestore
-        await updateMatchesOrder(user.teamId, newOrder.map((match, index) => ({ id: match.id, order: index })));
+        const orderUpdates = newOrderedMatches.map((match, index) => ({ id: match.id, order: index }));
+        await updateMatchesOrder(user.teamId, orderUpdates);
         toast({ title: "Order Updated", description: "Match order saved." });
       } catch (error) {
         console.error("Error updating match order:", error);
         toast({ title: "Error", description: "Could not save match order.", variant: "destructive" });
-        // Optionally revert UI change or refetch
-        fetchMatches(user.teamId); // Refetch to ensure consistency
+        fetchMatches(user.teamId); // Revert optimistic update by refetching
       }
     }
   }
   
   const isAdmin = user?.role === "admin";
 
-  if (isLoading || authLoading) {
-    return <div className="flex h-full items-center justify-center"><p>Loading matches...</p></div>;
+  if (authLoading || isLoadingData) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+            <Skeleton className="h-9 w-1/2" />
+            {isAdmin && <Skeleton className="h-10 w-32" />}
+        </div>
+        <Skeleton className="h-5 w-3/4" />
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[1,2,3].map(i => <Skeleton key={i} className="h-60 w-full rounded-lg" />)}
+        </div>
+      </div>
+    );
   }
-  if (!user || !user.teamId) {
-    return <div className="flex h-full items-center justify-center"><p>Please log in and ensure you are part of a team to view matches.</p></div>;
+
+  if (!user || !user.teamId || !currentTeam) {
+    // This state should ideally be handled by AuthProvider redirecting
+    return <div className="flex h-full items-center justify-center"><p>Loading team data or redirecting...</p></div>;
   }
 
 
@@ -156,13 +177,13 @@ export default function MatchesPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Match Schedule</h1>
           <p className="text-muted-foreground">
-            View and manage upcoming and past matches for your team. {isAdmin && "Drag to reorder."}
+            View and manage matches for {currentTeam.name}. {isAdmin && "Drag to reorder."}
           </p>
         </div>
         {isAdmin && (
           <Dialog open={isAddMatchDialogOpen} onOpenChange={(isOpen) => {
             setIsAddMatchDialogOpen(isOpen);
-            if (!isOpen) setEditingMatch(null);
+            if (!isOpen) setEditingMatch(null); // Reset editing state when dialog closes
           }}>
             <DialogTrigger asChild>
               <Button>
@@ -178,7 +199,7 @@ export default function MatchesPage() {
               </DialogHeader>
               <AddMatchForm 
                 onSubmit={editingMatch ? handleUpdateMatch : handleAddMatch} 
-                initialData={editingMatch}
+                initialData={editingMatch} // Pass null if not editing
                 onClose={() => {
                   setIsAddMatchDialogOpen(false);
                   setEditingMatch(null);
@@ -189,7 +210,7 @@ export default function MatchesPage() {
         )}
       </div>
 
-      {matches.length === 0 && !isLoading ? (
+      {matches.length === 0 ? (
          <Card className="col-span-full">
             <CardHeader>
                 <CardTitle>No Matches Yet</CardTitle>
@@ -204,7 +225,7 @@ export default function MatchesPage() {
                         It looks a bit empty here.
                     </p>
                     {isAdmin && (
-                        <Button className="mt-4" onClick={() => setIsAddMatchDialogOpen(true)}>
+                        <Button className="mt-4" onClick={() => { setEditingMatch(null); setIsAddMatchDialogOpen(true);}}>
                             <Icons.Add className="mr-2 h-4 w-4" /> Add First Match
                         </Button>
                     )}
@@ -219,9 +240,11 @@ export default function MatchesPage() {
                 <SortableItem key={match.id} id={match.id} disabled={!isAdmin}>
                   <MatchCard 
                     match={match} 
-                    onEdit={handleEditMatch} 
-                    onDelete={handleDeleteMatch} 
-                    setForceUpdateList={setForceUpdateList}
+                    onEdit={isAdmin ? handleEditMatch : undefined} 
+                    onDelete={isAdmin ? handleDeleteMatch : undefined}
+                    // Pass teamId to MatchCard if it needs it for operations like attendance
+                    // teamId={user.teamId!} Pass setForceUpdateCounter if MatchCard needs to trigger list refresh
+                    setForceUpdateList={setForceUpdateCounter} 
                   />
                 </SortableItem>
               ))}

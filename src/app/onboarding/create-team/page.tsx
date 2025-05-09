@@ -39,13 +39,13 @@ export default function CreateTeamPage() {
   useEffect(() => {
     if (!authIsLoading) {
       if (!firebaseUser) {
-        // If not logged in at all, go to login
+        // Not logged in, redirect to login
         router.replace("/login");
       } else if (user && user.teamId) {
-        // If logged in and already has a team, go to dashboard
+        // Logged in AND has a team, redirect to dashboard
         router.replace("/dashboard");
       }
-      // Otherwise, stay on this page to create a team
+      // Otherwise, user is logged in but has no teamId, so stay on this page.
     }
   }, [user, firebaseUser, authIsLoading, router]);
 
@@ -57,22 +57,30 @@ export default function CreateTeamPage() {
   });
 
   async function onSubmit(data: CreateTeamFormValues) {
-    if (!firebaseUser) {
+    if (!firebaseUser || !user) { // Check for both firebaseUser and the user profile from context
       toast({ title: "Error", description: "You must be logged in to create a team.", variant: "destructive" });
       return;
     }
     setIsSubmitting(true);
     try {
+      // 1. Create the team
       const newTeamId = await createTeam(data.teamName, firebaseUser.uid);
+      
+      // 2. Update the existing user's profile with the new teamId and set role to admin
+      //    (assuming they were a user without a team, now they become admin of this new team)
       await updateUserProfile(firebaseUser.uid, { teamId: newTeamId, role: "admin" as UserRole });
       
       toast({
         title: "Team Created!",
         description: `Your team "${data.teamName}" has been successfully created. Redirecting...`,
       });
-      // The AuthProvider's onAuthStateChanged listener should pick up the change
-      // and redirect to dashboard. Forcing a reload might also trigger it.
-      router.push("/dashboard"); // Or window.location.reload(); to ensure AuthProvider re-evaluates
+      // The AuthProvider's onAuthStateChanged listener should pick up the change in user.teamId
+      // and redirect to dashboard. Forcing a reload or router.push can also trigger it.
+      // Using router.push and expecting AuthProvider to handle the redirect fully.
+      router.push("/dashboard"); 
+      // To be absolutely sure AuthContext re-evaluates, you might consider a mechanism
+      // to signal AuthContext to re-fetch user data, or simply reload.
+      // window.location.href = "/dashboard"; // A harder refresh
     } catch (error: any) {
       console.error("Error creating team:", error);
       toast({ title: "Team Creation Failed", description: error.message || "Could not create team.", variant: "destructive" });
@@ -81,6 +89,7 @@ export default function CreateTeamPage() {
     }
   }
 
+  // Show loading if auth is processing, or if user data indicates they should be redirected
   if (authIsLoading || (user && user.teamId)) {
      return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -90,20 +99,25 @@ export default function CreateTeamPage() {
     );
   }
   
+  // If not authIsLoading, but firebaseUser is null, useEffect should have redirected to /login
   if (!firebaseUser && !authIsLoading) {
-    // This case should be handled by useEffect redirecting to /login
-    return <p>Redirecting...</p>;
+    return (
+         <div className="flex h-screen items-center justify-center bg-background">
+            <Icons.Dashboard className="h-12 w-12 animate-spin text-primary" />
+            <p className="ml-4 text-lg text-foreground">Redirecting...</p>
+        </div>
+    );
   }
 
-
+  // At this point, user is authenticated but user.teamId is missing.
   return (
     <AuthLayout>
       <div className="flex flex-col space-y-2 text-center mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">
-          Create Your Team
+          Set Up Your Team
         </h1>
         <p className="text-sm text-muted-foreground">
-          Almost there! Just give your team a name to get started.
+          You're almost ready! Just give your team a name to get started. You'll be the admin.
         </p>
       </div>
       <Form {...form}>
@@ -115,7 +129,7 @@ export default function CreateTeamPage() {
               <FormItem>
                 <FormLabel>Team Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="The Champions" {...field} />
+                  <Input placeholder="The All-Stars" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -126,9 +140,11 @@ export default function CreateTeamPage() {
           </Button>
         </form>
       </Form>
-      <Button variant="link" onClick={logout} className="mt-4 w-full">
-        Log out
-      </Button>
+       <div className="mt-6 text-center">
+        <Button variant="link" onClick={logout} className="text-muted-foreground">
+          Log out
+        </Button>
+      </div>
     </AuthLayout>
   );
 }

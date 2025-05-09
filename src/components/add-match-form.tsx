@@ -31,7 +31,7 @@ const matchSchema = z.object({
 type MatchFormValues = z.infer<typeof matchSchema>;
 
 interface AddMatchFormProps {
-  onSubmit: (data: Omit<Match, "id" | "attendance">) => void;
+  onSubmit: (data: Omit<Match, "id" | "attendance" | "order">) => void; // Exclude order
   initialData?: Match | null;
   onClose: () => void;
 }
@@ -41,18 +41,21 @@ export function AddMatchForm({ onSubmit, initialData, onClose }: AddMatchFormPro
     resolver: zodResolver(matchSchema),
     defaultValues: initialData ? {
       ...initialData,
-      date: new Date(initialData.date),
+      date: new Date(initialData.date), // Convert date string back to Date object for calendar
     } : {
       opponent: "",
-      time: "14:00",
-      location: "Home Ground",
+      // date: new Date(), // Default to today or let user pick
+      time: "14:00", // Sensible default
+      location: "Home Ground", // Sensible default
     },
   });
 
   const handleSubmit = (data: MatchFormValues) => {
+    // The `order` field is handled by the service now (e.g., set to list length on add).
+    // `attendance` is initialized as empty by the service.
     onSubmit({
       ...data,
-      date: format(data.date, "yyyy-MM-dd"),
+      date: format(data.date, "yyyy-MM-dd"), // Format date to string for Firestore
     });
   };
 
@@ -93,7 +96,7 @@ export function AddMatchForm({ onSubmit, initialData, onClose }: AddMatchFormPro
                       ) : (
                         <span>Pick a date</span>
                       )}
-                      <Icons.Matches className="ml-auto h-4 w-4 opacity-50" />
+                      <Icons.CalendarDays className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
@@ -102,7 +105,7 @@ export function AddMatchForm({ onSubmit, initialData, onClose }: AddMatchFormPro
                     mode="single"
                     selected={field.value}
                     onSelect={field.onChange}
-                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} // Disable past dates
+                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} // Optionally disable past dates
                     initialFocus
                   />
                 </PopoverContent>

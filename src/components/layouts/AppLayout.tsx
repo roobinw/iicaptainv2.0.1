@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Icons } from "@/components/icons";
 import { PanelLeft } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect } from "react"; // useEffect is already imported
 
 interface NavItem {
   href: string;
@@ -33,25 +33,36 @@ const navItems: NavItem[] = [
   { href: "/matches", label: "Matches", icon: "Matches" },
   { href: "/trainings", label: "Trainings", icon: "Trainings" },
   { href: "/players", label: "Players", icon: "Players" },
+  // { href: "/settings", label: "Settings", icon: "Settings" }, // Settings is usually in user menu
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { user, logout, isLoading } = useAuth();
+  const { user, currentTeam, logout, isLoading: authIsLoading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      // Ensure we are not already on a public page like /login or /signup
-      // to prevent redirect loops if those pages were mistakenly wrapped by AppLayout.
-      // However, typically, login/signup pages would use AuthLayout.
-      if (pathname !== "/login" && pathname !== "/signup") {
-        router.replace("/login");
+    // This useEffect now primarily handles the case where auth is done,
+    // but the user state means they shouldn't be on an auth-required page.
+    // AuthProvider's useEffect handles the initial loading and redirection logic.
+    if (!authIsLoading) {
+      if (!user) {
+        // If auth is done, no user, and not on a public page already
+        if (pathname !== "/login" && pathname !== "/signup" && !pathname.startsWith("/onboarding")) {
+          router.replace("/login");
+        }
+      } else if (!user.teamId && user.uid) { // User exists but no teamId (needs onboarding)
+         if (pathname !== "/onboarding/create-team" && pathname !== "/signup") { // Allow signup if they landed there
+            router.replace("/onboarding/create-team");
+         }
       }
+      // If user and user.teamId exist, they are allowed on app pages.
+      // Redirection from /login or /signup to /dashboard is handled by AuthProvider.
     }
-  }, [user, isLoading, router, pathname]);
+  }, [user, authIsLoading, router, pathname]);
 
-  if (isLoading) {
+
+  if (authIsLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Icons.Dashboard className="h-12 w-12 animate-spin text-primary" />
@@ -60,25 +71,26 @@ export function AppLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!user) {
-    // If not loading and no user, useEffect will trigger redirect.
-    // Show a loading/redirecting message until then.
+  // If still loading, or no user and not on a public page, show loading/redirecting.
+  // This case should be minimal if AuthProvider handles redirects properly.
+  if (!user || (user && !user.teamId && pathname !== "/onboarding/create-team" && pathname !== "/signup" )) {
     return (
         <div className="flex h-screen items-center justify-center bg-background">
             <Icons.Dashboard className="h-12 w-12 animate-spin text-primary" />
-            <p className="ml-4 text-lg text-foreground">Redirecting to login...</p>
+            <p className="ml-4 text-lg text-foreground">Verifying access or redirecting...</p>
         </div>
     ); 
   }
   
-  const getInitials = (name: string) => {
-    if (!name) return "";
+  const getInitials = (name: string | undefined) => {
+    if (!name) return "?";
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
 
   const sidebarContent = (
     <nav className="grid items-start gap-2 text-sm font-medium">
       {navItems.map((item) => {
+        // Admin-only items are filtered out if user is not admin
         if (item.adminOnly && user?.role !== "admin") {
           return null;
         }
@@ -109,7 +121,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
             <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
               <Icons.TeamLogo />
-              <span className="">TeamEase</span>
+              <span className="">{currentTeam?.name || "TeamEase"}</span>
             </Link>
           </div>
           <div className="flex-1 overflow-auto py-2 px-2">
@@ -134,7 +146,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                <div className="flex h-14 items-center border-b px-4">
                 <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
                   <Icons.TeamLogo />
-                  <span className="">TeamEase</span>
+                  <span className="">{currentTeam?.name || "TeamEase"}</span>
                 </Link>
               </div>
               <div className="flex-1 overflow-auto py-2 px-2">{sidebarContent}</div>
@@ -147,7 +159,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <DropdownMenuTrigger asChild>
               <Button variant="secondary" size="icon" className="rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar" />
+                  <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user icon"/>
                   <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                 </Avatar>
                 <span className="sr-only">Toggle user menu</span>
@@ -157,7 +169,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => router.push('/settings')}>Settings</DropdownMenuItem>
-              <DropdownMenuItem>Support</DropdownMenuItem>
+              <DropdownMenuItem disabled>Support (soon)</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
             </DropdownMenuContent>

@@ -32,7 +32,7 @@ const trainingSchema = z.object({
 type TrainingFormValues = z.infer<typeof trainingSchema>;
 
 interface AddTrainingFormProps {
-  onSubmit: (data: Omit<Training, "id" | "attendance">) => void;
+  onSubmit: (data: Omit<Training, "id" | "attendance" | "order">) => void; // Exclude order
   initialData?: Training | null;
   onClose: () => void;
 }
@@ -42,18 +42,20 @@ export function AddTrainingForm({ onSubmit, initialData, onClose }: AddTrainingF
     resolver: zodResolver(trainingSchema),
     defaultValues: initialData ? {
       ...initialData,
-      date: new Date(initialData.date),
+      date: new Date(initialData.date), // Convert date string back to Date object for calendar
     } : {
       location: "Training Pitch A",
+      // date: new Date(),
       time: "19:00",
       description: "",
     },
   });
 
   const handleSubmit = (data: TrainingFormValues) => {
+    // `order` handled by service. `attendance` initialized by service.
     onSubmit({
       ...data,
-      date: format(data.date, "yyyy-MM-dd"),
+      date: format(data.date, "yyyy-MM-dd"), // Format date to string for Firestore
     });
   };
 
@@ -94,7 +96,7 @@ export function AddTrainingForm({ onSubmit, initialData, onClose }: AddTrainingF
                       ) : (
                         <span>Pick a date</span>
                       )}
-                      <Icons.Matches className="ml-auto h-4 w-4 opacity-50" />
+                      <Icons.CalendarDays className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
                   </FormControl>
                 </PopoverTrigger>

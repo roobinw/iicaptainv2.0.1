@@ -5,13 +5,13 @@ import type { ReactNode, Dispatch, SetStateAction } from "react";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"; 
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"; 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
 import type { Match, Training, User } from "@/types";
 import { useAuth } from "@/lib/auth";
-import { getPlayersByTeam } from "@/services/userService"; // Updated to getPlayersByTeam
+import { getPlayersByTeam } from "@/services/userService";
 import { AttendanceToggler, getAttendanceStatusColor, getAttendanceStatusText } from "./attendance-toggler";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,9 +23,9 @@ interface EventCardBaseProps {
   icon: ReactNode;
   titlePrefix?: string;
   renderDetails: (item: Match | Training) => ReactNode;
-  onEdit?: (item: Match | Training) => void;
-  onDelete?: (itemId: string) => void;
-  setForceUpdateList?: Dispatch<SetStateAction<number>>;
+  onEdit?: (item: Match | Training) => void; // Admin only
+  onDelete?: (itemId: string) => void; // Admin only
+  setForceUpdateList?: Dispatch<SetStateAction<number>>; // To trigger parent list refresh
 }
 
 export function EventCardBase({
@@ -40,36 +40,49 @@ export function EventCardBase({
 }: EventCardBaseProps) {
   const { user: currentUser } = useAuth(); 
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
-  const [forceUpdateCard, setForceUpdateCard] = useState(0); // Renamed to avoid confusion
   const [playerList, setPlayerList] = useState<User[]>([]);
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(false);
+  // Local state for the item's attendance to provide immediate feedback
+  const [currentAttendance, setCurrentAttendance] = useState(item.attendance || {});
+
 
   useEffect(() => {
-    // Fetch players when dialog opens and if teamId is available
-    if (isAttendanceDialogOpen && playerList.length === 0 && currentUser?.teamId) {
+    // Update local attendance state if the item prop changes from parent
+    setCurrentAttendance(item.attendance || {});
+  }, [item.attendance]);
+
+
+  useEffect(() => {
+    if (isAttendanceDialogOpen && currentUser?.teamId) {
       setIsLoadingPlayers(true);
-      getPlayersByTeam(currentUser.teamId) // Use getPlayersByTeam with teamId
-        .then(setPlayerList)
+      getPlayersByTeam(currentUser.teamId) 
+        .then(fetchedPlayers => {
+            setPlayerList(fetchedPlayers);
+            // Initialize attendance for any new players not yet in the item's attendance map
+            const updatedAttendance = {...currentAttendance};
+            fetchedPlayers.forEach(player => {
+                if (!(player.uid in updatedAttendance)) {
+                    updatedAttendance[player.uid] = 'unknown';
+                }
+            });
+            setCurrentAttendance(updatedAttendance);
+        })
         .catch(err => console.error("Failed to fetch players for attendance:", err))
         .finally(() => setIsLoadingPlayers(false));
     }
-  }, [isAttendanceDialogOpen, playerList.length, currentUser?.teamId]); // Add currentUser.teamId dependency
+  }, [isAttendanceDialogOpen, currentUser?.teamId]);
 
   const isAdmin = currentUser?.role === "admin";
 
   const handleAttendanceChange = (playerId: string, status: "present" | "absent" | "excused" | "unknown") => {
-    // This function now only updates the local item's attendance for immediate UI feedback.
-    // The actual Firestore update is handled by AttendanceToggler.
-    // We can trigger a re-render of this card specifically.
-    const currentItem = item; // Create a mutable copy
-    currentItem.attendance = { ...currentItem.attendance, [playerId]: status };
-    // This will cause EventCardBase to re-render with the new attendance map for this item.
-    // setItem(updatedItem); // If item were a state variable in this component
-    setForceUpdateCard(val => val + 1); // Or force re-render via a dummy state change
+    // Optimistically update local attendance state for immediate UI feedback
+    setCurrentAttendance(prev => ({ ...prev, [playerId]: status }));
     
-    // If the parent list (MatchesPage/TrainingsPage) needs to refresh (e.g. for summary counts),
-    // setForceUpdateList will trigger a refetch from Firestore.
-    if (setForceUpdateList) setForceUpdateList(val => val + 1);
+    // The actual Firestore update is handled by AttendanceToggler.
+    // If parent list needs a full refresh (e.g., for summary counts that depend on re-fetch), use setForceUpdateList.
+    if (setForceUpdateList) {
+      setForceUpdateList(val => val + 1); 
+    }
   };
   
   const getInitials = (name: string) => {
@@ -77,9 +90,9 @@ export function EventCardBase({
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
 
-  // Use playerList from state for total count if available and loaded.
-  const presentCount = Object.values(item.attendance).filter(status => status === 'present').length;
-  const totalPlayersToCount = playerList.length > 0 ? playerList.length : Object.keys(item.attendance).filter(uid => uid !== 'undefined').length;
+  const presentCount = Object.values(currentAttendance).filter(status => status === 'present').length;
+  // Use playerList.length for total if available, otherwise count known UIDs in attendance map
+  const totalPlayersToCount = playerList.length > 0 ? playerList.length : Object.keys(currentAttendance).filter(uid => uid !== 'undefined' && uid !== null).length;
 
 
   return (
@@ -111,16 +124,16 @@ export function EventCardBase({
       </CardHeader>
       <CardContent className="flex-grow">
         <p className="text-sm text-muted-foreground">
-            Attendance: <span className="font-semibold text-primary">{presentCount} / {isLoadingPlayers ? '...' : totalPlayersToCount}</span> players present.
+            Attendance: <span className="font-semibold text-primary">{presentCount} / {isLoadingPlayers && playerList.length === 0 ? '...' : totalPlayersToCount}</span> players present.
         </p>
       </CardContent>
       <CardFooter className="border-t pt-4">
         <Dialog open={isAttendanceDialogOpen} onOpenChange={setIsAttendanceDialogOpen}>
-          <Dialog.Trigger asChild>
+          <DialogTrigger asChild>
             <Button variant="outline" className="w-full">
               <Icons.Attendance className="mr-2 h-4 w-4" /> Manage Attendance
             </Button>
-          </Dialog.Trigger>
+          </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] md:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Manage Attendance</DialogTitle>
@@ -129,7 +142,7 @@ export function EventCardBase({
               </DialogDescription>
             </DialogHeader>
             <ScrollArea className="h-[300px] md:h-[400px] pr-4">
-              {isLoadingPlayers ? (
+              {isLoadingPlayers && playerList.length === 0 ? (
                 <div className="space-y-3 py-1">
                   {[1,2,3].map(i => (
                      <div key={i} className="flex items-center justify-between p-2 border rounded-md">
@@ -150,34 +163,31 @@ export function EventCardBase({
                     <div key={player.uid} className="flex items-center justify-between p-2 border rounded-md bg-card hover:bg-secondary/30">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={player.avatarUrl} alt={player.name} data-ai-hint="player avatar"/>
+                          <AvatarImage src={player.avatarUrl} alt={player.name} data-ai-hint="player face"/>
                           <AvatarFallback>{getInitials(player.name)}</AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="font-medium">{player.name}</p>
-                          <p className={cn("text-xs", getAttendanceStatusColor(item.attendance[player.uid] || 'unknown'))}>
-                              Status: {getAttendanceStatusText(item.attendance[player.uid] || 'unknown')}
+                          <p className={cn("text-xs", getAttendanceStatusColor(currentAttendance[player.uid] || 'unknown'))}>
+                              Status: {getAttendanceStatusText(currentAttendance[player.uid] || 'unknown')}
                           </p>
                         </div>
                       </div>
-                      {isAdmin ? (
-                         <AttendanceToggler 
-                           item={item} 
+                      {/* Pass the item with potentially updated currentAttendance to AttendanceToggler if it reads from item.attendance */}
+                      {/* Or ensure AttendanceToggler itself uses currentAttendance passed to it */}
+                       <AttendanceToggler 
+                           item={{...item, attendance: currentAttendance}} // Pass item with current local attendance
                            player={player} 
                            eventType={eventType} 
-                           onAttendanceChange={handleAttendanceChange} 
-                           setForceUpdate={setForceUpdateCard}
-                         />
-                      ) : (
-                         <span className={cn("text-sm font-semibold", getAttendanceStatusColor(item.attendance[player.uid] || 'unknown'))}>
-                             {getAttendanceStatusText(item.attendance[player.uid] || 'unknown')}
-                         </span>
-                      )}
+                           onAttendanceChange={handleAttendanceChange}
+                           // setForceUpdate is for the toggler to signal back if needed, not for the parent list.
+                           // setForceUpdateList is for this component to signal parent list.
+                       />
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground text-center py-4">No players in your team found.</p>
+                <p className="text-muted-foreground text-center py-4">No players found in your team.</p>
               )}
             </ScrollArea>
           </DialogContent>
