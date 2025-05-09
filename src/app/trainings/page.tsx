@@ -38,9 +38,19 @@ export default function TrainingsPage() {
     try {
       const fetchedTrainings = await getTrainings(teamId);
       setTrainings(fetchedTrainings);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching trainings:", error);
-      toast({ title: "Error", description: "Could not fetch trainings.", variant: "destructive" });
+      let description = "Could not fetch trainings.";
+      if (error.code === 'failed-precondition') {
+        description = "Query requires an index. Please ensure the necessary Firestore index is created and active. Check FIRESTORE_SETUP_AND_STRUCTURE.md for details.";
+      } else if (error.code === 'permission-denied') {
+        description = "Permission denied. Check Firestore security rules.";
+      } else if (error.message) {
+        // Use a more generic message if the error message itself might be too technical or sensitive
+        description = "An unexpected error occurred while fetching trainings."; 
+        console.error("Detailed error message:", error.message); // Log the specific message for developers
+      }
+      toast({ title: "Error Fetching Trainings", description, variant: "destructive" });
     } finally {
       setIsLoadingData(false);
     }
@@ -53,7 +63,7 @@ export default function TrainingsPage() {
       setTrainings([]);
       setIsLoadingData(false);
     }
-  }, [authLoading, user, currentTeam, forceUpdateCounter, toast]);
+  }, [authLoading, user, currentTeam, forceUpdateCounter]); // Removed toast from dependencies as it's stable
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.hash === "#add" && user?.role === "admin") {
@@ -239,3 +249,4 @@ export default function TrainingsPage() {
     </div>
   );
 }
+
