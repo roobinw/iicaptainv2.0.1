@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect } from "react";
@@ -12,13 +11,15 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!isLoading) {
-      if (user) {
+      if (user && user.teamId) { // User is authenticated and has a team
         router.replace("/dashboard");
-      } else {
+      } else if (user && !user.teamId) { // User is authenticated but not yet onboarded with a team
+        router.replace("/onboarding/create-team");
+      } else { // No user (not authenticated)
         router.replace("/login");
       }
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, router]); // user.teamId is part of the user object, so user dependency is sufficient
 
   return (
     <div className="flex h-screen items-center justify-center bg-background">
