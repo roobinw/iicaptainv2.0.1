@@ -135,11 +135,9 @@ This is a top-level collection where each document represents a user profile.
         // Helper function to get requesting user's data (role, teamId)
         // Returns user data if document exists, otherwise null.
         function getUserAuthData() {
-          let userDocPath = /databases/$(database)/documents/users/$(request.auth.uid);
-          if (exists(userDocPath)) {
-            return get(userDocPath).data;
-          }
-          return null;
+          // Construct the path string correctly using string concatenation for dynamic parts like request.auth.uid
+          let userDocumentPath = path('/databases/$(database)/documents/users/' + request.auth.uid);
+          return exists(userDocumentPath) ? get(userDocumentPath).data : null;
         }
 
         // Helper: Is the user signed in?
