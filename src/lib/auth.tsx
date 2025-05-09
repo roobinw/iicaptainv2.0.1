@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { User, UserRole } from "@/types";
@@ -19,9 +18,9 @@ interface AuthContextType {
   user: User | null;
   firebaseUser: FirebaseUser | null;
   isLoading: boolean;
-  login: (email: string, password_unused?: string) => Promise<void>; // Password now used by Firebase
+  login: (email: string, password?: string) => Promise<void>; 
   logout: () => Promise<void>;
-  signup: (email: string, name: string, password_unused?: string, role?: UserRole) => Promise<void>; // Password now used by Firebase
+  signup: (email: string, name: string, password?: string, role?: UserRole) => Promise<void>; 
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,58 +33,59 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!auth) { // Ensure auth is initialized (client-side)
-      setIsLoading(false); // Potentially handle this state differently if auth isn't ready
+    if (!auth) { 
+      setIsLoading(false); 
       return;
     }
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
-        // User is signed in, get their profile from Firestore
         const userDocRef = doc(db, "users", fbUser.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
           setUser({ id: userDocSnap.id, ...userDocSnap.data() } as User);
         } else {
-          // This case should ideally not happen if user profile is created on signup
-          // Or, it could mean we need to create a profile if it's missing
           console.warn("User document not found in Firestore for UID:", fbUser.uid);
-          setUser(null); // Or handle profile creation
+          setUser(null); 
         }
       } else {
-        // User is signed out
         setUser(null);
       }
       setIsLoading(false);
     });
 
-    return () => unsubscribe(); // Cleanup subscription on unmount
-  }, [router]);
+    return () => unsubscribe(); 
+  }, [router]); // Removed db from dependencies as it's stable; router is for navigation
 
-  const login = async (email: string, password_unused?: string) => {
-    // This is a mock login as Firebase requires a password.
-    // The actual Firebase login will happen on the login page.
-    // This function is now mostly for updating local state IF a user object is passed directly
-    // or could be removed/refactored if login page handles all Firebase auth calls.
-
-    // For the demo, we simulate a direct login with pre-defined user details for non-Firebase flow
-    // This part will be superseded by Firebase login page logic
-    if (!password_unused && !process.env.NEXT_PUBLIC_FIREBASE_API_KEY) { // Fallback to old mock if no Firebase
-        const mockUser: User = {
-          id: Date.now().toString(),
-          email,
-          name: email.split('@')[0],
-          role: email.startsWith('admin') ? 'admin' : 'player',
-          avatarUrl: `https://picsum.photos/seed/${email}/40/40`,
-        };
-        setUser(mockUser);
-        // localStorage.setItem("currentUser", JSON.stringify(mockUser)); // No longer using localStorage for session
-        router.push("/dashboard");
-        return;
+  const login = async (email: string, password?: string) => {
+    if (!auth) {
+      toast({ title: "Login Error", description: "Firebase authentication is not available.", variant: "destructive" });
+      throw new Error("Firebase auth not initialized");
     }
-    // If password_unused or Firebase is configured, it implies Firebase login is handled elsewhere (e.g. login page)
-    // This function might not be directly called with email/password anymore if login page uses signInWithEmailAndPassword directly.
-    // If it is, it should call Firebase here. For now, assume login page handles it.
+    if (!password) {
+      toast({ title: "Login Error", description: "Password is required.", variant: "destructive" });
+      throw new Error("Password is required for login.");
+    }
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({
+        title: "Login Successful",
+        description: "Welcome back!",
+      });
+      // onAuthStateChanged handles user state update and potential navigation
+    } catch (error: any) {
+      console.error("Firebase login error (AuthContext):", error);
+      let errorMessage = "Failed to login. Please check your credentials.";
+      if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password" || error.code === "auth/invalid-credential") {
+        errorMessage = "Invalid email or password.";
+      }
+      toast({
+        title: "Login Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error; 
+    }
   };
 
   const logout = async () => {
@@ -94,7 +94,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await firebaseSignOut(auth);
       setUser(null);
       setFirebaseUser(null);
-      // localStorage.removeItem("currentUser"); // No longer using localStorage
       router.push("/login");
     } catch (error: any) {
       console.error("Error signing out: ", error);
@@ -104,23 +103,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  // Signup now creates user in Firebase Auth and Firestore
-  const signup = async (email: string, name: string, password_unused?: string, role: UserRole = "player") => {
-     // This is a mock signup as Firebase requires a password.
-    // The actual Firebase signup will happen on the signup page.
-    if (!password_unused && !process.env.NEXT_PUBLIC_FIREBASE_API_KEY) { // Fallback to old mock if no Firebase
-        const mockUser: User = {
-          id: Date.now().toString(),
-          email,
-          name,
-          role,
-          avatarUrl: `https://picsum.photos/seed/${email}/40/40`,
-        };
-        setUser(mockUser);
-        router.push("/dashboard");
-        return;
+  const signup = async (email: string, name: string, password?: string, role: UserRole = "player") => {
+    if (!auth || !db) {
+        toast({ title: "Signup Error", description: "Firebase services are not available.", variant: "destructive" });
+        throw new Error("Firebase services not initialized");
     }
-    // If password_unused or Firebase is configured, actual signup is handled on signup page.
+    if (!password) {
+        toast({ title: "Signup Error", description: "Password is required.", variant: "destructive" });
+        throw new Error("Password is required for signup.");
+    }
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const fbUser = userCredential.user;
+
+      const userDocRef = doc(db, "users", fbUser.uid);
+      await setDoc(userDocRef, {
+        uid: fbUser.uid,
+        email: email,
+        name: name,
+        role: role,
+        avatarUrl: `https://picsum.photos/seed/${email}/80/80`,
+        createdAt: serverTimestamp(),
+      });
+      
+      toast({
+        title: "Account Created",
+        description: "Welcome to TeamEase! You're now logged in.",
+      });
+      // onAuthStateChanged handles user state update and potential navigation
+    } catch (error: any) {
+      console.error("Firebase signup error (AuthContext):", error);
+      let errorMessage = "Failed to create account. Please try again.";
+      if (error.code === "auth/email-already-in-use") {
+        errorMessage = "This email address is already in use.";
+      } else if (error.code === "auth/weak-password") {
+        errorMessage = "Password is too weak. Please choose a stronger password.";
+      }
+      toast({
+        title: "Signup Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error; 
+    }
   };
 
   return (
