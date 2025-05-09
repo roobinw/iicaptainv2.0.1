@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Icons } from "@/components/icons";
 import { PlayerCard } from "@/components/player-card";
-import { AddPlayerForm } from "@/components/add-player-form";
-import type { User, UserRole } from "@/types";
+import { AddPlayerForm, type PlayerFormValuesExtended } from "@/components/add-player-form";
+import type { User } from "@/types";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -56,20 +55,29 @@ export default function PlayersPage() {
     }
   }, [currentUser?.role]);
 
-  const handleAddPlayer = async (data: Pick<User, 'name' | 'email' | 'role'>) => {
+  const handleAddPlayer = async (data: PlayerFormValuesExtended) => {
     if (!currentUser?.teamId) {
         toast({ title: "Error", description: "Team information is missing.", variant: "destructive"});
         return;
     }
+    if (!data.password) {
+      toast({ title: "Error", description: "Password is required to create a new player account.", variant: "destructive"});
+      return;
+    }
     try {
-      // addPlayerProfileToTeam now expects role directly
-      await addPlayerProfileToTeam(data, currentUser.teamId);
-      toast({ title: "Player Profile Added", description: `${data.name} has been added to your team.` });
+      // addPlayerProfileToTeam now expects email, password, name, role.
+      await addPlayerProfileToTeam({
+        email: data.email,
+        password: data.password, // Pass the password
+        name: data.name,
+        role: data.role,
+      }, currentUser.teamId);
+      toast({ title: "Player Account Created", description: `${data.name} has been added and their account created.` });
       setForceUpdateCounter(prev => prev + 1);
       setIsAddPlayerDialogOpen(false);
     } catch (error: any) {
-      console.error("Error adding player:", error);
-      toast({ title: "Error", description: error.message || "Could not add player profile.", variant: "destructive" });
+      console.error("Error adding player and creating account:", error);
+      toast({ title: "Error", description: error.message || "Could not add player or create account.", variant: "destructive" });
     }
   };
 
@@ -78,14 +86,14 @@ export default function PlayersPage() {
     setIsAddPlayerDialogOpen(true);
   };
 
-  const handleUpdatePlayer = async (data: Pick<User, 'name' | 'email' | 'role' | 'avatarUrl'>) => {
+  const handleUpdatePlayer = async (data: PlayerFormValuesExtended) => { // Now uses PlayerFormValuesExtended
     if (!editingPlayer || !editingPlayer.uid || !currentUser?.teamId) {
         toast({ title: "Error", description: "Player or team information missing for update.", variant: "destructive"});
         return;
     }
     try {
-      // updateUserProfile takes UID and a partial User object.
-      // Email is usually not updated for auth users here, but role and name are common.
+      // Password changes are not handled in this function for editing.
+      // Email is disabled for editing in the form.
       const updatePayload: Partial<Omit<User, 'id' | 'uid' | 'email' | 'createdAt'>> = {
         name: data.name,
         role: data.role,
@@ -111,7 +119,9 @@ export default function PlayersPage() {
       toast({ title: "Action Denied", description: "You cannot delete your own profile.", variant: "destructive"});
       return;
     }
-    if (!window.confirm(`Are you sure you want to remove ${playerToDelete.name}'s profile? This does not delete their authentication account if they have one, only their profile in this team.`)) return;
+    // Consider adding a check: if the user has a Firebase Auth account, this only deletes the Firestore profile.
+    // True deletion of auth account would require Firebase Admin SDK on backend or re-authentication.
+    if (!window.confirm(`Are you sure you want to remove ${playerToDelete.name}'s profile from this team? This does NOT delete their login account if one exists.`)) return;
     
     try {
       await deleteUserProfile(playerToDelete.uid);
@@ -167,19 +177,19 @@ export default function PlayersPage() {
           }}>
             <DialogTrigger asChild>
               <Button>
-                <Icons.Add className="mr-2 h-4 w-4" /> Add Player Profile
+                <Icons.Add className="mr-2 h-4 w-4" /> Add Player & Create Account
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>{editingPlayer ? "Edit Player Profile" : "Add New Player Profile"}</DialogTitle>
+                <DialogTitle>{editingPlayer ? "Edit Player Profile" : "Add New Player & Create Account"}</DialogTitle>
                 <DialogDescription>
-                  {editingPlayer ? "Update player profile details." : "Enter the new player's information to add them to your team."}
+                  {editingPlayer ? "Update player profile details." : "Enter the new player's information. An account will be created for them."}
                 </DialogDescription>
               </DialogHeader>
               <AddPlayerForm 
                 onSubmit={editingPlayer ? handleUpdatePlayer : handleAddPlayer}
-                initialData={editingPlayer}
+                initialDataProp={editingPlayer} // Pass editingPlayer here
                 onClose={() => {
                   setIsAddPlayerDialogOpen(false);
                   setEditingPlayer(null);
@@ -207,7 +217,7 @@ export default function PlayersPage() {
                 <CardTitle>No Players Found</CardTitle>
                 <CardDescription>
                 {searchTerm ? "No players match your search criteria." : "There are no players in your team yet."}
-                {isAdmin && !searchTerm && " Click 'Add Player Profile' to add members."}
+                {isAdmin && !searchTerm && " Click 'Add Player & Create Account' to add members."}
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -218,7 +228,7 @@ export default function PlayersPage() {
                     </p>
                     {isAdmin && !searchTerm && (
                         <Button className="mt-4" onClick={() => {setEditingPlayer(null); setIsAddPlayerDialogOpen(true);}}>
-                            <Icons.Add className="mr-2 h-4 w-4" /> Add First Player Profile
+                            <Icons.Add className="mr-2 h-4 w-4" /> Add First Player
                         </Button>
                     )}
                 </div>
@@ -230,8 +240,8 @@ export default function PlayersPage() {
             <PlayerCard 
               key={player.uid} 
               player={player} 
-              onEdit={isAdmin ? handleEditPlayer : undefined} 
-              onDelete={isAdmin ? () => handleDeletePlayer(player) : undefined}
+              onEdit={isAdmin && player.uid !== currentUser.uid ? handleEditPlayer : undefined} 
+              onDelete={isAdmin && player.uid !== currentUser.uid ? () => handleDeletePlayer(player) : undefined}
             />
           ))}
         </div>
