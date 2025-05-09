@@ -13,36 +13,41 @@ const firebaseConfig = {
   // measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID // Optional
 };
 
-let app: FirebaseApp | undefined;
-let auth: Auth | undefined;
-let db: Firestore | undefined;
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
 
-if (typeof window !== 'undefined') { // Ensure Firebase is initialized only on the client-side
-  if (!firebaseConfig.apiKey) {
-    console.error(
-      "Firebase API Key is missing or invalid. " +
-      "Please set NEXT_PUBLIC_FIREBASE_API_KEY in your .env.local file. " +
-      "Refer to .env.example for the required Firebase environment variables."
-    );
-    // Not throwing an error here to let Firebase SDK attempt initialization and provide its own error,
-    // which might be more specific if the key is present but malformed.
-  }
-  
-  // Attempt to initialize Firebase even if API key check fails,
-  // to allow Firebase SDK's own error reporting to take precedence.
-  try {
-    app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-    auth = getAuth(app);
-    db = getFirestore(app);
-  } catch (error) {
-      console.error("Error initializing Firebase. Ensure your Firebase configuration in .env.local is correct:", error);
-      // This catch block provides context if initializeApp or getAuth fails.
-  }
-} else {
-    // Server-side: app, auth, db will remain undefined.
-    // Server-side Firebase usage (e.g., Admin SDK) would require a different setup
-    // and typically not be initialized in this client-focused file.
+// This block will run on both client and server.
+// The Firebase SDK handles ensuring that initializeApp is only effectively called once.
+
+// Explicitly check for the API key first, as it's a common critical error.
+if (!firebaseConfig.apiKey) {
+  const errorMessage = "CRITICAL: Firebase API Key (NEXT_PUBLIC_FIREBASE_API_KEY) is missing or invalid in your environment configuration (.env.local). Firebase services will not be available. Refer to .env.example for required variables.";
+  console.error(errorMessage);
+  // Throw an error to prevent the application from attempting to start in a broken state.
+  throw new Error(errorMessage);
 }
 
+try {
+  // Initialize Firebase App if it hasn't been already
+  if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApp(); // Retrieve the existing app if already initialized
+  }
+
+  // Get Auth and Firestore instances
+  auth = getAuth(app);
+  db = getFirestore(app);
+
+} catch (e) {
+  const error = e as Error; // Cast to Error type for better error message access
+  const criticalErrorMessage = `CRITICAL: Firebase initialization failed: ${error.message}. This usually indicates misconfigured Firebase environment variables (NEXT_PUBLIC_FIREBASE_*) or issues with your Firebase project setup. Please review your .env.local file, compare with .env.example, and check your Firebase project console.`;
+  console.error(criticalErrorMessage);
+  console.error("Original Firebase SDK error:", error); // Log the original error object for more details
+  // Re-throw to ensure this critical failure stops the application or relevant part from proceeding without Firebase.
+  throw new Error(criticalErrorMessage);
+}
 
 export { app, auth, db };
+
