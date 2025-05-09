@@ -13,6 +13,7 @@ import type { Match, Training, User } from "@/types";
 import { useAuth } from "@/lib/auth";
 import { mockUsers } from "@/lib/mock-data";
 import { AttendanceToggler, getAttendanceStatusColor, getAttendanceStatusText } from "./attendance-toggler";
+import { cn } from "@/lib/utils";
 
 interface EventCardBaseProps {
   item: Match | Training;
@@ -147,3 +148,4 @@ export function EventCardBase({
     </Card>
   );
 }
+
