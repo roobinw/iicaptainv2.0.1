@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Icons } from "@/components/icons";
 import { PanelLeft } from "lucide-react";
+import { useEffect } from "react";
 
 interface NavItem {
   href: string;
@@ -39,6 +40,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, isLoading, router]);
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -48,15 +55,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }
 
   if (!user) {
-    // This should ideally be handled by middleware or route protection
-    // For client-side, redirect if not logged in
-    if (typeof window !== 'undefined') {
-       router.push("/login");
-    }
-    return null; 
+    // router.push will be called by useEffect, return null or loading indicator
+    return (
+        <div className="flex h-screen items-center justify-center">
+            <Icons.Dashboard className="h-12 w-12 animate-spin text-primary" />
+            <p className="ml-4 text-lg text-foreground">Redirecting...</p>
+        </div>
+    ); 
   }
   
   const getInitials = (name: string) => {
+    if (!name) return "";
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
 
