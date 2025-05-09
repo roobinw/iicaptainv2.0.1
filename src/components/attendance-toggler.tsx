@@ -4,7 +4,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import type { Match, Training, User as PlayerUser } from "@/types"; // Renamed User to PlayerUser to avoid conflict
+import type { Match, Training, User as PlayerUser } from "@/types"; 
 import { updateMatchAttendance } from "@/services/matchService";
 import { updateTrainingAttendance } from "@/services/trainingService";
 import { useToast } from "@/hooks/use-toast";
@@ -12,24 +12,22 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 
 
-type AttendanceStatus = "present" | "absent" | "excused" | "unknown";
+export type AttendanceStatus = "present" | "absent" | "excused" | "unknown";
 
 interface AttendanceTogglerProps {
-  item: Match | Training; // This item should have the most up-to-date attendance map from EventCardBase
+  item: Match | Training; 
   player: PlayerUser; 
   eventType: "match" | "training";
   onAttendanceChange: (playerId: string, status: AttendanceStatus) => void; 
-  // setForceUpdate is optional, can be used if Toggler needs to trigger a re-render of itself or its direct parent if state is complex
   setForceUpdate?: Dispatch<SetStateAction<number>>; 
 }
 
 export function AttendanceToggler({ item, player, eventType, onAttendanceChange, setForceUpdate }: AttendanceTogglerProps) {
-  const { user: currentUser } = useAuth(); // For teamId and potentially role checks
+  const { user: currentUser } = useAuth(); 
   const { toast } = useToast();
   
-  // Ensure player.uid is used, as 'id' might be Firestore doc ID from User type, but attendance keys are Firebase UIDs.
   const playerIdForAttendance = player.uid; 
-  const currentStatus = item.attendance[playerIdForAttendance] || "unknown";
+  const currentStatus: AttendanceStatus = item.attendance[playerIdForAttendance] || "present"; // Default to "present"
 
   const handleAttendance = async (newStatus: AttendanceStatus) => {
     if (!item.id || !playerIdForAttendance) {
@@ -41,9 +39,8 @@ export function AttendanceToggler({ item, player, eventType, onAttendanceChange,
         return;
     }
 
-    // Optimistically call onAttendanceChange to update UI in EventCardBase immediately
     onAttendanceChange(playerIdForAttendance, newStatus);
-    if(setForceUpdate) setForceUpdate(val => val + 1); // If Toggler itself needs a re-render
+    if(setForceUpdate) setForceUpdate(val => val + 1); 
 
     try {
       if (eventType === "match") {
@@ -51,13 +48,10 @@ export function AttendanceToggler({ item, player, eventType, onAttendanceChange,
       } else {
         await updateTrainingAttendance(currentUser.teamId, item.id, playerIdForAttendance, newStatus);
       }
-      // Toast success (optional, can be too noisy if updating many players)
-      // toast({title: "Attendance Updated", description: `${player.name}'s status set to ${newStatus}.`});
     } catch (error: any) {
       console.error("Error updating attendance in Firestore:", error);
       toast({title: "Update Failed", description: error.message || "Could not save attendance change.", variant: "destructive"});
-      // Revert optimistic update if Firestore fails
-      onAttendanceChange(playerIdForAttendance, currentStatus); // Revert to original status
+      onAttendanceChange(playerIdForAttendance, currentStatus); 
     }
   };
 
@@ -72,7 +66,7 @@ export function AttendanceToggler({ item, player, eventType, onAttendanceChange,
           currentStatus === "present" && "bg-green-500 hover:bg-green-600 text-white border-green-600"
         )}
         aria-label="Mark as Present"
-        disabled={!currentUser || currentUser.role !== 'admin'} // Only admin can change
+        disabled={!currentUser || currentUser.role !== 'admin'} 
       >
         <Icons.CheckCircle2 className="h-4 w-4" />
       </Button>
@@ -114,8 +108,8 @@ export const getAttendanceStatusColor = (status: AttendanceStatus): string => {
       return "text-red-600 dark:text-red-400";
     case "excused":
       return "text-yellow-600 dark:text-yellow-400";
-    default:
-      return "text-muted-foreground";
+    default: // This includes "unknown" or any other case, will default to present if not specified
+      return "text-muted-foreground"; 
   }
 };
 
@@ -127,7 +121,7 @@ export const getAttendanceStatusText = (status: AttendanceStatus): string => {
       return "Absent";
     case "excused":
       return "Excused";
-    default:
-      return "Unknown";
+    default: // This includes "unknown" or any other case
+      return "Unknown"; // Keep "Unknown" as a possible display text if status explicitly becomes "unknown"
   }
 };

@@ -11,8 +11,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
 import type { Match, Training, User } from "@/types";
 import { useAuth } from "@/lib/auth";
-import { getAllUsersByTeam } from "@/services/userService"; // Changed from getPlayersByTeam
-import { AttendanceToggler, getAttendanceStatusColor, getAttendanceStatusText } from "./attendance-toggler";
+import { getAllUsersByTeam } from "@/services/userService"; 
+import { AttendanceToggler, getAttendanceStatusColor, getAttendanceStatusText, type AttendanceStatus } from "./attendance-toggler";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -40,8 +40,8 @@ export function EventCardBase({
 }: EventCardBaseProps) {
   const { user: currentUser } = useAuth(); 
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
-  const [memberList, setMemberList] = useState<User[]>([]); // Renamed from playerList to memberList
-  const [isLoadingMembers, setIsLoadingMembers] = useState(false); // Renamed
+  const [memberList, setMemberList] = useState<User[]>([]); 
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false); 
   // Local state for the item's attendance to provide immediate feedback
   const [currentAttendance, setCurrentAttendance] = useState(item.attendance || {});
 
@@ -54,27 +54,29 @@ export function EventCardBase({
 
   useEffect(() => {
     if (isAttendanceDialogOpen && currentUser?.teamId) {
-      setIsLoadingMembers(true); // Changed to setIsLoadingMembers
-      getAllUsersByTeam(currentUser.teamId) // Changed from getPlayersByTeam to getAllUsersByTeam
-        .then(fetchedMembers => { // Changed from fetchedPlayers to fetchedMembers
-            setMemberList(fetchedMembers); // Changed from setPlayerList to setMemberList
+      setIsLoadingMembers(true); 
+      getAllUsersByTeam(currentUser.teamId) 
+        .then(fetchedMembers => { 
+            setMemberList(fetchedMembers); 
             // Initialize attendance for any new members not yet in the item's attendance map
+            // Default to "present" for members not yet in the attendance list
             const updatedAttendance = {...currentAttendance};
-            fetchedMembers.forEach(member => { // Changed from player to member
+            fetchedMembers.forEach(member => { 
                 if (!(member.uid in updatedAttendance)) {
-                    updatedAttendance[member.uid] = 'unknown';
+                    updatedAttendance[member.uid] = 'present'; // Default to present
                 }
             });
             setCurrentAttendance(updatedAttendance);
         })
         .catch(err => console.error("Failed to fetch team members for attendance:", err))
-        .finally(() => setIsLoadingMembers(false)); // Changed to setIsLoadingMembers
+        .finally(() => setIsLoadingMembers(false)); 
     }
-  }, [isAttendanceDialogOpen, currentUser?.teamId, currentAttendance]); // Added currentAttendance to re-evaluate if it changes externally
+  }, [isAttendanceDialogOpen, currentUser?.teamId]); // Removed currentAttendance from dependencies to prevent potential loops, default logic is now in this effect
+
 
   const isAdmin = currentUser?.role === "admin";
 
-  const handleAttendanceChange = (memberId: string, status: "present" | "absent" | "excused" | "unknown") => {
+  const handleAttendanceChange = (memberId: string, status: AttendanceStatus) => {
     // Optimistically update local attendance state for immediate UI feedback
     setCurrentAttendance(prev => ({ ...prev, [memberId]: status }));
     
@@ -159,7 +161,7 @@ export function EventCardBase({
                 </div>
               ) : memberList.length > 0 ? (
                 <div className="space-y-3 py-1">
-                  {memberList.map((member) => (  // Changed from player to member
+                  {memberList.map((member) => (  
                     <div key={member.uid} className="flex items-center justify-between p-2 border rounded-md bg-card hover:bg-secondary/30">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
@@ -168,14 +170,14 @@ export function EventCardBase({
                         </Avatar>
                         <div>
                           <p className="font-medium">{member.name}</p>
-                          <p className={cn("text-xs", getAttendanceStatusColor(currentAttendance[member.uid] || 'unknown'))}>
-                              Status: {getAttendanceStatusText(currentAttendance[member.uid] || 'unknown')}
+                          <p className={cn("text-xs", getAttendanceStatusColor(currentAttendance[member.uid] || 'present'))}>
+                              Status: {getAttendanceStatusText(currentAttendance[member.uid] || 'present')}
                           </p>
                         </div>
                       </div>
                        <AttendanceToggler 
                            item={{...item, attendance: currentAttendance}} 
-                           player={member} // Changed from player to member
+                           player={member} 
                            eventType={eventType} 
                            onAttendanceChange={handleAttendanceChange}
                        />
