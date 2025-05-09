@@ -79,7 +79,7 @@ This is a top-level collection where each document represents a user profile.
 {
   "name": "The Roaring Lions",
   "ownerUid": "firebaseUserUidAbc",
-  "createdAt": "October 26, 2023 at 10:00:00 AM UTC+2" 
+  "createdAt": "October 26, 2023 at 10:00:00 AM UTC+2"
 }
 ```
 
@@ -126,15 +126,20 @@ This is a top-level collection where each document represents a user profile.
     *   Default security rules (especially in "Production mode") are highly restrictive. You **must** configure Firestore Security Rules.
     *   These rules enforce multi-tenancy (a user can only access data for their own team) and role-based access (only an admin can create/modify team-wide data like matches or other player profiles within their team).
 
-    **Example Security Rules:**
+    **Example Security Rules (Updated with more robust helpers):**
     ```firestore-rules
     rules_version = '2';
     service cloud.firestore {
       match /databases/{database}/documents {
 
         // Helper function to get requesting user's data (role, teamId)
-        function getUserData() {
-          return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+        // Returns user data if document exists, otherwise null.
+        function getUserAuthData() {
+          let userDocPath = /databases/$(database)/documents/users/$(request.auth.uid);
+          if (exists(userDocPath)) {
+            return get(userDocPath).data;
+          }
+          return null;
         }
 
         // Helper: Is the user signed in?
@@ -144,15 +149,17 @@ This is a top-level collection where each document represents a user profile.
 
         // Helper: Does the requesting user belong to the specified teamId?
         function isUserTeamMember(teamId) {
-          return isSignedIn() && getUserData().teamId == teamId;
+          let userAuthRecord = getUserAuthData();
+          return isSignedIn() && userAuthRecord != null && userAuthRecord.teamId == teamId;
         }
 
         // Helper: Is the requesting user an admin of the specified teamId?
         function isUserTeamAdmin(teamId) {
-          return isUserTeamMember(teamId) && getUserData().role == 'admin';
+          // isUserTeamMember already checks isSignedIn and if userAuthRecord is null
+          return isUserTeamMember(teamId) && getUserAuthData().role == 'admin';
         }
         
-        // Helper: Is the user creating their own document?
+        // Helper: Is the user creating/modifying their own document?
         function isOwner(userId) {
           return request.auth != null && request.auth.uid == userId;
         }
@@ -172,16 +179,14 @@ This is a top-level collection where each document represents a user profile.
 
         // Users collection
         match /users/{userId} {
-          // Any signed-in user can read any user profile (e.g., to see names for attendance).
-          // Or, more restrictively: if isUserTeamMember(resource.data.teamId) (only see users in your own team).
-          // For simplicity, allowing any signed-in user to read profiles.
+          // Any signed-in user can read any user profile (e.g., to see names for attendance or their own profile).
           allow read: if isSignedIn();
 
           // A user can create their own profile document.
           // This is handled during signup where teamId and role are also set.
           allow create: if isOwner(userId) && 
                           request.resource.data.uid == userId &&
-                          request.resource.data.email != null && // ensure basic fields
+                          request.resource.data.email != null && 
                           request.resource.data.name != null &&
                           request.resource.data.role != null &&
                           request.resource.data.teamId != null; 
@@ -193,17 +198,18 @@ This is a top-level collection where each document represents a user profile.
           allow update: if isSignedIn() &&
                           (
                             (isOwner(userId) && 
-                              !(request.resource.data.role != resource.data.role || // prevent self-role change
-                                request.resource.data.teamId != resource.data.teamId || // prevent self-teamId change
-                                request.resource.data.email != resource.data.email    // prevent email change
+                              !(request.resource.data.role != resource.data.role || 
+                                request.resource.data.teamId != resource.data.teamId || 
+                                request.resource.data.email != resource.data.email    
                                )) || 
-                            (isUserTeamAdmin(resource.data.teamId) && // Admin updating others in their team
-                             request.resource.data.teamId == resource.data.teamId && // Ensure admin isn't changing target's teamId
-                             userId != request.auth.uid // Admin cannot change their own role/teamId this way
+                            (isUserTeamAdmin(resource.data.teamId) && 
+                             request.resource.data.teamId == resource.data.teamId && 
+                             userId != request.auth.uid 
                             ) 
                           );
           
           // An admin can delete user profiles from their team (except their own).
+          // resource.data.teamId refers to the teamId of the user being deleted.
           allow delete: if isUserTeamAdmin(resource.data.teamId) && userId != request.auth.uid;
         }
 
@@ -229,3 +235,4 @@ This is a top-level collection where each document represents a user profile.
 
 By following this structure and implementing robust security rules, your TeamEase application will have a solid foundation for managing team data securely and efficiently for multiple teams.
 The application code in `src/services/` is designed to work with this Firestore structure.
+
