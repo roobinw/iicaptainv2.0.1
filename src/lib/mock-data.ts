@@ -102,7 +102,7 @@ export const addMockMatch = (newMatch: Omit<Match, 'id' | 'attendance'>): Match 
 };
 
 export const addMockTraining = (newTraining: Omit<Training, 'id' | 'attendance'>): Training => {
- туристических  const training: Training = {
+  const training: Training = {
     ...newTraining,
     id: `training-${Date.now()}`,
     attendance: assignAttendance(mockPlayers), // Or initialize as all unknown
@@ -134,3 +134,4 @@ export const updatePlayerAttendance = (
     eventList[eventIndex].attendance[playerId] = status;
   }
 };
+
