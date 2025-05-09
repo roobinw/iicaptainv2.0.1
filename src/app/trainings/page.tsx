@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -16,6 +15,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { SortableItem } from '@/components/sortable-item';
 import { addTraining, getTrainings, updateTraining, deleteTraining, updateTrainingsOrder } from "@/services/trainingService";
 import { Skeleton } from "@/components/ui/skeleton";
+import { format, parseISO } from "date-fns";
 
 export default function TrainingsPage() {
   const { user, isLoading: authLoading, currentTeam } = useAuth();
@@ -190,7 +190,10 @@ export default function TrainingsPage() {
               <DialogHeader>
                 <DialogTitle>{editingTraining ? "Edit Training" : "Add New Training"}</DialogTitle>
                 <DialogDescription>
-                  {editingTraining ? "Update the details for this training session." : "Fill in the details for the new training session."}
+                  {editingTraining 
+                    ? `Update details for training at ${editingTraining.location} on ${format(parseISO(editingTraining.date), "MMM dd, yyyy")}.`
+                    : "Fill in the details for the new training session."
+                  }
                 </DialogDescription>
               </DialogHeader>
               <AddTrainingForm 
@@ -249,4 +252,3 @@ export default function TrainingsPage() {
     </div>
   );
 }
-

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -16,6 +15,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { SortableItem } from '@/components/sortable-item';
 import { addMatch, getMatches, updateMatch, deleteMatch, updateMatchesOrder } from "@/services/matchService";
 import { Skeleton } from "@/components/ui/skeleton";
+import { format, parseISO } from "date-fns";
 
 export default function MatchesPage() {
   const { user, isLoading: authLoading, currentTeam } = useAuth();
@@ -101,7 +101,7 @@ export default function MatchesPage() {
       // Ensure date is string "yyyy-MM-dd", other fields as is from form
       const updatePayload = { ...data, date: typeof data.date === 'string' ? data.date : (data.date as Date).toISOString().split('T')[0] };
       await updateMatch(user.teamId, editingMatch.id, updatePayload);
-      toast({ title: "Match Updated", description: `Match against data.opponent updated.` });
+      toast({ title: "Match Updated", description: `Match against ${data.opponent} updated.` });
       setForceUpdateCounter(prev => prev + 1);
       setIsAddMatchDialogOpen(false);
       setEditingMatch(null);
@@ -194,7 +194,10 @@ export default function MatchesPage() {
               <DialogHeader>
                 <DialogTitle>{editingMatch ? "Edit Match" : "Add New Match"}</DialogTitle>
                 <DialogDescription>
-                  {editingMatch ? "Update the details for this match." : "Fill in the details for the new match."}
+                  {editingMatch 
+                    ? `Update details for match vs ${editingMatch.opponent} on ${format(parseISO(editingMatch.date), "MMM dd, yyyy")}.`
+                    : "Fill in the details for the new match."
+                  }
                 </DialogDescription>
               </DialogHeader>
               <AddMatchForm 
@@ -242,8 +245,6 @@ export default function MatchesPage() {
                     match={match} 
                     onEdit={isAdmin ? handleEditMatch : undefined} 
                     onDelete={isAdmin ? handleDeleteMatch : undefined}
-                    // Pass teamId to MatchCard if it needs it for operations like attendance
-                    // teamId={user.teamId!} Pass setForceUpdateCounter if MatchCard needs to trigger list refresh
                     setForceUpdateList={setForceUpdateCounter} 
                   />
                 </SortableItem>

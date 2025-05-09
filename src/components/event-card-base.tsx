@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ReactNode, Dispatch, SetStateAction } from "react";
@@ -41,47 +40,81 @@ export function EventCardBase({
   const { user: currentUser } = useAuth(); 
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
   const [memberList, setMemberList] = useState<User[]>([]); 
-  const [isLoadingMembers, setIsLoadingMembers] = useState(false); 
-  // Local state for the item's attendance to provide immediate feedback
-  const [currentAttendance, setCurrentAttendance] = useState(item.attendance || {});
+  const [isLoadingMembers, setIsLoadingMembers] = useState(true); // Start true
+  const [currentAttendance, setCurrentAttendance] = useState<Record<string, AttendanceStatus>>(item.attendance || {});
 
 
   useEffect(() => {
-    // Update local attendance state if the item prop changes from parent
-    setCurrentAttendance(item.attendance || {});
-  }, [item.attendance]);
+    // Fetch members and initialize attendance on mount or when item/user changes
+    if (currentUser?.teamId) {
+      setIsLoadingMembers(true);
+      getAllUsersByTeam(currentUser.teamId)
+        .then(fetchedMembers => {
+          setMemberList(fetchedMembers);
+          const initialAttendanceFromItem = item.attendance || {};
+          const newInitializedAttendance: Record<string, AttendanceStatus> = {};
 
+          fetchedMembers.forEach(member => {
+            newInitializedAttendance[member.uid] = initialAttendanceFromItem[member.uid] || 'present';
+          });
+          setCurrentAttendance(newInitializedAttendance);
+        })
+        .catch(err => {
+          console.error(`Failed to fetch team members for ${eventType} card:`, err);
+          // Fallback: use item.attendance directly if member fetch fails, clear memberList
+          setMemberList([]);
+          setCurrentAttendance(item.attendance || {});
+        })
+        .finally(() => setIsLoadingMembers(false));
+    } else {
+      // No teamId, clear members and use item's attendance
+      setMemberList([]);
+      setCurrentAttendance(item.attendance || {});
+      setIsLoadingMembers(false);
+    }
+  }, [currentUser?.teamId, item.id, item.attendance, eventType]); // Added eventType for logging
 
+  // This effect can be simplified or merged if the above effect correctly handles dialog opening too.
+  // For now, it ensures members are re-fetched or re-processed if dialog opens and list is empty.
   useEffect(() => {
     if (isAttendanceDialogOpen && currentUser?.teamId) {
-      setIsLoadingMembers(true); 
-      getAllUsersByTeam(currentUser.teamId) 
-        .then(fetchedMembers => { 
-            setMemberList(fetchedMembers); 
-            // Initialize attendance for any new members not yet in the item's attendance map
-            // Default to "present" for members not yet in the attendance list
-            const updatedAttendance = {...currentAttendance};
-            fetchedMembers.forEach(member => { 
-                if (!(member.uid in updatedAttendance)) {
-                    updatedAttendance[member.uid] = 'present'; // Default to present
-                }
+      // If memberList is empty or needs refresh upon dialog open, (re)fetch.
+      // The main effect should cover initial load; this is more for refresh on dialog open if needed.
+      if (memberList.length === 0) { // Only fetch if list is empty to avoid redundant calls
+        setIsLoadingMembers(true);
+        getAllUsersByTeam(currentUser.teamId)
+          .then(fetchedMembers => {
+            setMemberList(fetchedMembers);
+            // Re-initialize attendance based on newly fetched members and current item.attendance
+            const initialAttendanceFromItem = item.attendance || {};
+            const updatedAttendance: Record<string, AttendanceStatus> = {};
+            fetchedMembers.forEach(member => {
+              updatedAttendance[member.uid] = initialAttendanceFromItem[member.uid] || 'present';
             });
-            setCurrentAttendance(updatedAttendance);
-        })
-        .catch(err => console.error("Failed to fetch team members for attendance:", err))
-        .finally(() => setIsLoadingMembers(false)); 
+            // Merge with any optimistic updates already in currentAttendance
+            setCurrentAttendance(prev => ({...updatedAttendance, ...prev}));
+          })
+          .catch(err => console.error("Failed to fetch team members on dialog open:", err))
+          .finally(() => setIsLoadingMembers(false));
+      } else {
+        // If memberList is already populated, ensure currentAttendance is up-to-date with it.
+        // This handles cases where item.attendance prop might have changed.
+        const initialAttendanceFromItem = item.attendance || {};
+        const refreshedAttendance: Record<string, AttendanceStatus> = {};
+        memberList.forEach(member => {
+            refreshedAttendance[member.uid] = initialAttendanceFromItem[member.uid] || 'present';
+        });
+        setCurrentAttendance(prev => ({...refreshedAttendance, ...prev}));
+        setIsLoadingMembers(false); // Ensure loading is false if members already present
+      }
     }
-  }, [isAttendanceDialogOpen, currentUser?.teamId]); // Removed currentAttendance from dependencies to prevent potential loops, default logic is now in this effect
+  }, [isAttendanceDialogOpen, currentUser?.teamId, item.attendance, memberList]);
 
 
   const isAdmin = currentUser?.role === "admin";
 
   const handleAttendanceChange = (memberId: string, status: AttendanceStatus) => {
-    // Optimistically update local attendance state for immediate UI feedback
     setCurrentAttendance(prev => ({ ...prev, [memberId]: status }));
-    
-    // The actual Firestore update is handled by AttendanceToggler.
-    // If parent list needs a full refresh (e.g., for summary counts that depend on re-fetch), use setForceUpdateList.
     if (setForceUpdateList) {
       setForceUpdateList(val => val + 1); 
     }
@@ -93,9 +126,7 @@ export function EventCardBase({
   }
 
   const presentCount = Object.values(currentAttendance).filter(status => status === 'present').length;
-  // Use memberList.length for total if available, otherwise count known UIDs in attendance map
-  const totalMembersToCount = memberList.length > 0 ? memberList.length : Object.keys(currentAttendance).filter(uid => uid !== 'undefined' && uid !== null).length;
-
+  // totalMembersToCount will be memberList.length once loaded.
 
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
@@ -126,7 +157,11 @@ export function EventCardBase({
       </CardHeader>
       <CardContent className="flex-grow">
         <p className="text-sm text-muted-foreground">
-            Attendance: <span className="font-semibold text-primary">{presentCount} / {isLoadingMembers && memberList.length === 0 ? '...' : totalMembersToCount}</span> members present.
+            Attendance: {isLoadingMembers ? (
+                <Skeleton className="h-4 w-20 inline-block" />
+            ) : (
+                <span className="font-semibold text-primary">{presentCount} / {memberList.length}</span>
+            )} members present.
         </p>
       </CardContent>
       <CardFooter className="border-t pt-4">
@@ -140,11 +175,11 @@ export function EventCardBase({
             <DialogHeader>
               <DialogTitle>Manage Attendance</DialogTitle>
               <DialogDescription>
-                Update attendance for {eventType === "match" ? (item as Match).opponent : (item as Training).location} on {item.date}.
+                Update attendance for {eventType === "match" ? (item as Match).opponent : (item as Training).location} on {format(parseISO(item.date), "MMM dd, yyyy")}.
               </DialogDescription>
             </DialogHeader>
             <ScrollArea className="h-[300px] md:h-[400px] pr-4">
-              {isLoadingMembers && memberList.length === 0 ? (
+              {isLoadingMembers && memberList.length === 0 ? ( // Show skeleton only if truly loading and no members yet
                 <div className="space-y-3 py-1">
                   {[1,2,3].map(i => (
                      <div key={i} className="flex items-center justify-between p-2 border rounded-md">
