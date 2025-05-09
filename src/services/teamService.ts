@@ -53,8 +53,8 @@ export const createTeam = async (teamName: string, ownerUid: string): Promise<st
 
 export const getTeamById = async (teamId: string): Promise<Team | null> => {
   if (!db) {
-    console.error("Firestore not initialized in getTeamById");
-    return null;
+    console.error("Firestore not initialized in getTeamById. Cannot fetch team.");
+    throw new Error("Firestore not initialized. Cannot fetch team.");
   }
   if (!teamId) {
     console.warn("getTeamById called with no teamId");

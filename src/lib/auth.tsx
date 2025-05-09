@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      setIsLoading(true); // Start loading when auth state might change
+      setIsLoading(true); 
       setFirebaseUser(fbUser);
 
       if (fbUser) {
@@ -56,24 +56,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           if (userData.teamId) {
             try {
-              const teamData = await getTeamById(userData.teamId);
+              const teamData = await getTeamById(userData.teamId); // Server Action Call
               setCurrentTeam(teamData);
-              if (pathname === "/login" || pathname === "/signup" || pathname === "/onboarding/create-team") {
+
+              if (!teamData) {
+                // Team ID exists in user profile, but team document not found in Firestore
+                console.warn(`AuthContext: User ${userData.uid} has teamId ${userData.teamId}, but team document was not found.`);
+                toast({ title: "Team Not Found", description: "Your assigned team could not be loaded. Please contact support or try re-joining/creating a team.", variant: "destructive" });
+                setCurrentTeam(null); // Ensure it's null
+                if (pathname !== "/onboarding/create-team" && pathname !== "/login" && pathname !== "/signup") {
+                  router.replace("/onboarding/create-team"); // Redirect to allow re-onboarding
+                }
+              } else if (pathname === "/login" || pathname === "/signup" || pathname === "/onboarding/create-team") {
                 router.replace("/dashboard");
               }
-            } catch (teamError) {
-              console.error("Error fetching team data:", teamError);
-              setCurrentTeam(null); // Ensure team is null if fetch fails
-              toast({ title: "Error", description: "Could not load your team's data.", variant: "destructive" });
-              // Potentially redirect to an error page or /onboarding/create-team if team is crucial
-              if (pathname !== "/onboarding/create-team") {
+            } catch (error: any) { // Catches errors from getTeamById server action
+              console.error("AuthContext: Error fetching team data via getTeamById. Raw error:", error);
+              let errorMessage = "Could not load your team's data due to a server issue.";
+              if (error && error.message) {
+                errorMessage = error.message;
+              } else if (typeof error === 'string') {
+                errorMessage = error;
+              }
+              try { 
+                console.error("AuthContext: teamError details (stringified):", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+              } catch (stringifyError) {
+                console.error("AuthContext: Could not stringify teamError:", stringifyError);
+              }
+
+              setCurrentTeam(null);
+              toast({
+                title: "Error Loading Team",
+                description: errorMessage,
+                variant: "destructive"
+              });
+              if (pathname !== "/onboarding/create-team" && pathname !== "/login" && pathname !== "/signup") {
                   router.replace("/onboarding/create-team");
               }
             }
           } else {
             // User profile exists but no teamId
             setCurrentTeam(null);
-            if (pathname !== "/onboarding/create-team" && pathname !== "/signup") { // Allow signup if they somehow got here
+            if (pathname !== "/onboarding/create-team" && pathname !== "/signup") { 
                  router.replace("/onboarding/create-team");
             }
           }
@@ -81,8 +105,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Firebase Auth user exists, but no Firestore user profile
           setUser(null);
           setCurrentTeam(null);
-          // This state suggests incomplete signup or an issue.
-          // Redirect to signup to ensure profile creation.
           if (pathname !== "/signup" && pathname !== "/onboarding/create-team") {
             router.replace("/signup");
           }
@@ -93,7 +115,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setFirebaseUser(null);
         setCurrentTeam(null);
         const nonAuthRoutes = ["/login", "/signup"];
-        if (!nonAuthRoutes.includes(pathname) && !pathname.startsWith("/onboarding")) { // Allow onboarding if somehow accessed
+        if (!nonAuthRoutes.includes(pathname) && !pathname.startsWith("/onboarding")) { 
           router.replace("/login");
         }
       }
@@ -101,7 +123,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe(); 
-  }, [router, toast, pathname]); // pathname dependency ensures re-evaluation on route change
+  }, [router, toast, pathname]);
 
   const login = async (email: string, password?: string) => {
     if (!auth) {
@@ -115,9 +137,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will handle fetching user data, team data, and redirection.
-      // Toasting success here might be premature if onAuthStateChanged fails to load user data.
-      // Let onAuthStateChanged complete fully.
     } catch (error: any) {
       setIsLoading(false);
       console.error("Firebase login error (AuthContext):", error);
@@ -132,21 +151,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       throw error; 
     }
-    // setIsLoading(false) will be handled by onAuthStateChanged completing
   };
 
   const logout = async () => {
     setIsLoading(true);
     try {
       await firebaseSignOut(auth);
-      // State updates (user, firebaseUser, currentTeam to null) are handled by onAuthStateChanged
       router.push("/login"); 
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
     } catch (error: any) {
       console.error("Error signing out: ", error);
       toast({ title: "Logout Failed", description: error.message, variant: "destructive" });
     } finally {
-      setIsLoading(false); // Explicitly set loading false after logout attempt
+      setIsLoading(false); 
     }
   };
   
@@ -178,7 +195,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const userDocRef = doc(db, "users", fbUser.uid);
       await setDoc(userDocRef, {
         uid: fbUser.uid,
-        email: email, // Use lowercase email for consistency
+        email: email.toLowerCase(), 
         name: name,
         role: "admin" as UserRole, 
         teamId: newTeamId,
@@ -186,8 +203,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         createdAt: serverTimestamp(),
       });
       
-      // onAuthStateChanged will handle setting user state, team state, and redirecting to dashboard.
-      // Toast can be shown here or wait for onAuthStateChanged to fully resolve.
       toast({
         title: "Account & Team Created!",
         description: "Welcome to TeamEase! Redirecting...",
@@ -209,7 +224,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       throw error; 
     }
-    // setIsLoading(false) will be handled by onAuthStateChanged
   };
 
   return (
@@ -226,6 +240,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-// Removed setSubmitHook and setDataHook as they are anti-patterns.
-// Signup data should be passed directly to the signup function.
