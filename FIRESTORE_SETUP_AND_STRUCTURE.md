@@ -247,15 +247,44 @@ This is a top-level collection where each document represents a user profile.
     ```
     *   **Test your security rules thoroughly** using the Firebase console's Rules Playground before deploying your app widely. This allows you to simulate requests as different users and see if the rules grant or deny access as expected.
 
-By following this structure and implementing robust security rules, your TeamEase application will have a solid foundation for managing team data securely and efficiently for multiple teams.
+## 5. Required Firestore Indexes
 
-Some key changes in the rules provided above compared to the previous version in history:
-1.  `getUserAuthData()`: Changed `path('/databases/$(database)/documents/users/' + request.auth.uid)` to `path('/databases/' + database + '/documents/users/' + request.auth.uid)`. The `$(database)` syntax was incorrect; `database` is an implicitly available variable in rules.
-2.  `isUserTeamAdmin(teamId)`: Optimized to call `getUserAuthData()` only once and relies on `isUserTeamMember` for some initial checks.
-3.  `allow create` on `/users/{userId}`: Added `isSignedIn()` and ensures `isOwner(userId)` is checked for user self-creation.
-4.  `allow update` on `/users/{userId}`: Refined conditions to ensure admins are updating users within their own team and cannot change a user's teamId. Added check to prevent UID changes.
-5.  `allow delete` on `/users/{userId}`: Added check to ensure admin is in the same team as the user being deleted.
+Certain queries in the application, especially those involving multiple `orderBy` clauses, require composite indexes in Firestore. If these indexes are not present, the queries will fail, and you might see errors like "The query requires an index..." or generic data fetching errors in the app.
 
-Please try applying these updated rules. If you still encounter "Error saving rules", please provide the exact error message from the Firebase console again, along with the line number it refers to, as the parser can be sensitive.
-If the rules save successfully but you still get "Missing or insufficient permissions", then you'll need to use the Rules Playground to simulate the failing operation and see why the rules are denying access. Ensure the user document `/users/{yourAuthUID}` exists and has the correct `teamId` and `role` fields.
+You can create these indexes in the Firebase console:
+1.  Go to your Firebase Project -> Firestore Database -> Indexes.
+2.  Click on "Composite" and then "Create Index".
+3.  For each index listed below, enter the "Collection ID" (or "Collection group ID" if specified) and add the fields exactly as shown with their respective order (Ascending/Descending).
 
+*   **Collection Group:** `matches`
+    *   **Fields:**
+        1.  `order` (Ascending)
+        2.  `date` (Descending)
+        3.  `time` (Descending)
+    *   **Query scope:** Collection group
+
+*   **Collection Group:** `trainings`
+    *   **Fields:**
+        1.  `order` (Ascending)
+        2.  `date` (Descending)
+        3.  `time` (Descending)
+    *   **Query scope:** Collection group
+
+*   **Collection:** `users`
+    *   **Fields:**
+        1. `teamId` (Ascending)
+        2. `name` (Ascending)
+    *   **Query scope:** Collection
+
+*   **Collection:** `users`
+    *   **Fields:**
+        1. `teamId` (Ascending)
+        2. `role` (Ascending)
+        3. `name` (Ascending)
+    *   **Query scope:** Collection
+
+
+**Note on Index Creation Time:** Composite indexes can take a few minutes to build, especially if you already have data in your collections. Firestore will indicate the status of index creation in the console.
+
+By following this structure, implementing robust security rules, and creating the necessary indexes, your TeamEase application will have a solid foundation for managing team data securely and efficiently for multiple teams.
+```
