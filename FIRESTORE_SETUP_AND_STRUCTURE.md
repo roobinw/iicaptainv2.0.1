@@ -125,10 +125,12 @@ This is a top-level collection where each document represents a user profile.
 *   **Firestore Security Rules (VERY IMPORTANT):**
     *   Default security rules (especially in "Production mode") are highly restrictive. You **must** configure Firestore Security Rules.
     *   These rules enforce multi-tenancy (a user can only access data for their own team) and role-based access (only an admin can create/modify team-wide data like matches or other player profiles within their team).
+    *   **Carefully copy and paste the rules below into the Firebase console Rules editor.**
 
-    **Example Security Rules (Updated with more robust helpers):**
+    **Security Rules:**
     ```firestore-rules
     rules_version = '2';
+
     service cloud.firestore {
       match /databases/{database}/documents {
 
@@ -136,7 +138,7 @@ This is a top-level collection where each document represents a user profile.
         // Returns user data if document exists, otherwise null.
         function getUserAuthData() {
           // Construct the path string correctly using string concatenation for dynamic parts like request.auth.uid
-          let userDocumentPath = path('/databases/$(database)/documents/users/' + request.auth.uid);
+          let userDocumentPath = path('/databases/' + database + '/documents/users/' + request.auth.uid);
           return exists(userDocumentPath) ? get(userDocumentPath).data : null;
         }
 
@@ -154,7 +156,8 @@ This is a top-level collection where each document represents a user profile.
         // Helper: Is the requesting user an admin of the specified teamId?
         function isUserTeamAdmin(teamId) {
           // isUserTeamMember already checks isSignedIn and if userAuthRecord is null
-          return isUserTeamMember(teamId) && getUserAuthData().role == 'admin';
+          let userAuthData = getUserAuthData(); // Call once to avoid redundant calls
+          return isUserTeamMember(teamId) && userAuthData != null && userAuthData.role == 'admin';
         }
         
         // Helper: Is the user creating/modifying their own document?
@@ -167,7 +170,6 @@ This is a top-level collection where each document represents a user profile.
           // Any authenticated user who is part of this team can read team details.
           allow read: if isUserTeamMember(teamId);
           // Only an authenticated user can create a team, and they must be its owner.
-          // teamId in request.resource.data should match what's being created.
           allow create: if isSignedIn() && request.auth.uid == request.resource.data.ownerUid;
           // Only an admin of this team can update its name (ownerUid should not be changed by client).
           allow update: if isUserTeamAdmin(teamId) && request.resource.data.ownerUid == resource.data.ownerUid;
@@ -196,13 +198,15 @@ This is a top-level collection where each document represents a user profile.
           allow update: if isSignedIn() &&
                           (
                             (isOwner(userId) && 
+                              // User cannot change their own role, teamId, or email via this path.
                               !(request.resource.data.role != resource.data.role || 
                                 request.resource.data.teamId != resource.data.teamId || 
                                 request.resource.data.email != resource.data.email    
                                )) || 
+                            // Admin can update other users in their team.
                             (isUserTeamAdmin(resource.data.teamId) && 
-                             request.resource.data.teamId == resource.data.teamId && 
-                             userId != request.auth.uid 
+                             request.resource.data.teamId == resource.data.teamId && // Ensure admin is not changing the target user's teamId
+                             userId != request.auth.uid // Admin cannot use this rule to update their own profile
                             ) 
                           );
           
@@ -234,3 +238,10 @@ This is a top-level collection where each document represents a user profile.
 By following this structure and implementing robust security rules, your TeamEase application will have a solid foundation for managing team data securely and efficiently for multiple teams.
 The application code in `src/services/` is designed to work with this Firestore structure.
 
+Some key changes in the rules provided above compared to the previous version in history:
+1.  `getUserAuthData()`: Changed `path('/databases/$(database)/documents/users/' + request.auth.uid)` to `path('/databases/' + database + '/documents/users/' + request.auth.uid)`. The `$(database)` syntax was incorrect; `database` is an implicitly available variable in rules.
+2.  `isUserTeamAdmin(teamId)`: Optimized to call `getUserAuthData()` only once.
+3.  Minor clarifications in comments for `allow update` on `/users/{userId}`.
+
+Please try applying these updated rules. If you still encounter "Error saving rules", please provide the exact error message from the Firebase console again, along with the line number it refers to, as the parser can be sensitive.
+If the rules save successfully but you still get "Missing or insufficient permissions", then you'll need to use the Rules Playground to simulate the failing operation and see why the rules are denying access.
