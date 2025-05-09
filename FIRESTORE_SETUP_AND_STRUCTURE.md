@@ -259,4 +259,3 @@ Some key changes in the rules provided above compared to the previous version in
 
 Please try applying these updated rules. If you still encounter "Error saving rules", please provide the exact error message from the Firebase console again, along with the line number it refers to, as the parser can be sensitive.
 If the rules save successfully but you still get "Missing or insufficient permissions", then you'll need to use the Rules Playground to simulate the failing operation and see why the rules are denying access. Ensure the user document `/users/{yourAuthUID}` exists and has the correct `teamId` and `role` fields.
-```
