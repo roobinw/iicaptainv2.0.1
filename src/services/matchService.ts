@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import type { Match, User } from '@/types';
+import type { Match } from '@/types'; // User type no longer needed here directly
 import {
   collection,
   doc,
@@ -19,9 +19,20 @@ import {
 } from 'firebase/firestore';
 import { format, parseISO } from 'date-fns';
 
-// Convert Match data for Firestore storage
+const getMatchesCollectionRef = (teamId: string) => {
+  if (!db) throw new Error("Firestore not initialized");
+  if (!teamId) throw new Error("Team ID is required for match operations.");
+  return collection(db, 'teams', teamId, 'matches');
+};
+
+const getMatchDocRef = (teamId: string, matchId: string) => {
+  if (!db) throw new Error("Firestore not initialized");
+  if (!teamId) throw new Error("Team ID is required for match operations.");
+  if (!matchId) throw new Error("Match ID is required.");
+  return doc(db, 'teams', teamId, 'matches', matchId);
+};
+
 const toFirestoreMatch = (matchData: Omit<Match, 'id'>): any => {
-  // Ensure date is a string in "yyyy-MM-dd" format
   const dateString = typeof matchData.date === 'string' 
     ? matchData.date 
     : format(matchData.date instanceof Date ? matchData.date : parseISO(matchData.date), "yyyy-MM-dd");
@@ -29,53 +40,44 @@ const toFirestoreMatch = (matchData: Omit<Match, 'id'>): any => {
   return {
     ...matchData,
     date: dateString, 
-    // Firebase Timestamps for created/updated times if needed
-    // createdAt: serverTimestamp(), 
-    // updatedAt: serverTimestamp(),
   };
 };
 
-// Convert Firestore document to Match type
 const fromFirestoreMatch = (docSnap: any): Match => {
   const data = docSnap.data();
   return {
     id: docSnap.id,
     ...data,
-    // If date was stored as Firebase Timestamp, convert it:
-    // date: (data.date as Timestamp).toDate().toISOString().split('T')[0], 
   } as Match;
 };
 
-export const addMatch = async (matchData: Omit<Match, 'id' | 'attendance'>): Promise<string> => {
-  if (!db) throw new Error("Firestore not initialized");
+export const addMatch = async (teamId: string, matchData: Omit<Match, 'id' | 'attendance'>): Promise<string> => {
   const newMatchData = {
     ...matchData,
-    attendance: {}, // Initialize with empty attendance
+    attendance: {}, 
   };
-  const docRef = await addDoc(collection(db, 'matches'), toFirestoreMatch(newMatchData));
+  const matchesColRef = getMatchesCollectionRef(teamId);
+  const docRef = await addDoc(matchesColRef, toFirestoreMatch(newMatchData));
   return docRef.id;
 };
 
-export const getMatches = async (): Promise<Match[]> => {
-  if (!db) return [];
-  const matchesCol = collection(db, 'matches');
-  // Order by date, then time. Firestore might require a composite index for this.
-  const q = query(matchesCol, orderBy('date', 'desc'), orderBy('time', 'desc'));
+export const getMatches = async (teamId: string): Promise<Match[]> => {
+  if (!teamId) return [];
+  const matchesColRef = getMatchesCollectionRef(teamId);
+  const q = query(matchesColRef, orderBy('date', 'desc'), orderBy('time', 'desc'));
   const matchSnapshot = await getDocs(q);
   return matchSnapshot.docs.map(fromFirestoreMatch);
 };
 
-export const getMatchById = async (id: string): Promise<Match | null> => {
-  if (!db) return null;
-  const matchDocRef = doc(db, 'matches', id);
+export const getMatchById = async (teamId: string, matchId: string): Promise<Match | null> => {
+  if (!teamId || !matchId) return null;
+  const matchDocRef = getMatchDocRef(teamId, matchId);
   const docSnap = await getDoc(matchDocRef);
   return docSnap.exists() ? fromFirestoreMatch(docSnap) : null;
 };
 
-export const updateMatch = async (id: string, data: Partial<Omit<Match, 'id'>>): Promise<void> => {
-  if (!db) throw new Error("Firestore not initialized");
-  const matchDocRef = doc(db, 'matches', id);
-  // Ensure date is correctly formatted if being updated
+export const updateMatch = async (teamId: string, matchId: string, data: Partial<Omit<Match, 'id'>>): Promise<void> => {
+  const matchDocRef = getMatchDocRef(teamId, matchId);
   const updateData = {...data};
   if (data.date) {
     updateData.date = typeof data.date === 'string' 
@@ -85,33 +87,31 @@ export const updateMatch = async (id: string, data: Partial<Omit<Match, 'id'>>):
   await updateDoc(matchDocRef, updateData);
 };
 
-export const deleteMatch = async (id: string): Promise<void> => {
-  if (!db) throw new Error("Firestore not initialized");
-  const matchDocRef = doc(db, 'matches', id);
+export const deleteMatch = async (teamId: string, matchId: string): Promise<void> => {
+  const matchDocRef = getMatchDocRef(teamId, matchId);
   await deleteDoc(matchDocRef);
 };
 
 export const updateMatchAttendance = async (
+  teamId: string,
   matchId: string,
-  playerId: string,
+  playerId: string, // This should be Firebase UID
   status: "present" | "absent" | "excused" | "unknown"
 ): Promise<void> => {
-  if (!db) throw new Error("Firestore not initialized");
-  const matchDocRef = doc(db, 'matches', matchId);
-  // Firestore requires dot notation for updating nested map fields
+  const matchDocRef = getMatchDocRef(teamId, matchId);
   const fieldPath = `attendance.${playerId}`;
   await updateDoc(matchDocRef, {
     [fieldPath]: status,
   });
 };
 
-// Example function to reorder matches if storing order in Firestore
-// This requires an 'order' field in your Match type and Firestore documents.
-export const updateMatchesOrder = async (orderedMatches: Pick<Match, 'id' | 'order'>[]): Promise<void> => {
+export const updateMatchesOrder = async (teamId: string, orderedMatches: Pick<Match, 'id' | 'order'>[]): Promise<void> => {
   if (!db) throw new Error("Firestore not initialized");
+  if (!teamId) throw new Error("Team ID is required for updating matches order.");
   const batch = writeBatch(db);
   orderedMatches.forEach(match => {
-    const matchRef = doc(db, 'matches', match.id);
+    // Path needs to include teamId
+    const matchRef = doc(db, 'teams', teamId, 'matches', match.id);
     batch.update(matchRef, { order: match.order });
   });
   await batch.commit();

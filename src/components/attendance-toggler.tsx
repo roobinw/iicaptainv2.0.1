@@ -9,21 +9,22 @@ import { updateMatchAttendance } from "@/services/matchService";
 import { updateTrainingAttendance } from "@/services/trainingService";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth"; // Import useAuth
 
 
 type AttendanceStatus = "present" | "absent" | "excused" | "unknown";
 
 interface AttendanceTogglerProps {
   item: Match | Training;
-  player: User; // User type now includes uid
+  player: User; 
   eventType: "match" | "training";
   onAttendanceChange: (playerId: string, status: AttendanceStatus) => void; 
   setForceUpdate?: Dispatch<SetStateAction<number>>; 
 }
 
 export function AttendanceToggler({ item, player, eventType, onAttendanceChange, setForceUpdate }: AttendanceTogglerProps) {
+  const { user: currentUser } = useAuth(); // Get current user for teamId
   const { toast } = useToast();
-  // Player ID for attendance key is Firebase UID
   const playerIdForAttendance = player.uid; 
   const currentStatus = item.attendance[playerIdForAttendance] || "unknown";
 
@@ -32,15 +33,19 @@ export function AttendanceToggler({ item, player, eventType, onAttendanceChange,
         toast({title: "Error", description: "Missing item or player ID for attendance update.", variant: "destructive"});
         return;
     }
+    if (!currentUser?.teamId) {
+        toast({title: "Error", description: "Team information not found. Cannot update attendance.", variant: "destructive"});
+        return;
+    }
+
     try {
       if (eventType === "match") {
-        await updateMatchAttendance(item.id, playerIdForAttendance, status);
+        await updateMatchAttendance(currentUser.teamId, item.id, playerIdForAttendance, status);
       } else {
-        await updateTrainingAttendance(item.id, playerIdForAttendance, status);
+        await updateTrainingAttendance(currentUser.teamId, item.id, playerIdForAttendance, status);
       }
-      onAttendanceChange(playerIdForAttendance, status); // Update local state in parent
+      onAttendanceChange(playerIdForAttendance, status); 
       if(setForceUpdate) setForceUpdate(val => val + 1); 
-      // toast({title: "Attendance Updated", description: `${player.name}'s status set to ${status}.`});
     } catch (error: any) {
       console.error("Error updating attendance:", error);
       toast({title: "Update Failed", description: error.message || "Could not update attendance.", variant: "destructive"});

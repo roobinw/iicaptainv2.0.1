@@ -8,29 +8,42 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { format, parseISO, isAfter, isEqual } from "date-fns";
 import { useEffect, useState } from "react";
-import type { Match, Training, User } from "@/types";
+import type { Match, Training, User, Team } from "@/types"; // Import Team
 import { getMatches } from "@/services/matchService";
 import { getTrainings } from "@/services/trainingService";
-import { getPlayers } from "@/services/userService"; // Assuming this fetches users with 'player' role
+import { getPlayersByTeam } from "@/services/userService"; // Updated to getPlayersByTeam
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
-  const { user, isLoading: authIsLoading } = useAuth();
+  const { user, currentTeam, isLoading: authIsLoading } = useAuth(); // Get currentTeam
   const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([]);
   const [upcomingTrainings, setUpcomingTrainings] = useState<Training[]>([]);
   const [totalPlayers, setTotalPlayers] = useState(0);
-  const [teamName, setTeamName] = useState("Your Team"); // Placeholder, can be dynamic if stored
+  // Team name now comes from currentTeam context
+  // const [teamName, setTeamName] = useState("Your Team"); 
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
-    if (authIsLoading || !user) return;
+    // Ensure user, teamId, and currentTeam are available before fetching
+    if (authIsLoading || !user || !user.teamId || !currentTeam) {
+        // If still loading or user/team info not ready, set loading true or wait.
+        // If not loading and info is missing, it might be an error state or redirect handled by AuthProvider.
+        if (!authIsLoading && (!user || !user.teamId)) {
+          setIsLoadingData(false); // Not loading data if essential info is missing post-auth check
+        } else {
+          setIsLoadingData(true);
+        }
+        return;
+    }
+    
+    const teamId = user.teamId; // Or currentTeam.id
 
     const fetchData = async () => {
       setIsLoadingData(true);
       try {
         const today = new Date();
         
-        const allMatches = await getMatches();
+        const allMatches = await getMatches(teamId);
         const futureMatches = allMatches
           .filter(match => {
             const matchDate = parseISO(match.date);
@@ -40,7 +53,7 @@ export default function DashboardPage() {
           .slice(0, 2);
         setUpcomingMatches(futureMatches);
 
-        const allTrainings = await getTrainings();
+        const allTrainings = await getTrainings(teamId);
         const futureTrainings = allTrainings
           .filter(training => {
             const trainingDate = parseISO(training.date);
@@ -50,22 +63,20 @@ export default function DashboardPage() {
           .slice(0, 2);
         setUpcomingTrainings(futureTrainings);
         
-        const players = await getPlayers();
+        const players = await getPlayersByTeam(teamId); // Use getPlayersByTeam
         setTotalPlayers(players.length);
 
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
-        // Optionally set error state and display error message
       } finally {
         setIsLoadingData(false);
       }
     };
 
     fetchData();
-  }, [user, authIsLoading]);
+  }, [user, currentTeam, authIsLoading]); // Depend on user, currentTeam, and authIsLoading
 
   if (authIsLoading || isLoadingData) {
-    // Skeleton loader for dashboard
     return (
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -102,8 +113,14 @@ export default function DashboardPage() {
     );
   }
     
-  if (!user) {
-    return null; // AppLayout handles redirect if not logged in after loading
+  // AuthProvider handles redirect if user or teamId is missing after loading
+  if (!user || !user.teamId || !currentTeam) {
+    return (
+         <div className="flex h-full items-center justify-center">
+            <Icons.Dashboard className="h-12 w-12 animate-spin text-primary" />
+            <p className="ml-4 text-lg">Loading team data or redirecting...</p>
+        </div>
+    );
   }
 
   return (
@@ -112,7 +129,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Welcome, {user.name}!</h1>
           <p className="text-muted-foreground">
-            Here&apos;s what&apos;s happening with {teamName}.
+            Here&apos;s what&apos;s happening with {currentTeam?.name || "your team"}.
           </p>
         </div>
         { user.role === 'admin' && (
@@ -164,7 +181,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{totalPlayers}</div>
             <p className="text-xs text-muted-foreground">
-              Active players in the team.
+              Active players in {currentTeam?.name || "the team"}.
             </p>
           </CardContent>
         </Card>

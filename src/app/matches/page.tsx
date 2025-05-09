@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableItem } from '@/components/sortable-item';
-import { addMatch, getMatches, updateMatch, deleteMatch } from "@/services/matchService";
+import { addMatch, getMatches, updateMatch, deleteMatch, updateMatchesOrder } from "@/services/matchService"; // Added updateMatchesOrder
 import { parseISO } from "date-fns";
 
 export default function MatchesPage() {
@@ -33,12 +33,11 @@ export default function MatchesPage() {
     })
   );
 
-  const fetchMatches = async () => {
+  const fetchMatches = async (teamId: string) => {
     setIsLoading(true);
     try {
-      const fetchedMatches = await getMatches();
-      // Ensure matches are sorted by date on client-side after fetch if not guaranteed by service
-      fetchedMatches.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const fetchedMatches = await getMatches(teamId);
+      fetchedMatches.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || new Date(a.date).getTime() - new Date(b.date).getTime());
       setMatches(fetchedMatches);
     } catch (error) {
       console.error("Error fetching matches:", error);
@@ -49,10 +48,14 @@ export default function MatchesPage() {
   };
 
   useEffect(() => {
-    if(!authLoading) {
-        fetchMatches();
+    if(!authLoading && user && user.teamId) {
+        fetchMatches(user.teamId);
+    } else if (!authLoading && !user) {
+      // User not logged in, AuthProvider should redirect. Clear data or show message.
+      setMatches([]);
+      setIsLoading(false);
     }
-  }, [authLoading, forceUpdateList]);
+  }, [authLoading, user, forceUpdateList]);
 
 
   useEffect(() => {
@@ -65,10 +68,14 @@ export default function MatchesPage() {
 
 
   const handleAddMatch = async (data: Omit<Match, "id" | "attendance">) => {
+    if (!user?.teamId) {
+        toast({ title: "Error", description: "Team information is missing.", variant: "destructive"});
+        return;
+    }
     try {
-      await addMatch(data);
+      await addMatch(user.teamId, data);
       toast({ title: "Match Added", description: `Match against ${data.opponent} scheduled.` });
-      setForceUpdateList(prev => prev + 1); // Trigger refetch
+      setForceUpdateList(prev => prev + 1); 
       setIsAddMatchDialogOpen(false);
     } catch (error: any) {
       toast({ title: "Error adding match", description: error.message || "Could not add match.", variant: "destructive" });
@@ -81,13 +88,15 @@ export default function MatchesPage() {
   };
 
   const handleUpdateMatch = async (data: Omit<Match, "id" | "attendance">) => {
-    if (!editingMatch) return;
+    if (!editingMatch || !user?.teamId) {
+        toast({ title: "Error", description: "Cannot update match. Missing information.", variant: "destructive"});
+        return;
+    }
     try {
-      // Ensure date is a string for Firestore update, forms handle Date object
       const updateData = { ...data, date: typeof data.date === 'string' ? data.date : (data.date as Date).toISOString().split('T')[0] };
-      await updateMatch(editingMatch.id, updateData as Partial<Omit<Match, 'id'>>);
-      toast({ title: "Match Updated", description: `Match against data.opponent updated.` });
-      setForceUpdateList(prev => prev + 1); // Trigger refetch
+      await updateMatch(user.teamId, editingMatch.id, updateData as Partial<Omit<Match, 'id'>>);
+      toast({ title: "Match Updated", description: `Match against ${data.opponent} updated.` });
+      setForceUpdateList(prev => prev + 1); 
       setIsAddMatchDialogOpen(false);
       setEditingMatch(null);
     } catch (error: any) {
@@ -96,28 +105,38 @@ export default function MatchesPage() {
   };
 
   const handleDeleteMatch = async (matchId: string) => {
+    if (!user?.teamId) {
+         toast({ title: "Error", description: "Team information is missing.", variant: "destructive"});
+        return;
+    }
     if (!window.confirm("Are you sure you want to delete this match?")) return;
     try {
-      await deleteMatch(matchId);
+      await deleteMatch(user.teamId, matchId);
       toast({ title: "Match Deleted", description: "The match has been removed.", variant: "destructive" });
-      setForceUpdateList(prev => prev + 1); // Trigger refetch
+      setForceUpdateList(prev => prev + 1); 
     } catch (error: any) {
       toast({ title: "Error deleting match", description: error.message || "Could not delete match.", variant: "destructive" });
     }
   };
 
-  function handleDragEnd(event: DragEndEvent) {
+  async function handleDragEnd(event: DragEndEvent) {
     const {active, over} = event;
-    if (over && active.id !== over.id) {
-      setMatches((items) => {
-        const oldIndex = items.findIndex(item => item.id === active.id);
-        const newIndex = items.findIndex(item => item.id === over.id);
-        const newOrder = arrayMove(items, oldIndex, newIndex);
-        // Note: Persisting DND order to Firestore requires an 'order' field and batch updates.
-        // For now, this only reorders locally.
-        // updateMatchesOrder(newOrder.map((match, index) => ({ id: match.id, order: index }))); // Example for Firestore persistence
-        return newOrder;
-      });
+    if (over && active.id !== over.id && user?.teamId) {
+      const oldIndex = matches.findIndex(item => item.id === active.id);
+      const newIndex = matches.findIndex(item => item.id === over.id);
+      const newOrder = arrayMove(matches, oldIndex, newIndex);
+      setMatches(newOrder); // Update UI immediately
+
+      try {
+        // Persist the new order to Firestore
+        await updateMatchesOrder(user.teamId, newOrder.map((match, index) => ({ id: match.id, order: index })));
+        toast({ title: "Order Updated", description: "Match order saved." });
+      } catch (error) {
+        console.error("Error updating match order:", error);
+        toast({ title: "Error", description: "Could not save match order.", variant: "destructive" });
+        // Optionally revert UI change or refetch
+        fetchMatches(user.teamId); // Refetch to ensure consistency
+      }
     }
   }
   
@@ -126,6 +145,10 @@ export default function MatchesPage() {
   if (isLoading || authLoading) {
     return <div className="flex h-full items-center justify-center"><p>Loading matches...</p></div>;
   }
+  if (!user || !user.teamId) {
+    return <div className="flex h-full items-center justify-center"><p>Please log in and ensure you are part of a team to view matches.</p></div>;
+  }
+
 
   return (
     <div className="space-y-6">
@@ -133,7 +156,7 @@ export default function MatchesPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Match Schedule</h1>
           <p className="text-muted-foreground">
-            View and manage upcoming and past matches. {isAdmin && "Drag to reorder (local view only)."}
+            View and manage upcoming and past matches for your team. {isAdmin && "Drag to reorder."}
           </p>
         </div>
         {isAdmin && (
@@ -171,7 +194,7 @@ export default function MatchesPage() {
             <CardHeader>
                 <CardTitle>No Matches Yet</CardTitle>
                 <CardDescription>
-                There are no matches scheduled. {isAdmin && "Click 'Add Match' to get started."}
+                There are no matches scheduled for your team. {isAdmin && "Click 'Add Match' to get started."}
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -198,7 +221,7 @@ export default function MatchesPage() {
                     match={match} 
                     onEdit={handleEditMatch} 
                     onDelete={handleDeleteMatch} 
-                    setForceUpdateList={setForceUpdateList} // To re-render card if attendance changes
+                    setForceUpdateList={setForceUpdateList}
                   />
                 </SortableItem>
               ))}

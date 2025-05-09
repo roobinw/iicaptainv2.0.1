@@ -1,8 +1,8 @@
 
 "use client";
 
-import type { User, UserRole } from "@/types";
-import { useRouter } from "next/navigation";
+import type { User, UserRole, Team } from "@/types";
+import { useRouter, usePathname } from "next/navigation"; // Added usePathname
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { 
   onAuthStateChanged, 
@@ -12,25 +12,30 @@ import {
   type User as FirebaseUser 
 } from "firebase/auth";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "./firebase"; // Import Firebase instances
+import { auth, db } from "./firebase"; 
 import { useToast } from "@/hooks/use-toast";
+import { createTeam, getTeamById } from "@/services/teamService"; // Import team service
 
 interface AuthContextType {
   user: User | null;
+  currentTeam: Team | null; // Added currentTeam
   firebaseUser: FirebaseUser | null;
   isLoading: boolean;
   login: (email: string, password?: string) => Promise<void>; 
   logout: () => Promise<void>;
-  signup: (email: string, name: string, password?: string, role?: UserRole) => Promise<void>; 
+  // Signup signature changed to include teamName
+  signup: (email: string, name: string, teamName: string, password?: string) => Promise<void>; 
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [currentTeam, setCurrentTeam] = useState<Team | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -46,30 +51,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (userDocSnap.exists()) {
           const userData = { id: userDocSnap.id, ...userDocSnap.data() } as User;
           setUser(userData);
-          // Check if current path is login or signup, then redirect to dashboard
-          // This handles redirect after successful login/signup
-          if (window.location.pathname === "/login" || window.location.pathname === "/signup") {
-            router.replace("/dashboard");
+
+          if (userData.teamId) {
+            const teamData = await getTeamById(userData.teamId);
+            setCurrentTeam(teamData);
+            if (pathname === "/login" || pathname === "/signup" || pathname === "/onboarding/create-team") {
+              router.replace("/dashboard");
+            }
+          } else {
+            // User exists but has no teamId, redirect to create team flow
+            setCurrentTeam(null);
+            if (pathname !== "/onboarding/create-team") {
+                 router.replace("/onboarding/create-team");
+            }
           }
         } else {
+          // This case implies an issue, e.g., auth user exists but no Firestore doc.
+          // This might occur if signup failed midway. For now, redirect to signup or a special onboarding.
+          // Or, if they are a new user who hasn't completed team setup.
           console.warn("User document not found in Firestore for UID:", fbUser.uid);
-          // This case might happen if a user is authenticated with Firebase Auth
-          // but their Firestore document was deleted or not created.
-          // Log them out to prevent inconsistent state.
-          await firebaseSignOut(auth);
-          setUser(null);
-          router.replace("/login"); // Or an error page
+          setCurrentTeam(null);
+          setUser(null); // Clear partial user state
+          // Redirect to a flow that ensures user profile and team are set up.
+          // For a new user, this might be signup. For an existing auth user missing profile, it's an edge case.
+          if (pathname !== "/signup" && pathname !== "/onboarding/create-team") {
+            router.replace("/signup"); // Or a dedicated onboarding page
+          }
         }
       } else {
         setUser(null);
-        // If user is not logged in and trying to access a protected route,
-        // AppLayout will handle redirect. If on /, page.tsx handles it.
+        setCurrentTeam(null);
       }
       setIsLoading(false);
     });
 
     return () => unsubscribe(); 
-  }, [router, toast]); // Added router and toast to dependencies
+  }, [router, toast, pathname]);
 
   const login = async (email: string, password?: string) => {
     if (!auth) {
@@ -82,13 +99,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will pick this up, set user, and redirect.
-      // Toast for success can be shown here or after user state is confirmed.
-      // Showing it here for immediate feedback.
       toast({
         title: "Login Successful",
         description: "Welcome back! Redirecting...",
       });
+      // onAuthStateChanged will handle fetching user data, team data, and redirection.
     } catch (error: any) {
       console.error("Firebase login error (AuthContext):", error);
       let errorMessage = "Failed to login. Please check your credentials.";
@@ -110,7 +125,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await firebaseSignOut(auth);
       setUser(null);
       setFirebaseUser(null);
-      router.push("/login"); // Explicitly redirect to login after logout
+      setCurrentTeam(null);
+      router.push("/login"); 
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
     } catch (error: any) {
       console.error("Error signing out: ", error);
@@ -120,7 +136,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  const signup = async (email: string, name: string, password?: string, role: UserRole = "player") => {
+  // Updated signup to include teamName and create a team
+  const signup = async (email: string, name: string, teamName: string, password?: string) => {
     if (!auth || !db) {
         toast({ title: "Signup Error", description: "Firebase services are not available.", variant: "destructive" });
         throw new Error("Firebase services not initialized");
@@ -129,25 +146,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: "Signup Error", description: "Password is required.", variant: "destructive" });
         throw new Error("Password is required for signup.");
     }
+    if (!teamName.trim()) {
+        toast({ title: "Signup Error", description: "Team name is required.", variant: "destructive" });
+        throw new Error("Team name is required.");
+    }
+
+    setIsSubmitting(true); // Assuming setIsSubmitting is defined in the component using this
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const fbUser = userCredential.user;
 
+      // 1. Create the team
+      const newTeamId = await createTeam(teamName, fbUser.uid);
+
+      // 2. Create user profile in Firestore, linking to the new team
       const userDocRef = doc(db, "users", fbUser.uid);
       await setDoc(userDocRef, {
         uid: fbUser.uid,
-        email: email,
-        name: name,
-        role: role,
-        avatarUrl: `https://picsum.photos/seed/${email}/80/80`,
+        email: data.email,
+        name: data.name,
+        role: "admin" as UserRole, // First user is admin of their team
+        teamId: newTeamId,
+        avatarUrl: `https://picsum.photos/seed/${data.email}/80/80`,
         createdAt: serverTimestamp(),
       });
       
-      // onAuthStateChanged will pick this up, set user, and redirect.
       toast({
-        title: "Account Created",
-        description: "Welcome to TeamEase! Redirecting...",
+        title: "Account & Team Created",
+        description: "Welcome to TeamEase! You're now logged in.",
       });
+      // onAuthStateChanged will handle setting user state, team state, and redirecting.
     } catch (error: any) {
       console.error("Firebase signup error (AuthContext):", error);
       let errorMessage = "Failed to create account. Please try again.";
@@ -155,6 +183,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         errorMessage = "This email address is already in use.";
       } else if (error.code === "auth/weak-password") {
         errorMessage = "Password is too weak. Please choose a stronger password.";
+      } else if (error.message.includes("Team name is required")) {
+        errorMessage = "Team name is required.";
       }
       toast({
         title: "Signup Failed",
@@ -162,11 +192,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         variant: "destructive",
       });
       throw error; 
+    } finally {
+      // setIsSubmitting(false);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, isLoading, login, logout, signup }}>
+    <AuthContext.Provider value={{ user, currentTeam, firebaseUser, isLoading, login, logout, signup }}>
       {children}
     </AuthContext.Provider>
   );
@@ -179,4 +211,16 @@ export const useAuth = () => {
   }
   return context;
 };
+
+// Helper for components that might use setIsSubmitting
+// This is a placeholder, actual setIsSubmitting should be managed by the calling component's state
+let setIsSubmittingGl: (isSubmitting: boolean) => void = () => {};
+const data = { email: "", name: "" }; // Placeholder, actual data comes from form
+export const setSubmitHook = (hook: (isSubmitting: boolean) => void) => {
+    setIsSubmittingGl = hook;
+}
+export const setDataHook = (emailData: string, nameData: string) => {
+    data.email = emailData;
+    data.name = nameData;
+}
 

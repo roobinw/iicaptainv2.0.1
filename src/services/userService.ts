@@ -1,12 +1,12 @@
 
-'use server'; // Can be used by Server Components/Actions if needed, but primarily client below
+'use server'; 
 
 import { db } from '@/lib/firebase';
 import type { User, UserRole } from '@/types';
 import {
   collection,
   doc,
-  addDoc,
+  setDoc, // Changed from addDoc for specific UID usage
   getDoc,
   getDocs,
   updateDoc,
@@ -18,7 +18,6 @@ import {
   orderBy,
 } from 'firebase/firestore';
 
-// Helper to convert Firestore Timestamps to JS Date objects or ISO strings
 const processTimestamp = (timestamp: Timestamp | undefined): string | undefined => {
   return timestamp ? timestamp.toDate().toISOString() : undefined;
 };
@@ -26,14 +25,14 @@ const processTimestamp = (timestamp: Timestamp | undefined): string | undefined 
 const fromFirestoreUser = (docSnap: any): User => {
   const data = docSnap.data();
   return {
-    id: docSnap.id, // Firestore document ID
-    uid: data.uid, // Firebase Auth UID
+    id: docSnap.id, 
+    uid: data.uid, 
     name: data.name,
     email: data.email,
     role: data.role,
     avatarUrl: data.avatarUrl,
+    teamId: data.teamId, // Include teamId
     createdAt: processTimestamp(data.createdAt),
-    // lastLoginAt: processTimestamp(data.lastLoginAt), // Example if you add more fields
   } as User;
 };
 
@@ -50,48 +49,68 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
   return null;
 };
 
-export const getAllUsers = async (): Promise<User[]> => {
+// Get all users belonging to a specific team
+export const getAllUsersByTeam = async (teamId: string): Promise<User[]> => {
    if (!db) {
     console.error("Firestore not initialized");
     return [];
   }
+  if (!teamId) {
+    console.warn("getAllUsersByTeam called without teamId");
+    return [];
+  }
   const usersCol = collection(db, 'users');
-  const q = query(usersCol, orderBy('name', 'asc'));
+  const q = query(usersCol, where('teamId', '==', teamId), orderBy('name', 'asc'));
   const userSnapshot = await getDocs(q);
   return userSnapshot.docs.map(fromFirestoreUser);
 };
 
-
-export const getPlayers = async (): Promise<User[]> => {
+// Get players (role 'player') for a specific team
+export const getPlayersByTeam = async (teamId: string): Promise<User[]> => {
   if (!db) {
     console.error("Firestore not initialized");
     return [];
   }
+   if (!teamId) {
+    console.warn("getPlayersByTeam called without teamId");
+    return [];
+  }
   const usersCol = collection(db, 'users');
-  const q = query(usersCol, where('role', '==', 'player'), orderBy('name', 'asc'));
+  const q = query(usersCol, where('teamId', '==', teamId), where('role', '==', 'player'), orderBy('name', 'asc'));
   const playerSnapshot = await getDocs(q);
   return playerSnapshot.docs.map(fromFirestoreUser);
 };
 
-// Add player is typically handled during signup or by an admin action
-// This function assumes an admin is adding a player manually (not through typical auth flow)
-// Note: This doesn't create Firebase Auth credentials, only a Firestore profile.
-// For a full user creation, you'd need to use Firebase Admin SDK or have the user sign up.
-export const addPlayerProfile = async (playerData: Omit<User, 'id' | 'avatarUrl' | 'createdAt'> & { avatarUrl?: string }): Promise<string> => {
+// Admin adding a player profile to their team.
+// This still creates a profile without auth credentials.
+export const addPlayerProfileToTeam = async (
+  playerData: Omit<User, 'id' | 'avatarUrl' | 'createdAt' | 'uid' | 'teamId'>, 
+  teamId: string
+): Promise<string> => {
   if (!db) {
     console.error("Firestore not initialized");
     throw new Error("Firestore not initialized");
   }
-  // A placeholder UID is needed if not creating auth user. This is not ideal for actual players.
-  // Consider if this function is truly needed or if all players must come via auth signup.
-  const uidForNonAuthPlayer = `manual-${Date.now()}`; 
-  const userRef = doc(db, 'users', playerData.uid || uidForNonAuthPlayer); // Use provided UID or generate one
+  if (!teamId) {
+    console.error("TeamId is required to add a player profile.");
+    throw new Error("TeamId is required.");
+  }
+  
+  // For manually added profiles, we might generate a UID or expect one.
+  // For simplicity, let's use a generated ID for the document and a placeholder for uid.
+  // This distinguishes them from auth users.
+  const newPlayerUid = `manual-${Date.now()}`;
+  const userRef = doc(db, 'users', newPlayerUid); // Use generated UID for doc ID
+
   await setDoc(userRef, {
     ...playerData,
+    uid: newPlayerUid, // Store the generated UID in the document
+    teamId: teamId,
+    role: 'player' as UserRole, // Default role for manually added profiles
     avatarUrl: playerData.avatarUrl || `https://picsum.photos/seed/${playerData.email}/80/80`,
     createdAt: serverTimestamp(),
   });
-  return userRef.id;
+  return userRef.id; // This is newPlayerUid
 };
 
 export const updateUserProfile = async (uid: string, data: Partial<Omit<User, 'id' | 'email' | 'createdAt'>>): Promise<void> => {
@@ -100,8 +119,7 @@ export const updateUserProfile = async (uid: string, data: Partial<Omit<User, 'i
     throw new Error("Firestore not initialized");
   }
   const userDocRef = doc(db, 'users', uid);
-  // Filter out uid, email, createdAt from data to prevent accidental updates by client
-  const { uid: _uid, email: _email, createdAt: _createdAt, ...updateData } = data as any;
+  const { uid: _uid, email: _email, createdAt: _createdAt, id: _id, ...updateData } = data as any;
   await updateDoc(userDocRef, updateData);
 };
 
@@ -110,8 +128,6 @@ export const deleteUserProfile = async (uid: string): Promise<void> => {
     console.error("Firestore not initialized");
     throw new Error("Firestore not initialized");
   }
-  // Note: This only deletes the Firestore profile, not the Firebase Auth user.
-  // Deleting Firebase Auth user requires Admin SDK or reauthentication.
   const userDocRef = doc(db, 'users', uid);
   await deleteDoc(userDocRef);
 };

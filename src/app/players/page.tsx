@@ -7,12 +7,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Icons } from "@/components/icons";
 import { PlayerCard } from "@/components/player-card";
 import { AddPlayerForm } from "@/components/add-player-form";
-import type { User, UserRole } from "@/types";
+import type { User } from "@/types";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { getAllUsers, addPlayerProfile, updateUserProfile, deleteUserProfile } from "@/services/userService"; // Firestore service
+import { getAllUsersByTeam, addPlayerProfileToTeam, updateUserProfile, deleteUserProfile } from "@/services/userService"; 
 
 export default function PlayersPage() {
   const { user: currentUser, isLoading: authLoading } = useAuth();
@@ -23,24 +23,28 @@ export default function PlayersPage() {
   const [editingPlayer, setEditingPlayer] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const fetchPlayers = async () => {
+  const fetchPlayers = async (teamId: string) => {
     setIsLoading(true);
     try {
-      const fetchedPlayers = await getAllUsers(); // Fetches all users, could be getPlayers() for only 'player' role
+      // Fetches all users for the current team, admin can then see/manage roles
+      const fetchedPlayers = await getAllUsersByTeam(teamId); 
       setPlayers(fetchedPlayers);
     } catch (error) {
       console.error("Error fetching players:", error);
-      toast({ title: "Error", description: "Could not fetch players.", variant: "destructive" });
+      toast({ title: "Error", description: "Could not fetch players for your team.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!authLoading) { // Ensure auth state is resolved before fetching
-        fetchPlayers();
+    if (!authLoading && currentUser && currentUser.teamId) {
+        fetchPlayers(currentUser.teamId);
+    } else if (!authLoading && !currentUser) {
+        setPlayers([]);
+        setIsLoading(false);
     }
-  }, [authLoading]);
+  }, [authLoading, currentUser]);
 
   useEffect(() => {
     if (window.location.hash === "#add" && currentUser?.role === "admin") {
@@ -50,20 +54,17 @@ export default function PlayersPage() {
     }
   }, [currentUser?.role]);
 
-  const handleAddPlayer = async (data: Omit<User, "id" | "avatarUrl" | "createdAt" | "uid"> & { avatarUrl?: string }) => {
-    // This adds a profile to Firestore. For a real player, they should sign up via Firebase Auth.
-    // This function is more for an admin manually adding a profile placeholder.
-    // The 'uid' would typically come from Firebase Auth.
-    // For this example, we'll let addPlayerProfile handle UID generation if not an auth user.
-    const newPlayerData = {
-        ...data,
-        // uid: `manual-${Date.now()}` // Let service handle UID if not provided and not an auth user
-    };
+  const handleAddPlayer = async (data: Omit<User, "id" | "avatarUrl" | "createdAt" | "uid" | "teamId" | "role"> & { avatarUrl?: string }) => {
+    if (!currentUser?.teamId) {
+        toast({ title: "Error", description: "Team information is missing.", variant: "destructive"});
+        return;
+    }
+    const newPlayerData = { ...data }; // role will be 'player' by default in service
 
     try {
-      await addPlayerProfile(newPlayerData as any); // Cast to any to match service expectations for non-auth user
-      toast({ title: "Player Profile Added", description: `${data.name} has been added.` });
-      fetchPlayers(); // Refresh list
+      await addPlayerProfileToTeam(newPlayerData, currentUser.teamId);
+      toast({ title: "Player Profile Added", description: `${data.name} has been added to your team.` });
+      if (currentUser.teamId) fetchPlayers(currentUser.teamId); 
       setIsAddPlayerDialogOpen(false);
     } catch (error: any) {
       console.error("Error adding player:", error);
@@ -76,12 +77,13 @@ export default function PlayersPage() {
     setIsAddPlayerDialogOpen(true);
   };
 
-  const handleUpdatePlayer = async (data: Omit<User, "id" | "avatarUrl" | "createdAt" | "uid"> & { avatarUrl?: string }) => {
-    if (!editingPlayer || !editingPlayer.uid) return; // uid is crucial now (Firebase Auth UID)
+  const handleUpdatePlayer = async (data: Omit<User, "id" | "avatarUrl" | "createdAt" | "uid" | "teamId"> & { avatarUrl?: string }) => {
+    if (!editingPlayer || !editingPlayer.uid || !currentUser?.teamId) return;
     try {
-      await updateUserProfile(editingPlayer.uid, data);
+      // Ensure role is part of the data passed to updateUserProfile if it's editable in the form
+      await updateUserProfile(editingPlayer.uid, data); 
       toast({ title: "Player Updated", description: `${data.name}'s details have been updated.` });
-      fetchPlayers(); // Refresh list
+      if (currentUser.teamId) fetchPlayers(currentUser.teamId);
       setIsAddPlayerDialogOpen(false);
       setEditingPlayer(null);
     } catch (error: any) {
@@ -91,20 +93,20 @@ export default function PlayersPage() {
   };
 
   const handleDeletePlayer = async (playerToDelete: User) => {
-    if (!playerToDelete.uid) {
-        toast({ title: "Error", description: "Player UID not found.", variant: "destructive"});
+    if (!playerToDelete.uid || !currentUser?.teamId) {
+        toast({ title: "Error", description: "Player UID or Team info not found.", variant: "destructive"});
         return;
     }
     if (playerToDelete.uid === currentUser?.uid) {
-      toast({ title: "Action Denied", description: "You cannot delete your own account.", variant: "destructive"});
+      toast({ title: "Action Denied", description: "You cannot delete your own profile.", variant: "destructive"});
       return;
     }
-    if (!window.confirm("Are you sure you want to remove this player's profile? This does not delete their authentication account.")) return;
+    if (!window.confirm(`Are you sure you want to remove ${playerToDelete.name}'s profile? This does not delete their authentication account if they have one.`)) return;
     
     try {
-      await deleteUserProfile(playerToDelete.uid);
+      await deleteUserProfile(playerToDelete.uid); // Deletes from 'users' collection
       toast({ title: "Player Profile Removed", description: "The player's profile has been removed.", variant: "destructive" });
-      fetchPlayers(); // Refresh list
+      if (currentUser.teamId) fetchPlayers(currentUser.teamId);
     } catch (error: any) {
       console.error("Error deleting player:", error);
       toast({ title: "Error", description: error.message || "Could not remove player profile.", variant: "destructive" });
@@ -120,6 +122,9 @@ export default function PlayersPage() {
 
   if (isLoading || authLoading) {
     return <div className="flex h-full items-center justify-center"><p>Loading players...</p></div>;
+  }
+  if (!currentUser || !currentUser.teamId) {
+    return <div className="flex h-full items-center justify-center"><p>Please log in and ensure you are part of a team to view players.</p></div>;
   }
 
   return (
@@ -145,7 +150,7 @@ export default function PlayersPage() {
               <DialogHeader>
                 <DialogTitle>{editingPlayer ? "Edit Player Profile" : "Add New Player Profile"}</DialogTitle>
                 <DialogDescription>
-                  {editingPlayer ? "Update player profile details." : "Enter the new player's information. This creates a profile, not an auth account."}
+                  {editingPlayer ? "Update player profile details." : "Enter the new player's information. This creates a profile in your team."}
                 </DialogDescription>
               </DialogHeader>
               <AddPlayerForm 
@@ -177,8 +182,8 @@ export default function PlayersPage() {
             <CardHeader>
                 <CardTitle>No Players Found</CardTitle>
                 <CardDescription>
-                {searchTerm ? "No players match your search criteria." : "There are no players in the team yet."}
-                {isAdmin && !searchTerm && " Click 'Add Player Profile' to get started (for non-auth users) or have users sign up."}
+                {searchTerm ? "No players match your search criteria." : "There are no players in your team yet."}
+                {isAdmin && !searchTerm && " Click 'Add Player Profile' to add members."}
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -199,10 +204,10 @@ export default function PlayersPage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredPlayers.map((player) => (
             <PlayerCard 
-              key={player.id} // Use Firestore doc ID if available and unique, or uid
+              key={player.uid} 
               player={player} 
-              onEdit={handleEditPlayer}
-              onDelete={() => handleDeletePlayer(player)} // Pass the full player object
+              onEdit={isAdmin ? handleEditPlayer : undefined} // Only pass onEdit if admin
+              onDelete={isAdmin ? () => handleDeletePlayer(player) : undefined} // Only pass onDelete if admin
             />
           ))}
         </div>

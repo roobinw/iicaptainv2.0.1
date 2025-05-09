@@ -19,7 +19,20 @@ import {
 } from 'firebase/firestore';
 import { format, parseISO } from 'date-fns';
 
-// Convert Training data for Firestore storage
+const getTrainingsCollectionRef = (teamId: string) => {
+  if (!db) throw new Error("Firestore not initialized");
+  if (!teamId) throw new Error("Team ID is required for training operations.");
+  return collection(db, 'teams', teamId, 'trainings');
+};
+
+const getTrainingDocRef = (teamId: string, trainingId: string) => {
+  if (!db) throw new Error("Firestore not initialized");
+  if (!teamId) throw new Error("Team ID is required for training operations.");
+  if (!trainingId) throw new Error("Training ID is required.");
+  return doc(db, 'teams', teamId, 'trainings', trainingId);
+};
+
+
 const toFirestoreTraining = (trainingData: Omit<Training, 'id'>): any => {
   const dateString = typeof trainingData.date === 'string' 
     ? trainingData.date 
@@ -28,84 +41,77 @@ const toFirestoreTraining = (trainingData: Omit<Training, 'id'>): any => {
   return {
     ...trainingData,
     date: dateString,
-    // createdAt: serverTimestamp(),
-    // updatedAt: serverTimestamp(),
   };
 };
 
-// Convert Firestore document to Training type
 const fromFirestoreTraining = (docSnap: any): Training => {
   const data = docSnap.data();
   return {
     id: docSnap.id,
     ...data,
-    // date: (data.date as Timestamp).toDate().toISOString().split('T')[0], // If date is Timestamp
   } as Training;
 };
 
-export const addTraining = async (trainingData: Omit<Training, 'id' | 'attendance'>): Promise<string> => {
-  if (!db) throw new Error("Firestore not initialized");
+export const addTraining = async (teamId: string, trainingData: Omit<Training, 'id' | 'attendance'>): Promise<string> => {
   const newTrainingData = {
     ...trainingData,
-    attendance: {}, // Initialize with empty attendance
+    attendance: {}, 
   };
-  const docRef = await addDoc(collection(db, 'trainings'), toFirestoreTraining(newTrainingData));
+  const trainingsColRef = getTrainingsCollectionRef(teamId);
+  const docRef = await addDoc(trainingsColRef, toFirestoreTraining(newTrainingData));
   return docRef.id;
 };
 
-export const getTrainings = async (): Promise<Training[]> => {
-  if (!db) return [];
-  const trainingsCol = collection(db, 'trainings');
-  const q = query(trainingsCol, orderBy('date', 'desc'), orderBy('time', 'desc'));
+export const getTrainings = async (teamId: string): Promise<Training[]> => {
+  if (!teamId) return [];
+  const trainingsColRef = getTrainingsCollectionRef(teamId);
+  const q = query(trainingsColRef, orderBy('date', 'desc'), orderBy('time', 'desc'));
   const trainingSnapshot = await getDocs(q);
   return trainingSnapshot.docs.map(fromFirestoreTraining);
 };
 
-export const getTrainingById = async (id: string): Promise<Training | null> => {
-  if (!db) return null;
-  const trainingDocRef = doc(db, 'trainings', id);
+export const getTrainingById = async (teamId: string, trainingId: string): Promise<Training | null> => {
+  if (!teamId || !trainingId) return null;
+  const trainingDocRef = getTrainingDocRef(teamId, trainingId);
   const docSnap = await getDoc(trainingDocRef);
   return docSnap.exists() ? fromFirestoreTraining(docSnap) : null;
 };
 
-export const updateTraining = async (id: string, data: Partial<Omit<Training, 'id'>>): Promise<void> => {
-  if (!db) throw new Error("Firestore not initialized");
-  const trainingDocRef = doc(db, 'trainings', id);
+export const updateTraining = async (teamId: string, trainingId: string, data: Partial<Omit<Training, 'id'>>): Promise<void> => {
+  const trainingDocRef = getTrainingDocRef(teamId, trainingId);
   const updateData = {...data};
   if (data.date) {
     updateData.date = typeof data.date === 'string' 
       ? data.date 
-      : format(data.date instanceof Date ? trainingData.date : parseISO(data.date as string), "yyyy-MM-dd");
+      : format(data.date instanceof Date ? data.date : parseISO(data.date as string), "yyyy-MM-dd");
   }
   await updateDoc(trainingDocRef, updateData);
 };
 
-export const deleteTraining = async (id: string): Promise<void> => {
-  if (!db) throw new Error("Firestore not initialized");
-  const trainingDocRef = doc(db, 'trainings', id);
+export const deleteTraining = async (teamId: string, trainingId: string): Promise<void> => {
+  const trainingDocRef = getTrainingDocRef(teamId, trainingId);
   await deleteDoc(trainingDocRef);
 };
 
 export const updateTrainingAttendance = async (
+  teamId: string,
   trainingId: string,
-  playerId: string,
+  playerId: string, // Firebase UID
   status: "present" | "absent" | "excused" | "unknown"
 ): Promise<void> => {
-  if (!db) throw new Error("Firestore not initialized");
-  const trainingDocRef = doc(db, 'trainings', trainingId);
+  const trainingDocRef = getTrainingDocRef(teamId, trainingId);
   const fieldPath = `attendance.${playerId}`;
   await updateDoc(trainingDocRef, {
     [fieldPath]: status,
   });
 };
 
-// Example function to reorder trainings if storing order in Firestore
-// This requires an 'order' field in your Training type and Firestore documents.
-export const updateTrainingsOrder = async (orderedTrainings: Pick<Training, 'id' | 'order'>[]): Promise<void> => {
+export const updateTrainingsOrder = async (teamId: string, orderedTrainings: Pick<Training, 'id' | 'order'>[]): Promise<void> => {
   if (!db) throw new Error("Firestore not initialized");
+  if (!teamId) throw new Error("Team ID is required for updating trainings order.");
   const batch = writeBatch(db);
   orderedTrainings.forEach(training => {
-    const trainingRef = doc(db, 'trainings', training.id);
+    const trainingRef = doc(db, 'teams', teamId, 'trainings', training.id);
     batch.update(trainingRef, { order: training.order });
   });
   await batch.commit();

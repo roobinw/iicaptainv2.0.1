@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from "@/lib/auth";
@@ -8,17 +9,20 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { updateUserProfile } from "@/services/userService"; // Firestore service
+import { updateUserProfile } from "@/services/userService"; 
 import { Skeleton } from "@/components/ui/skeleton";
+// import { updateTeamName } from "@/services/teamService"; // Future: if team name is editable
 
 export default function SettingsPage() {
-  const { user, isLoading: authIsLoading, firebaseUser } = useAuth();
+  const { user, firebaseUser, currentTeam, isLoading: authIsLoading } = useAuth();
   const { toast } = useToast();
   
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [teamName, setTeamName] = useState(""); // For team name display/edit
+  const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
+  // const [isSubmittingTeam, setIsSubmittingTeam] = useState(false); // Future
 
   useEffect(() => {
     if (user) {
@@ -26,7 +30,10 @@ export default function SettingsPage() {
       setEmail(user.email || "");
       setAvatarUrl(user.avatarUrl || `https://picsum.photos/seed/${user.email}/80/80`);
     }
-  }, [user]);
+    if (currentTeam) {
+      setTeamName(currentTeam.name || "");
+    }
+  }, [user, currentTeam]);
 
   if (authIsLoading || !user || !firebaseUser) {
     return (
@@ -55,6 +62,17 @@ export default function SettingsPage() {
                     <Skeleton className="h-10 w-32" />
                 </CardContent>
             </Card>
+             <Card>
+                <CardHeader>
+                    <Skeleton className="h-7 w-32 mb-1" />
+                    <Skeleton className="h-5 w-64" />
+                </CardHeader>
+                <CardContent className="space-y-4 max-w-md">
+                    <Skeleton className="h-5 w-24 mb-1" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-32" />
+                </CardContent>
+            </Card>
         </div>
     );
   }
@@ -67,12 +85,9 @@ export default function SettingsPage() {
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!firebaseUser) return;
-    setIsSubmitting(true);
+    setIsSubmittingProfile(true);
     try {
-      await updateUserProfile(firebaseUser.uid, { name }); // Only name is editable here for simplicity
-      // AuthProvider's onAuthStateChanged will pick up new user data from Firestore eventually,
-      // or we can force a refresh of user context if needed.
-      // For now, local state update and toast is sufficient.
+      await updateUserProfile(firebaseUser.uid, { name }); 
       toast({
         title: "Profile Updated",
         description: "Your profile details have been saved.",
@@ -81,20 +96,23 @@ export default function SettingsPage() {
       console.error("Error updating profile:", error);
       toast({ title: "Update Failed", description: error.message || "Could not update profile.", variant: "destructive" });
     } finally {
-      setIsSubmitting(false);
+      setIsSubmittingProfile(false);
     }
   };
+
+  // Future: const handleTeamNameUpdate = async (e: React.FormEvent) => { ... };
+
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">Manage your account and preferences.</p>
+        <p className="text-muted-foreground">Manage your account, team, and preferences.</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Profile</CardTitle>
+          <CardTitle>My Profile</CardTitle>
           <CardDescription>Update your personal information.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -121,15 +139,42 @@ export default function SettingsPage() {
                <p className="text-xs text-muted-foreground mt-1">Email address cannot be changed.</p>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="role">My Role (in Team)</Label>
               <Input id="role" value={user.role.charAt(0).toUpperCase() + user.role.slice(1)} disabled />
             </div>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save Changes"}
+            <Button type="submit" disabled={isSubmittingProfile}>
+              {isSubmittingProfile ? "Saving Profile..." : "Save Profile Changes"}
             </Button>
           </form>
         </CardContent>
       </Card>
+
+      {currentTeam && user.role === 'admin' && ( // Only team admins can see/edit team settings
+        <Card>
+          <CardHeader>
+            <CardTitle>Team Settings: {currentTeam.name}</CardTitle>
+            <CardDescription>Manage your team&apos;s information.</CardDescription>
+          </CardHeader>
+          <CardContent className="max-w-md">
+            <form className="space-y-4"> {/* onSubmit={handleTeamNameUpdate} Future */}
+              <div className="space-y-1">
+                <Label htmlFor="teamName">Team Name</Label>
+                <Input 
+                  id="teamName" 
+                  value={teamName} 
+                  onChange={(e) => setTeamName(e.target.value)} 
+                  disabled // Enable when updateTeamName service is implemented
+                />
+              </div>
+              <Button type="submit" disabled>  {/* disabled={isSubmittingTeam} Future */}
+                 {/* {isSubmittingTeam ? "Saving Team..." : "Save Team Name"} Future */}
+                 Save Team Name (Not Implemented)
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
 
       <Card>
         <CardHeader>
@@ -137,15 +182,7 @@ export default function SettingsPage() {
           <CardDescription>Change your account password.</CardDescription>
         </CardHeader>
         <CardContent className="max-w-md">
-            {/* Firebase password change typically involves re-authentication or sending a password reset email */}
             <p className="text-muted-foreground">Password changes can be initiated via Firebase password reset flows (not implemented here).</p>
-            {/* 
-            <div className="space-y-1">
-                <Label htmlFor="currentPassword">Current Password</Label>
-                <Input id="currentPassword" type="password" disabled />
-            </div>
-            ...
-            */}
             <Button className="mt-4" disabled>Change Password (Not Implemented)</Button>
         </CardContent>
       </Card>

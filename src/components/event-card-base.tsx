@@ -5,13 +5,13 @@ import type { ReactNode, Dispatch, SetStateAction } from "react";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"; // DialogTrigger is used inside
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"; 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
 import type { Match, Training, User } from "@/types";
 import { useAuth } from "@/lib/auth";
-import { getPlayers } from "@/services/userService"; // To fetch actual players
+import { getPlayersByTeam } from "@/services/userService"; // Updated to getPlayersByTeam
 import { AttendanceToggler, getAttendanceStatusColor, getAttendanceStatusText } from "./attendance-toggler";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,35 +38,38 @@ export function EventCardBase({
   onDelete,
   setForceUpdateList
 }: EventCardBaseProps) {
-  const { user: currentUser } = useAuth(); // Renamed to avoid conflict with player in map
+  const { user: currentUser } = useAuth(); 
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
-  const [forceUpdateCard, setForceUpdateCard] = useState(0);
+  const [forceUpdateCard, setForceUpdateCard] = useState(0); // Renamed to avoid confusion
   const [playerList, setPlayerList] = useState<User[]>([]);
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(false);
 
   useEffect(() => {
-    if (isAttendanceDialogOpen && playerList.length === 0) {
+    // Fetch players when dialog opens and if teamId is available
+    if (isAttendanceDialogOpen && playerList.length === 0 && currentUser?.teamId) {
       setIsLoadingPlayers(true);
-      getPlayers()
+      getPlayersByTeam(currentUser.teamId) // Use getPlayersByTeam with teamId
         .then(setPlayerList)
         .catch(err => console.error("Failed to fetch players for attendance:", err))
         .finally(() => setIsLoadingPlayers(false));
     }
-  }, [isAttendanceDialogOpen, playerList.length]);
+  }, [isAttendanceDialogOpen, playerList.length, currentUser?.teamId]); // Add currentUser.teamId dependency
 
   const isAdmin = currentUser?.role === "admin";
 
   const handleAttendanceChange = (playerId: string, status: "present" | "absent" | "excused" | "unknown") => {
-    // The actual update logic is now within AttendanceToggler calling Firestore services
-    // This function will update the local item's attendance state to reflect change immediately
-    const updatedItem = { ...item };
-    updatedItem.attendance = { ...updatedItem.attendance, [playerId]: status };
-    // If parent component (MatchesPage/TrainingsPage) needs to re-render its list due to this change
-    // (e.g., to update summary counts without a full refetch), this can be propagated.
-    // However, setForceUpdateList is usually for CRUD ops, not individual attendance toggles.
-    // Direct re-render of the card is handled by forceUpdateCard.
-    setForceUpdateCard(val => val + 1); 
-    if (setForceUpdateList) setForceUpdateList(val => val + 1); // This forces list refetch, which includes attendance
+    // This function now only updates the local item's attendance for immediate UI feedback.
+    // The actual Firestore update is handled by AttendanceToggler.
+    // We can trigger a re-render of this card specifically.
+    const currentItem = item; // Create a mutable copy
+    currentItem.attendance = { ...currentItem.attendance, [playerId]: status };
+    // This will cause EventCardBase to re-render with the new attendance map for this item.
+    // setItem(updatedItem); // If item were a state variable in this component
+    setForceUpdateCard(val => val + 1); // Or force re-render via a dummy state change
+    
+    // If the parent list (MatchesPage/TrainingsPage) needs to refresh (e.g. for summary counts),
+    // setForceUpdateList will trigger a refetch from Firestore.
+    if (setForceUpdateList) setForceUpdateList(val => val + 1);
   };
   
   const getInitials = (name: string) => {
@@ -74,8 +77,10 @@ export function EventCardBase({
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
 
+  // Use playerList from state for total count if available and loaded.
   const presentCount = Object.values(item.attendance).filter(status => status === 'present').length;
-  const totalPlayersToCount = playerList.length > 0 ? playerList.length : Object.keys(item.attendance).length; // Fallback if playerList not loaded
+  const totalPlayersToCount = playerList.length > 0 ? playerList.length : Object.keys(item.attendance).filter(uid => uid !== 'undefined').length;
+
 
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
@@ -106,7 +111,7 @@ export function EventCardBase({
       </CardHeader>
       <CardContent className="flex-grow">
         <p className="text-sm text-muted-foreground">
-            Attendance: <span className="font-semibold text-primary">{presentCount} / {totalPlayersToCount || "?"}</span> players present.
+            Attendance: <span className="font-semibold text-primary">{presentCount} / {isLoadingPlayers ? '...' : totalPlayersToCount}</span> players present.
         </p>
       </CardContent>
       <CardFooter className="border-t pt-4">
@@ -141,7 +146,7 @@ export function EventCardBase({
                 </div>
               ) : playerList.length > 0 ? (
                 <div className="space-y-3 py-1">
-                  {playerList.map((player) => ( // player here is from the fetched playerList
+                  {playerList.map((player) => ( 
                     <div key={player.uid} className="flex items-center justify-between p-2 border rounded-md bg-card hover:bg-secondary/30">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
@@ -158,10 +163,10 @@ export function EventCardBase({
                       {isAdmin ? (
                          <AttendanceToggler 
                            item={item} 
-                           player={player} // Pass the full player object from playerList
+                           player={player} 
                            eventType={eventType} 
                            onAttendanceChange={handleAttendanceChange} 
-                           setForceUpdate={setForceUpdateCard} // This updates the card itself
+                           setForceUpdate={setForceUpdateCard}
                          />
                       ) : (
                          <span className={cn("text-sm font-semibold", getAttendanceStatusColor(item.attendance[player.uid] || 'unknown'))}>
@@ -172,7 +177,7 @@ export function EventCardBase({
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground text-center py-4">No players found or an error occurred.</p>
+                <p className="text-muted-foreground text-center py-4">No players in your team found.</p>
               )}
             </ScrollArea>
           </DialogContent>

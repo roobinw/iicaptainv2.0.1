@@ -14,7 +14,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableItem } from '@/components/sortable-item';
-import { addTraining, getTrainings, updateTraining, deleteTraining } from "@/services/trainingService";
+import { addTraining, getTrainings, updateTraining, deleteTraining, updateTrainingsOrder } from "@/services/trainingService"; // Added updateTrainingsOrder
 import { parseISO } from "date-fns";
 
 export default function TrainingsPage() {
@@ -33,11 +33,11 @@ export default function TrainingsPage() {
     })
   );
 
-  const fetchTrainings = async () => {
+  const fetchTrainings = async (teamId: string) => {
     setIsLoading(true);
     try {
-      const fetchedTrainings = await getTrainings();
-      fetchedTrainings.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const fetchedTrainings = await getTrainings(teamId);
+      fetchedTrainings.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || new Date(a.date).getTime() - new Date(b.date).getTime());
       setTrainings(fetchedTrainings);
     } catch (error) {
       console.error("Error fetching trainings:", error);
@@ -48,10 +48,13 @@ export default function TrainingsPage() {
   };
 
   useEffect(() => {
-    if(!authLoading) {
-        fetchTrainings();
+    if(!authLoading && user && user.teamId) {
+        fetchTrainings(user.teamId);
+    } else if (!authLoading && !user) {
+      setTrainings([]);
+      setIsLoading(false);
     }
-  }, [authLoading, forceUpdateList]);
+  }, [authLoading, user, forceUpdateList]);
 
   useEffect(() => {
     if (window.location.hash === "#add" && user?.role === "admin") {
@@ -62,8 +65,12 @@ export default function TrainingsPage() {
   }, [user?.role]);
 
   const handleAddTraining = async (data: Omit<Training, "id" | "attendance">) => {
+     if (!user?.teamId) {
+        toast({ title: "Error", description: "Team information is missing.", variant: "destructive"});
+        return;
+    }
     try {
-      await addTraining(data);
+      await addTraining(user.teamId, data);
       toast({ title: "Training Added", description: `Training at ${data.location} scheduled.` });
       setForceUpdateList(prev => prev + 1);
       setIsAddTrainingDialogOpen(false);
@@ -78,11 +85,14 @@ export default function TrainingsPage() {
   };
 
   const handleUpdateTraining = async (data: Omit<Training, "id" | "attendance">) => {
-    if (!editingTraining) return;
+    if (!editingTraining || !user?.teamId) {
+      toast({ title: "Error", description: "Cannot update training. Missing information.", variant: "destructive"});
+      return;
+    }
     try {
       const updateData = { ...data, date: typeof data.date === 'string' ? data.date : (data.date as Date).toISOString().split('T')[0] };
-      await updateTraining(editingTraining.id, updateData as Partial<Omit<Training, 'id'>>);
-      toast({ title: "Training Updated", description: `Training at data.location updated.` });
+      await updateTraining(user.teamId, editingTraining.id, updateData as Partial<Omit<Training, 'id'>>);
+      toast({ title: "Training Updated", description: `Training at ${data.location} updated.` });
       setForceUpdateList(prev => prev + 1);
       setIsAddTrainingDialogOpen(false);
       setEditingTraining(null);
@@ -92,9 +102,13 @@ export default function TrainingsPage() {
   };
 
   const handleDeleteTraining = async (trainingId: string) => {
+    if (!user?.teamId) {
+       toast({ title: "Error", description: "Team information is missing.", variant: "destructive"});
+       return;
+    }
     if (!window.confirm("Are you sure you want to delete this training session?")) return;
     try {
-      await deleteTraining(trainingId);
+      await deleteTraining(user.teamId, trainingId);
       toast({ title: "Training Deleted", description: "The training session has been removed.", variant: "destructive" });
       setForceUpdateList(prev => prev + 1);
     } catch (error: any) {
@@ -102,17 +116,22 @@ export default function TrainingsPage() {
     }
   };
 
-  function handleDragEnd(event: DragEndEvent) {
+  async function handleDragEnd(event: DragEndEvent) {
     const {active, over} = event;
-    if (over && active.id !== over.id) {
-      setTrainings((items) => {
-        const oldIndex = items.findIndex(item => item.id === active.id);
-        const newIndex = items.findIndex(item => item.id === over.id);
-        const newOrder = arrayMove(items, oldIndex, newIndex);
-        // Persisting DND order to Firestore is a further step
-        // updateTrainingsOrder(newOrder.map((training, index) => ({ id: training.id, order: index })));
-        return newOrder;
-      });
+    if (over && active.id !== over.id && user?.teamId) {
+      const oldIndex = trainings.findIndex(item => item.id === active.id);
+      const newIndex = trainings.findIndex(item => item.id === over.id);
+      const newOrder = arrayMove(trainings, oldIndex, newIndex);
+      setTrainings(newOrder);
+
+      try {
+        await updateTrainingsOrder(user.teamId, newOrder.map((training, index) => ({ id: training.id, order: index })));
+        toast({ title: "Order Updated", description: "Training order saved." });
+      } catch (error) {
+        console.error("Error updating training order:", error);
+        toast({ title: "Error", description: "Could not save training order.", variant: "destructive" });
+        fetchTrainings(user.teamId); // Revert or refetch
+      }
     }
   }
 
@@ -121,6 +140,9 @@ export default function TrainingsPage() {
   if (isLoading || authLoading) {
     return <div className="flex h-full items-center justify-center"><p>Loading trainings...</p></div>;
   }
+  if (!user || !user.teamId) {
+    return <div className="flex h-full items-center justify-center"><p>Please log in and ensure you are part of a team to view trainings.</p></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -128,7 +150,7 @@ export default function TrainingsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Training Schedule</h1>
           <p className="text-muted-foreground">
-            Plan and view upcoming training sessions. {isAdmin && "Drag to reorder (local view only)."}
+            Plan and view upcoming training sessions for your team. {isAdmin && "Drag to reorder."}
           </p>
         </div>
         {isAdmin && (
@@ -166,7 +188,7 @@ export default function TrainingsPage() {
             <CardHeader>
                 <CardTitle>No Trainings Yet</CardTitle>
                 <CardDescription>
-                There are no training sessions scheduled. {isAdmin && "Click 'Add Training' to get started."}
+                There are no training sessions scheduled for your team. {isAdmin && "Click 'Add Training' to get started."}
                 </CardDescription>
             </CardHeader>
             <CardContent>
