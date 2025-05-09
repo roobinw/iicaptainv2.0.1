@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { User, UserRole, Team } from "@/types";
@@ -24,7 +23,7 @@ interface AuthContextType {
   login: (email: string, password?: string) => Promise<void>; 
   logout: () => Promise<void>;
   signup: (email: string, name: string, teamName: string, password?: string) => Promise<void>; 
-  refreshTeamData: () => Promise<void>; // New function
+  refreshTeamData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,10 +37,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
   const { toast } = useToast();
 
-  const fetchAndSetCurrentTeam = useCallback(async (teamId: string) => {
+  const fetchAndSetCurrentTeam = useCallback(async (teamId: string): Promise<Team | null> => {
     if (!teamId) {
       setCurrentTeam(null);
-      return;
+      return null;
     }
     try {
       const teamData = await getTeamById(teamId);
@@ -50,13 +49,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: "Team Not Found", description: "Your assigned team could not be loaded.", variant: "destructive" });
         router.replace("/onboarding/create-team");
       }
+      return teamData;
     } catch (error: any) {
-      console.error("AuthContext: Error fetching team data:", error);
+      console.error("AuthContext: Error fetching team data in fetchAndSetCurrentTeam:", error);
       setCurrentTeam(null);
       toast({ title: "Error Loading Team", description: error.message || "Could not load your team's data.", variant: "destructive" });
       if (pathname !== "/onboarding/create-team" && pathname !== "/login" && pathname !== "/signup") {
         router.replace("/onboarding/create-team");
       }
+      return null;
     }
   }, [pathname, router, toast]);
 
@@ -80,13 +81,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser(userData);
 
             if (userData.teamId) {
-              await fetchAndSetCurrentTeam(userData.teamId);
-              // Redirect after team data is fetched and set
-              if (currentTeam && (pathname === "/login" || pathname === "/signup" || pathname === "/onboarding/create-team")) {
-                 router.replace("/dashboard");
-              } else if (!currentTeam && userData.teamId && pathname !== "/onboarding/create-team" && pathname !== "/login" && pathname !== "/signup") {
-                // This case implies fetchAndSetCurrentTeam set currentTeam to null because team was not found
-                // The redirect is handled inside fetchAndSetCurrentTeam for this case
+              // Fetch team data directly here for reliable redirection logic
+              const fetchedTeam = await getTeamById(userData.teamId);
+              setCurrentTeam(fetchedTeam); // Update context state
+
+              if (fetchedTeam) { // Team exists
+                // If user is on a page they shouldn't be on (e.g. login), redirect to dashboard
+                if (pathname === "/login" || pathname === "/signup" || pathname === "/onboarding/create-team") {
+                   router.replace("/dashboard");
+                }
+              } else { // Team not found or error fetching team
+                // setCurrentTeam(null) was done above by fetchedTeam being null
+                if (pathname !== "/onboarding/create-team" && pathname !== "/login" && pathname !== "/signup") {
+                  toast({ title: "Team Not Found", description: "Your assigned team data could not be loaded. Please try creating or joining a team.", variant: "destructive" });
+                  router.replace("/onboarding/create-team");
+                }
               }
             } else {
               // User profile exists but no teamId
@@ -99,8 +108,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Firebase Auth user exists, but no Firestore user profile
             setUser(null);
             setCurrentTeam(null);
-            if (pathname !== "/signup" && pathname !== "/onboarding/create-team") {
-              router.replace("/signup"); // Or /onboarding/create-team if a profile needs to be created for an existing auth user
+            if (pathname !== "/signup" && pathname !== "/onboarding/create-team") { // Allow staying on create-team if intermediate state
+              router.replace("/signup"); 
             }
           }
         } else {
@@ -141,7 +150,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe(); 
-  }, [router, toast, pathname, fetchAndSetCurrentTeam, currentTeam]); // Added currentTeam to ensure redirect logic re-evaluates
+    // Removed currentTeam from dependency array to prevent loops. 
+    // fetchAndSetCurrentTeam is stable due to its own useCallback.
+    // The effect should primarily react to auth state changes and pathname for redirection logic.
+  }, [router, toast, pathname, fetchAndSetCurrentTeam]);
 
   const login = async (email: string, password?: string) => {
     if (!auth) {
@@ -155,6 +167,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      // onAuthStateChanged will handle fetching user data and redirecting
     } catch (error: any) {
       console.error("Firebase login error (AuthContext):", error);
       let errorMessage = "Failed to login. Please check your credentials.";
@@ -169,18 +182,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false); 
       throw error; 
     }
+    // Do not set isLoading to false here, onAuthStateChanged handles the full loading cycle.
   };
 
   const logout = async () => {
     setIsLoading(true);
     try {
       await firebaseSignOut(auth);
+      // setUser, setFirebaseUser, setCurrentTeam will be handled by onAuthStateChanged
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
     } catch (error: any) {
       console.error("Error signing out: ", error);
       toast({ title: "Logout Failed", description: error.message, variant: "destructive" });
     } finally {
-       setIsLoading(false); 
+       // onAuthStateChanged will set isLoading to false after processing logout
     }
   };
   
@@ -220,6 +235,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         createdAt: serverTimestamp(),
       });
       
+      // onAuthStateChanged will handle setting user, team, and redirecting.
       toast({
         title: "Account & Team Created!",
         description: "Welcome to TeamEase! Redirecting...",
@@ -237,9 +253,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: errorMessage,
         variant: "destructive",
       });
-      setIsLoading(false);
+      setIsLoading(false); // Ensure loading is false on error if onAuthStateChanged doesn't fire for this error
       throw error; 
     }
+     // Do not set isLoading to false here, onAuthStateChanged handles the full loading cycle.
   };
 
   const refreshTeamData = useCallback(async () => {
@@ -248,7 +265,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await fetchAndSetCurrentTeam(user.teamId);
       setIsLoading(false);
     }
-  }, [user, fetchAndSetCurrentTeam]);
+  }, [user, fetchAndSetCurrentTeam]); // fetchAndSetCurrentTeam is stable
 
   return (
     <AuthContext.Provider value={{ user, currentTeam, firebaseUser, isLoading, login, logout, signup, refreshTeamData }}>
@@ -264,3 +281,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
