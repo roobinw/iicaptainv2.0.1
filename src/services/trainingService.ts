@@ -1,5 +1,5 @@
 
-'use server';
+// 'use server'; // Removed to run client-side
 
 import { db } from '@/lib/firebase';
 import type { Training } from '@/types';

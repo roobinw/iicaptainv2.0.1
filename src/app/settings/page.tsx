@@ -11,32 +11,32 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { updateUserProfile } from "@/services/userService"; 
 import { Skeleton } from "@/components/ui/skeleton";
-// import { updateTeamName } from "@/services/teamService"; // Placeholder for future implementation
+import { updateTeamName } from "@/services/teamService"; 
 
 export default function SettingsPage() {
-  const { user, firebaseUser, currentTeam, isLoading: authIsLoading } = useAuth();
+  const { user, firebaseUser, currentTeam, isLoading: authIsLoading, refreshTeamData } = useAuth();
   const { toast } = useToast();
   
   const [name, setName] = useState("");
   const [email, setEmail] = useState(""); // Display only, not editable
   const [avatarUrl, setAvatarUrl] = useState(""); // Display only for now
-  const [currentTeamName, setCurrentTeamName] = useState(""); // For team name display/edit
+  const [currentTeamNameInput, setCurrentTeamNameInput] = useState(""); 
   
   const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
-  const [isSubmittingTeam, setIsSubmittingTeam] = useState(false); // For team name update
+  const [isSubmittingTeam, setIsSubmittingTeam] = useState(false);
 
   useEffect(() => {
     if (user) {
       setName(user.name || "");
-      setEmail(user.email || ""); // Email is from auth, not typically changed here
+      setEmail(user.email || ""); 
       setAvatarUrl(user.avatarUrl || `https://picsum.photos/seed/${user.email}/80/80`);
     }
     if (currentTeam) {
-      setCurrentTeamName(currentTeam.name || "");
+      setCurrentTeamNameInput(currentTeam.name || "");
     }
   }, [user, currentTeam]);
 
-  if (authIsLoading || !user || !firebaseUser || !currentTeam && user?.role === 'admin') { // Wait for currentTeam if user is admin
+  if (authIsLoading || !user || !firebaseUser || (user?.role === 'admin' && !currentTeam) ) {
     return (
         <div className="space-y-6">
             <div>
@@ -63,7 +63,6 @@ export default function SettingsPage() {
                     <Skeleton className="h-10 w-32" />
                 </CardContent>
             </Card>
-            {/* Skeleton for Team Settings if admin */}
             { user?.role === 'admin' && (
                 <Card>
                     <CardHeader>
@@ -81,8 +80,6 @@ export default function SettingsPage() {
     );
   }
   
-  // If after loading, essential data is still missing, AuthProvider should handle redirect.
-  // This is a fallback display.
   if (!user || !firebaseUser) {
       return <p>Loading user data or redirecting...</p>;
   }
@@ -101,14 +98,13 @@ export default function SettingsPage() {
     if (!firebaseUser) return;
     setIsSubmittingProfile(true);
     try {
-      // Only 'name' and 'avatarUrl' (if implemented) are typically updated by user here.
-      // Role and teamId changes are handled by specific admin actions or system flows.
       await updateUserProfile(firebaseUser.uid, { name }); 
       toast({
         title: "Profile Updated",
         description: "Your profile details have been saved.",
       });
-      // Optionally, trigger a refresh of the user context if name change needs immediate reflection in layout
+      // AuthProvider will pick up name change on next full reload or if specifically told to refresh user data.
+      // For immediate reflection in this session without full reload, AuthContext would need a 'refreshUser' type function.
     } catch (error: any) {
       console.error("Error updating profile:", error);
       toast({ title: "Update Failed", description: error.message || "Could not update profile.", variant: "destructive" });
@@ -119,15 +115,15 @@ export default function SettingsPage() {
 
   const handleTeamNameUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentTeam || !user || user.role !== 'admin' || !currentTeamName.trim()) return;
+    if (!currentTeam || !user || user.role !== 'admin' || !currentTeamNameInput.trim()) return;
     setIsSubmittingTeam(true);
     try {
-      // await updateTeamName(currentTeam.id, currentTeamName.trim()); // Uncomment when service is ready
+      await updateTeamName(currentTeam.id, currentTeamNameInput.trim());
       toast({
         title: "Team Name Updated",
-        description: `Your team is now called "${currentTeamName.trim()}".`,
+        description: `Your team is now called "${currentTeamNameInput.trim()}".`,
       });
-      // AuthContext might need a way to refresh currentTeam if name changes
+      if(refreshTeamData) refreshTeamData(); // Call refreshTeamData from AuthContext
     } catch (error: any) {
       console.error("Error updating team name:", error);
       toast({ title: "Team Update Failed", description: error.message || "Could not update team name.", variant: "destructive" });
@@ -183,7 +179,6 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Team Settings Card - visible only to team admins */}
       {currentTeam && user.role === 'admin' && (
         <Card>
           <CardHeader>
@@ -196,15 +191,14 @@ export default function SettingsPage() {
                 <Label htmlFor="teamName">Team Name</Label>
                 <Input 
                   id="teamName" 
-                  value={currentTeamName} 
-                  onChange={(e) => setCurrentTeamName(e.target.value)} 
-                  disabled={isSubmittingTeam} // Enable when updateTeamName service is fully implemented
+                  value={currentTeamNameInput} 
+                  onChange={(e) => setCurrentTeamNameInput(e.target.value)} 
+                  disabled={isSubmittingTeam}
                 />
               </div>
-              <Button type="submit" disabled={isSubmittingTeam || true}> {/* Keep disabled until service is active */}
-                 {isSubmittingTeam ? "Saving Team..." : "Save Team Name"} {/* (Feature not fully active) */}
+              <Button type="submit" disabled={isSubmittingTeam || !currentTeamNameInput.trim() || currentTeamNameInput.trim() === currentTeam.name}>
+                 {isSubmittingTeam ? "Saving Team..." : "Save Team Name"}
               </Button>
-               <p className="text-xs text-muted-foreground mt-1">Team name updates are planned for a future version.</p>
             </form>
           </CardContent>
         </Card>
