@@ -42,24 +42,31 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push("/login");
+      // Ensure we are not already on a public page like /login or /signup
+      // to prevent redirect loops if those pages were mistakenly wrapped by AppLayout.
+      // However, typically, login/signup pages would use AuthLayout.
+      if (pathname !== "/login" && pathname !== "/signup") {
+        router.replace("/login");
+      }
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, router, pathname]);
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center bg-background">
         <Icons.Dashboard className="h-12 w-12 animate-spin text-primary" />
+         <p className="ml-4 text-lg text-foreground">Loading Application...</p>
       </div>
     );
   }
 
   if (!user) {
-    // router.push will be called by useEffect, return null or loading indicator
+    // If not loading and no user, useEffect will trigger redirect.
+    // Show a loading/redirecting message until then.
     return (
-        <div className="flex h-screen items-center justify-center">
+        <div className="flex h-screen items-center justify-center bg-background">
             <Icons.Dashboard className="h-12 w-12 animate-spin text-primary" />
-            <p className="ml-4 text-lg text-foreground">Redirecting...</p>
+            <p className="ml-4 text-lg text-foreground">Redirecting to login...</p>
         </div>
     ); 
   }

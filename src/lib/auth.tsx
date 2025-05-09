@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { User, UserRole } from "@/types";
@@ -43,19 +44,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userDocRef = doc(db, "users", fbUser.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
-          setUser({ id: userDocSnap.id, ...userDocSnap.data() } as User);
+          const userData = { id: userDocSnap.id, ...userDocSnap.data() } as User;
+          setUser(userData);
+          // Check if current path is login or signup, then redirect to dashboard
+          // This handles redirect after successful login/signup
+          if (window.location.pathname === "/login" || window.location.pathname === "/signup") {
+            router.replace("/dashboard");
+          }
         } else {
           console.warn("User document not found in Firestore for UID:", fbUser.uid);
-          setUser(null); 
+          // This case might happen if a user is authenticated with Firebase Auth
+          // but their Firestore document was deleted or not created.
+          // Log them out to prevent inconsistent state.
+          await firebaseSignOut(auth);
+          setUser(null);
+          router.replace("/login"); // Or an error page
         }
       } else {
         setUser(null);
+        // If user is not logged in and trying to access a protected route,
+        // AppLayout will handle redirect. If on /, page.tsx handles it.
       }
       setIsLoading(false);
     });
 
     return () => unsubscribe(); 
-  }, [router]); // Removed db from dependencies as it's stable; router is for navigation
+  }, [router, toast]); // Added router and toast to dependencies
 
   const login = async (email: string, password?: string) => {
     if (!auth) {
@@ -68,15 +82,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      // onAuthStateChanged will pick this up, set user, and redirect.
+      // Toast for success can be shown here or after user state is confirmed.
+      // Showing it here for immediate feedback.
       toast({
         title: "Login Successful",
-        description: "Welcome back!",
+        description: "Welcome back! Redirecting...",
       });
-      // onAuthStateChanged handles user state update and potential navigation
     } catch (error: any) {
       console.error("Firebase login error (AuthContext):", error);
       let errorMessage = "Failed to login. Please check your credentials.";
-      if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password" || error.code === "auth/invalid-credential") {
+      if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password" || error.code === "auth/invalid-credential" || error.code === "auth/invalid-email") {
         errorMessage = "Invalid email or password.";
       }
       toast({
@@ -94,7 +110,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await firebaseSignOut(auth);
       setUser(null);
       setFirebaseUser(null);
-      router.push("/login");
+      router.push("/login"); // Explicitly redirect to login after logout
+      toast({ title: "Logged Out", description: "You have been successfully logged out." });
     } catch (error: any) {
       console.error("Error signing out: ", error);
       toast({ title: "Logout Failed", description: error.message, variant: "destructive" });
@@ -126,11 +143,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         createdAt: serverTimestamp(),
       });
       
+      // onAuthStateChanged will pick this up, set user, and redirect.
       toast({
         title: "Account Created",
-        description: "Welcome to TeamEase! You're now logged in.",
+        description: "Welcome to TeamEase! Redirecting...",
       });
-      // onAuthStateChanged handles user state update and potential navigation
     } catch (error: any) {
       console.error("Firebase signup error (AuthContext):", error);
       let errorMessage = "Failed to create account. Please try again.";
@@ -162,3 +179,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
