@@ -126,6 +126,7 @@ This is a top-level collection where each document represents a user profile.
     *   Default security rules (especially in "Production mode") are highly restrictive. You **must** configure Firestore Security Rules.
     *   These rules enforce multi-tenancy (a user can only access data for their own team) and role-based access (only an admin can create/modify team-wide data like matches or other player profiles within their team).
     *   **Carefully copy and paste the rules below into the Firebase console Rules editor.**
+    *   **If you encounter "Missing or insufficient permissions" errors, double-check that these rules are correctly applied and that your `users/{uid}` documents contain the correct `teamId` and `role` for the authenticated user.**
 
     **Security Rules:**
     ```firestore-rules
@@ -180,39 +181,51 @@ This is a top-level collection where each document represents a user profile.
         // Users collection
         match /users/{userId} {
           // Any signed-in user can read any user profile (e.g., to see names for attendance or their own profile).
+          // If a user document doesn't exist for request.auth.uid, getUserAuthData() will return null,
+          // and subsequent checks like isUserTeamMember/isUserTeamAdmin will fail, leading to permission denied.
+          // This rule allows reading profiles which is generally fine.
           allow read: if isSignedIn();
 
           // A user can create their own profile document.
           // This is handled during signup where teamId and role are also set.
-          allow create: if isOwner(userId) && 
+          allow create: if isSignedIn() && 
+                          isOwner(userId) && // Ensures user is creating their own doc
                           request.resource.data.uid == userId &&
                           request.resource.data.email != null && 
                           request.resource.data.name != null &&
                           request.resource.data.role != null &&
                           request.resource.data.teamId != null; 
-                          // teamId and role validity checked during team creation by admin on signup.
+                          // Further checks for teamId validity and role assignment happen implicitly 
+                          // when the user tries to access team-specific data based on these fields.
 
           // A user can update their own profile (e.g., name, avatarUrl).
           // An admin can update profiles of users within their own team.
-          // Critical fields like 'role' and 'teamId' should be protected from arbitrary client-side changes by non-admins or on self-update.
+          // Critical fields like 'role' and 'teamId' should be protected from arbitrary client-side changes.
           allow update: if isSignedIn() &&
                           (
+                            // User is updating their own profile
                             (isOwner(userId) && 
                               // User cannot change their own role, teamId, or email via this path.
+                              // uid should also not be changeable.
+                              request.resource.data.uid == resource.data.uid &&
                               !(request.resource.data.role != resource.data.role || 
                                 request.resource.data.teamId != resource.data.teamId || 
                                 request.resource.data.email != resource.data.email    
                                )) || 
-                            // Admin can update other users in their team.
-                            (isUserTeamAdmin(resource.data.teamId) && 
-                             request.resource.data.teamId == resource.data.teamId && // Ensure admin is not changing the target user's teamId
-                             userId != request.auth.uid // Admin cannot use this rule to update their own profile
+                            // Admin is updating another user's profile within their team
+                            (isUserTeamAdmin(resource.data.teamId) && // Admin of the target user's team
+                             resource.data.teamId == getUserAuthData().teamId && // Admin must be in the same team as the target user
+                             request.resource.data.teamId == resource.data.teamId && // Admin is not changing the target user's teamId
+                             request.resource.data.uid == resource.data.uid && // UID must not change
+                             userId != request.auth.uid // Admin cannot use this rule to update their own profile via this path
                             ) 
                           );
           
           // An admin can delete user profiles from their team (except their own).
           // resource.data.teamId refers to the teamId of the user being deleted.
-          allow delete: if isUserTeamAdmin(resource.data.teamId) && userId != request.auth.uid;
+          allow delete: if isUserTeamAdmin(resource.data.teamId) && 
+                          resource.data.teamId == getUserAuthData().teamId && // Admin must be in the same team as the user being deleted
+                          userId != request.auth.uid; // Admin cannot delete themselves
         }
 
         // Matches subcollection (nested under a specific team)
@@ -233,15 +246,17 @@ This is a top-level collection where each document represents a user profile.
       }
     }
     ```
-    *   **Test your security rules thoroughly** using the Firebase console's Rules Playground before deploying your app widely.
+    *   **Test your security rules thoroughly** using the Firebase console's Rules Playground before deploying your app widely. This allows you to simulate requests as different users and see if the rules grant or deny access as expected.
 
 By following this structure and implementing robust security rules, your TeamEase application will have a solid foundation for managing team data securely and efficiently for multiple teams.
-The application code in `src/services/` is designed to work with this Firestore structure.
 
 Some key changes in the rules provided above compared to the previous version in history:
 1.  `getUserAuthData()`: Changed `path('/databases/$(database)/documents/users/' + request.auth.uid)` to `path('/databases/' + database + '/documents/users/' + request.auth.uid)`. The `$(database)` syntax was incorrect; `database` is an implicitly available variable in rules.
-2.  `isUserTeamAdmin(teamId)`: Optimized to call `getUserAuthData()` only once.
-3.  Minor clarifications in comments for `allow update` on `/users/{userId}`.
+2.  `isUserTeamAdmin(teamId)`: Optimized to call `getUserAuthData()` only once and relies on `isUserTeamMember` for some initial checks.
+3.  `allow create` on `/users/{userId}`: Added `isSignedIn()` and ensures `isOwner(userId)` is checked for user self-creation.
+4.  `allow update` on `/users/{userId}`: Refined conditions to ensure admins are updating users within their own team and cannot change a user's teamId. Added check to prevent UID changes.
+5.  `allow delete` on `/users/{userId}`: Added check to ensure admin is in the same team as the user being deleted.
 
 Please try applying these updated rules. If you still encounter "Error saving rules", please provide the exact error message from the Firebase console again, along with the line number it refers to, as the parser can be sensitive.
-If the rules save successfully but you still get "Missing or insufficient permissions", then you'll need to use the Rules Playground to simulate the failing operation and see why the rules are denying access.
+If the rules save successfully but you still get "Missing or insufficient permissions", then you'll need to use the Rules Playground to simulate the failing operation and see why the rules are denying access. Ensure the user document `/users/{yourAuthUID}` exists and has the correct `teamId` and `role` fields.
+```
