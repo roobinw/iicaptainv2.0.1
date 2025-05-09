@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode, Dispatch, SetStateAction } from "react";
@@ -14,6 +15,7 @@ import { getAllUsersByTeam } from "@/services/userService";
 import { AttendanceToggler, getAttendanceStatusColor, getAttendanceStatusText, type AttendanceStatus } from "./attendance-toggler";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { format, parseISO } from "date-fns";
 
 
 interface EventCardBaseProps {
@@ -72,40 +74,32 @@ export function EventCardBase({
       setCurrentAttendance(item.attendance || {});
       setIsLoadingMembers(false);
     }
-  }, [currentUser?.teamId, item.id, item.attendance, eventType]); // Added eventType for logging
+  }, [currentUser?.teamId, item.id, item.attendance, eventType]); 
 
-  // This effect can be simplified or merged if the above effect correctly handles dialog opening too.
-  // For now, it ensures members are re-fetched or re-processed if dialog opens and list is empty.
   useEffect(() => {
     if (isAttendanceDialogOpen && currentUser?.teamId) {
-      // If memberList is empty or needs refresh upon dialog open, (re)fetch.
-      // The main effect should cover initial load; this is more for refresh on dialog open if needed.
-      if (memberList.length === 0) { // Only fetch if list is empty to avoid redundant calls
+      if (memberList.length === 0) { 
         setIsLoadingMembers(true);
         getAllUsersByTeam(currentUser.teamId)
           .then(fetchedMembers => {
             setMemberList(fetchedMembers);
-            // Re-initialize attendance based on newly fetched members and current item.attendance
             const initialAttendanceFromItem = item.attendance || {};
             const updatedAttendance: Record<string, AttendanceStatus> = {};
             fetchedMembers.forEach(member => {
               updatedAttendance[member.uid] = initialAttendanceFromItem[member.uid] || 'present';
             });
-            // Merge with any optimistic updates already in currentAttendance
             setCurrentAttendance(prev => ({...updatedAttendance, ...prev}));
           })
           .catch(err => console.error("Failed to fetch team members on dialog open:", err))
           .finally(() => setIsLoadingMembers(false));
       } else {
-        // If memberList is already populated, ensure currentAttendance is up-to-date with it.
-        // This handles cases where item.attendance prop might have changed.
         const initialAttendanceFromItem = item.attendance || {};
         const refreshedAttendance: Record<string, AttendanceStatus> = {};
         memberList.forEach(member => {
             refreshedAttendance[member.uid] = initialAttendanceFromItem[member.uid] || 'present';
         });
         setCurrentAttendance(prev => ({...refreshedAttendance, ...prev}));
-        setIsLoadingMembers(false); // Ensure loading is false if members already present
+        setIsLoadingMembers(false); 
       }
     }
   }, [isAttendanceDialogOpen, currentUser?.teamId, item.attendance, memberList]);
@@ -116,6 +110,10 @@ export function EventCardBase({
   const handleAttendanceChange = (memberId: string, status: AttendanceStatus) => {
     setCurrentAttendance(prev => ({ ...prev, [memberId]: status }));
     if (setForceUpdateList) {
+      // No need to increment, just re-setting the parent's state item from child will trigger re-render.
+      // However, if parent specifically relies on counter for other effects, keep it.
+      // For simple list refresh on attendance change this might be overkill if parent re-fetches data.
+      // Assuming setForceUpdateList *is* a counter for now as per its name.
       setForceUpdateList(val => val + 1); 
     }
   };
@@ -126,7 +124,6 @@ export function EventCardBase({
   }
 
   const presentCount = Object.values(currentAttendance).filter(status => status === 'present').length;
-  // totalMembersToCount will be memberList.length once loaded.
 
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
@@ -157,7 +154,7 @@ export function EventCardBase({
       </CardHeader>
       <CardContent className="flex-grow">
         <p className="text-sm text-muted-foreground">
-            Attendance: {isLoadingMembers ? (
+            Attendance: {isLoadingMembers && memberList.length === 0 ? ( // Show skeleton only if list is empty and loading
                 <Skeleton className="h-4 w-20 inline-block" />
             ) : (
                 <span className="font-semibold text-primary">{presentCount} / {memberList.length}</span>
@@ -179,7 +176,7 @@ export function EventCardBase({
               </DialogDescription>
             </DialogHeader>
             <ScrollArea className="h-[300px] md:h-[400px] pr-4">
-              {isLoadingMembers && memberList.length === 0 ? ( // Show skeleton only if truly loading and no members yet
+              {isLoadingMembers && memberList.length === 0 ? ( 
                 <div className="space-y-3 py-1">
                   {[1,2,3].map(i => (
                      <div key={i} className="flex items-center justify-between p-2 border rounded-md">
@@ -211,10 +208,11 @@ export function EventCardBase({
                         </div>
                       </div>
                        <AttendanceToggler 
-                           item={{...item, attendance: currentAttendance}} 
+                           item={{...item, attendance: currentAttendance}} // Pass the locally managed attendance
                            player={member} 
                            eventType={eventType} 
                            onAttendanceChange={handleAttendanceChange}
+                           setForceUpdate={setForceUpdateList} // Pass this down if AttendanceToggler also needs to trigger parent refresh
                        />
                     </div>
                   ))}
@@ -229,3 +227,4 @@ export function EventCardBase({
     </Card>
   );
 }
+
