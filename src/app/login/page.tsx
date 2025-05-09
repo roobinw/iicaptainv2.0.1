@@ -5,7 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -16,22 +17,31 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/auth"; // useAuth will provide user state after Firebase auth
 import { AuthLayout } from "@/components/layouts/AuthLayout";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
-  password: z.string().min(1, { message: "Password is required." }), // Simplified for mock
+  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  // const { login: contextLogin, user, isLoading: authIsLoading } = useAuth(); // user from context to redirect if already logged in
+  const { user, isLoading: authIsLoading } = useAuth();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!authIsLoading && user) {
+      router.replace("/dashboard");
+    }
+  }, [user, authIsLoading, router]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -42,35 +52,39 @@ export default function LoginPage() {
   });
 
   async function onSubmit(data: LoginFormValues) {
-    setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // For demo purposes, we'll use the email as part of the name and determine role
-    // In a real app, the backend would verify credentials and return user data
-    let name = "Demo User";
-    let role: "admin" | "player" = "player";
-
-    if (data.email.toLowerCase().startsWith("admin")) {
-        name = "Admin User";
-        role = "admin";
-    } else if (data.email.toLowerCase().startsWith("player")) {
-        name = "Player User";
-        role = "player";
+    setIsSubmitting(true);
+    try {
+      await signInWithEmailAndPassword(auth, data.email, data.password);
+      // onAuthStateChanged in AuthProvider will handle setting user state and redirecting
+      toast({
+        title: "Login Successful",
+        description: "Welcome back!",
+      });
+      // router.push("/dashboard"); // AuthProvider's onAuthStateChanged listener handles this
+    } catch (error: any) {
+      console.error("Firebase login error:", error);
+      let errorMessage = "Failed to login. Please check your credentials.";
+      if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password" || error.code === "auth/invalid-credential") {
+        errorMessage = "Invalid email or password.";
+      }
+      toast({
+        title: "Login Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    // Use the email itself as a placeholder name if no prefix matches
-    else if (data.email.includes('@')) {
-      name = data.email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    }
-
-
-    login(data.email, name, role);
-    toast({
-      title: "Login Successful",
-      description: `Welcome back, ${name}!`,
-    });
-    setIsLoading(false);
   }
+  
+  if (authIsLoading || (!authIsLoading && user)) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
 
   return (
     <AuthLayout>
@@ -110,8 +124,8 @@ export default function LoginPage() {
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Signing in..." : "Sign In"}
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Signing in..." : "Sign In"}
           </Button>
         </form>
       </Form>
@@ -124,9 +138,7 @@ export default function LoginPage() {
           Sign Up
         </Link>
       </p>
-       <div className="mt-4 text-xs text-center text-muted-foreground">
-        <p>Hint: Try 'admin@example.com' or 'player@example.com'. Any password works.</p>
-      </div>
+       {/* Remove hint as it's no longer relevant with Firebase */}
     </AuthLayout>
   );
 }

@@ -5,6 +5,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,9 +22,10 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
 import { AuthLayout } from "@/components/layouts/AuthLayout";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { UserRole } from "@/types";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useRouter } from "next/navigation";
 
 const signupSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -37,9 +41,16 @@ const signupSchema = z.object({
 type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
-  const { signup } = useAuth();
+  const { user, isLoading: authIsLoading } = useAuth();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!authIsLoading && user) {
+      router.replace("/dashboard");
+    }
+  }, [user, authIsLoading, router]);
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -53,15 +64,53 @@ export default function SignupPage() {
   });
 
   async function onSubmit(data: SignupFormValues) {
-    setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    signup(data.email, data.name, data.role as UserRole);
-    toast({
-      title: "Account Created",
-      description: "Welcome to TeamEase! You're now logged in.",
-    });
-    setIsLoading(false);
+    setIsSubmitting(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const firebaseUser = userCredential.user;
+
+      // Create user profile in Firestore
+      const userDocRef = doc(db, "users", firebaseUser.uid);
+      await setDoc(userDocRef, {
+        uid: firebaseUser.uid,
+        email: data.email,
+        name: data.name,
+        role: data.role as UserRole,
+        avatarUrl: `https://picsum.photos/seed/${data.email}/80/80`, // Use a slightly larger default avatar
+        createdAt: serverTimestamp(),
+      });
+      
+      toast({
+        title: "Account Created",
+        description: "Welcome to TeamEase! You're now logged in.",
+      });
+      // onAuthStateChanged in AuthProvider will handle setting user state and redirecting
+      // router.push("/dashboard"); // AuthProvider's onAuthStateChanged listener handles this
+
+    } catch (error: any) {
+      console.error("Firebase signup error:", error);
+      let errorMessage = "Failed to create account. Please try again.";
+      if (error.code === "auth/email-already-in-use") {
+        errorMessage = "This email address is already in use.";
+      } else if (error.code === "auth/weak-password") {
+        errorMessage = "Password is too weak. Please choose a stronger password.";
+      }
+      toast({
+        title: "Signup Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+  
+  if (authIsLoading || (!authIsLoading && user)) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
   }
 
   return (
@@ -162,8 +211,8 @@ export default function SignupPage() {
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Creating Account..." : "Create Account"}
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Creating Account..." : "Create Account"}
           </Button>
         </form>
       </Form>

@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Icons } from "@/components/icons";
 import { TrainingCard } from "@/components/training-card";
 import { AddTrainingForm } from "@/components/add-training-form";
-import { mockTrainings, addMockTraining } from "@/lib/mock-data";
 import type { Training } from "@/types";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -15,12 +14,14 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableItem } from '@/components/sortable-item';
-
+import { addTraining, getTrainings, updateTraining, deleteTraining } from "@/services/trainingService";
+import { parseISO } from "date-fns";
 
 export default function TrainingsPage() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [trainings, setTrainings] = useState<Training[]>(mockTrainings);
+  const [trainings, setTrainings] = useState<Training[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAddTrainingDialogOpen, setIsAddTrainingDialogOpen] = useState(false);
   const [editingTraining, setEditingTraining] = useState<Training | null>(null);
   const [forceUpdateList, setForceUpdateList] = useState(0); 
@@ -32,6 +33,26 @@ export default function TrainingsPage() {
     })
   );
 
+  const fetchTrainings = async () => {
+    setIsLoading(true);
+    try {
+      const fetchedTrainings = await getTrainings();
+      fetchedTrainings.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      setTrainings(fetchedTrainings);
+    } catch (error) {
+      console.error("Error fetching trainings:", error);
+      toast({ title: "Error", description: "Could not fetch trainings.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if(!authLoading) {
+        fetchTrainings();
+    }
+  }, [authLoading, forceUpdateList]);
+
   useEffect(() => {
     if (window.location.hash === "#add" && user?.role === "admin") {
       setIsAddTrainingDialogOpen(true);
@@ -40,11 +61,15 @@ export default function TrainingsPage() {
     }
   }, [user?.role]);
 
-  const handleAddTraining = (data: Omit<Training, "id" | "attendance">) => {
-    const newTraining = addMockTraining(data);
-    setTrainings(prev => [...prev, newTraining].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
-    toast({ title: "Training Added", description: `Training at ${data.location} scheduled.` });
-    setIsAddTrainingDialogOpen(false);
+  const handleAddTraining = async (data: Omit<Training, "id" | "attendance">) => {
+    try {
+      await addTraining(data);
+      toast({ title: "Training Added", description: `Training at ${data.location} scheduled.` });
+      setForceUpdateList(prev => prev + 1);
+      setIsAddTrainingDialogOpen(false);
+    } catch (error: any) {
+      toast({ title: "Error adding training", description: error.message || "Could not add training.", variant: "destructive" });
+    }
   };
 
   const handleEditTraining = (training: Training) => {
@@ -52,24 +77,29 @@ export default function TrainingsPage() {
     setIsAddTrainingDialogOpen(true);
   };
 
-  const handleUpdateTraining = (data: Omit<Training, "id" | "attendance">) => {
+  const handleUpdateTraining = async (data: Omit<Training, "id" | "attendance">) => {
     if (!editingTraining) return;
-    const updatedTrainings = trainings.map(t =>
-      t.id === editingTraining.id ? { ...editingTraining, ...data, date: data.date.toString() } : t
-    );
-    setTrainings(updatedTrainings.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
-    mockTrainings.splice(0, mockTrainings.length, ...updatedTrainings);
-    toast({ title: "Training Updated", description: `Training at ${data.location} updated.` });
-    setIsAddTrainingDialogOpen(false);
-    setEditingTraining(null);
+    try {
+      const updateData = { ...data, date: typeof data.date === 'string' ? data.date : (data.date as Date).toISOString().split('T')[0] };
+      await updateTraining(editingTraining.id, updateData as Partial<Omit<Training, 'id'>>);
+      toast({ title: "Training Updated", description: `Training at data.location updated.` });
+      setForceUpdateList(prev => prev + 1);
+      setIsAddTrainingDialogOpen(false);
+      setEditingTraining(null);
+    } catch (error: any) {
+      toast({ title: "Error updating training", description: error.message || "Could not update training.", variant: "destructive" });
+    }
   };
 
-  const handleDeleteTraining = (trainingId: string) => {
+  const handleDeleteTraining = async (trainingId: string) => {
     if (!window.confirm("Are you sure you want to delete this training session?")) return;
-    const updatedTrainings = trainings.filter(t => t.id !== trainingId);
-    setTrainings(updatedTrainings);
-    mockTrainings.splice(0, mockTrainings.length, ...updatedTrainings);
-    toast({ title: "Training Deleted", description: "The training session has been removed.", variant: "destructive" });
+    try {
+      await deleteTraining(trainingId);
+      toast({ title: "Training Deleted", description: "The training session has been removed.", variant: "destructive" });
+      setForceUpdateList(prev => prev + 1);
+    } catch (error: any) {
+      toast({ title: "Error deleting training", description: error.message || "Could not delete training.", variant: "destructive" });
+    }
   };
 
   function handleDragEnd(event: DragEndEvent) {
@@ -79,13 +109,18 @@ export default function TrainingsPage() {
         const oldIndex = items.findIndex(item => item.id === active.id);
         const newIndex = items.findIndex(item => item.id === over.id);
         const newOrder = arrayMove(items, oldIndex, newIndex);
-        mockTrainings.splice(0, mockTrainings.length, ...newOrder);
+        // Persisting DND order to Firestore is a further step
+        // updateTrainingsOrder(newOrder.map((training, index) => ({ id: training.id, order: index })));
         return newOrder;
       });
     }
   }
 
   const isAdmin = user?.role === "admin";
+  
+  if (isLoading || authLoading) {
+    return <div className="flex h-full items-center justify-center"><p>Loading trainings...</p></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -93,7 +128,7 @@ export default function TrainingsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Training Schedule</h1>
           <p className="text-muted-foreground">
-            Plan and view upcoming training sessions. {isAdmin && "Drag to reorder."}
+            Plan and view upcoming training sessions. {isAdmin && "Drag to reorder (local view only)."}
           </p>
         </div>
         {isAdmin && (
@@ -126,7 +161,7 @@ export default function TrainingsPage() {
         )}
       </div>
 
-      {trainings.length === 0 ? (
+      {trainings.length === 0 && !isLoading ? (
          <Card className="col-span-full">
             <CardHeader>
                 <CardTitle>No Trainings Yet</CardTitle>

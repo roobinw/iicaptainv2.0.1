@@ -3,30 +3,108 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth";
-import { mockTeam, mockMatches, mockTrainings, mockUsers } from "@/lib/mock-data";
 import { Icons } from "@/components/icons";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isAfter, isEqual } from "date-fns";
+import { useEffect, useState } from "react";
+import type { Match, Training, User } from "@/types";
+import { getMatches } from "@/services/matchService";
+import { getTrainings } from "@/services/trainingService";
+import { getPlayers } from "@/services/userService"; // Assuming this fetches users with 'player' role
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, isLoading: authIsLoading } = useAuth();
+  const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([]);
+  const [upcomingTrainings, setUpcomingTrainings] = useState<Training[]>([]);
+  const [totalPlayers, setTotalPlayers] = useState(0);
+  const [teamName, setTeamName] = useState("Your Team"); // Placeholder, can be dynamic if stored
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
-  if (!user) {
-    return null; // Or a loading spinner, AppLayout handles redirect
+  useEffect(() => {
+    if (authIsLoading || !user) return;
+
+    const fetchData = async () => {
+      setIsLoadingData(true);
+      try {
+        const today = new Date();
+        
+        const allMatches = await getMatches();
+        const futureMatches = allMatches
+          .filter(match => {
+            const matchDate = parseISO(match.date);
+            return isAfter(matchDate, today) || isEqual(matchDate, today);
+          })
+          .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
+          .slice(0, 2);
+        setUpcomingMatches(futureMatches);
+
+        const allTrainings = await getTrainings();
+        const futureTrainings = allTrainings
+          .filter(training => {
+            const trainingDate = parseISO(training.date);
+            return isAfter(trainingDate, today) || isEqual(trainingDate, today);
+          })
+          .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
+          .slice(0, 2);
+        setUpcomingTrainings(futureTrainings);
+        
+        const players = await getPlayers();
+        setTotalPlayers(players.length);
+
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        // Optionally set error state and display error message
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    fetchData();
+  }, [user, authIsLoading]);
+
+  if (authIsLoading || isLoadingData) {
+    // Skeleton loader for dashboard
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <Skeleton className="h-9 w-64 mb-2" />
+            <Skeleton className="h-5 w-80" />
+          </div>
+          { user?.role === 'admin' && (
+            <div className="flex gap-2">
+                <Skeleton className="h-10 w-32" />
+                <Skeleton className="h-10 w-36" />
+            </div>
+        )}
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1,2,3].map(i => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-12 mb-1" />
+                <Skeleton className="h-4 w-48" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+            <Skeleton className="h-72 w-full rounded-lg" />
+            <Skeleton className="h-72 w-full rounded-lg" />
+        </div>
+      </div>
+    );
   }
-
-  const upcomingMatches = mockMatches
-    .filter(match => parseISO(match.date) >= new Date())
-    .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
-    .slice(0, 2);
-
-  const upcomingTrainings = mockTrainings
-    .filter(training => parseISO(training.date) >= new Date())
-    .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
-    .slice(0, 2);
     
-  const totalPlayers = mockUsers.filter(u => u.role === 'player').length;
+  if (!user) {
+    return null; // AppLayout handles redirect if not logged in after loading
+  }
 
   return (
     <div className="space-y-6">
@@ -34,7 +112,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Welcome, {user.name}!</h1>
           <p className="text-muted-foreground">
-            Here&apos;s what&apos;s happening with {mockTeam.name}.
+            Here&apos;s what&apos;s happening with {teamName}.
           </p>
         </div>
         { user.role === 'admin' && (
@@ -62,7 +140,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{upcomingMatches.length}</div>
             <p className="text-xs text-muted-foreground">
-              Next match: {upcomingMatches.length > 0 ? `vs ${upcomingMatches[0].opponent} on ${format(parseISO(upcomingMatches[0].date), "MMM dd")}` : "None scheduled"}
+              Next: {upcomingMatches.length > 0 ? `vs ${upcomingMatches[0].opponent} on ${format(parseISO(upcomingMatches[0].date), "MMM dd")}` : "None scheduled"}
             </p>
           </CardContent>
         </Card>
@@ -74,7 +152,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{upcomingTrainings.length}</div>
             <p className="text-xs text-muted-foreground">
-               Next training: {upcomingTrainings.length > 0 ? `${format(parseISO(upcomingTrainings[0].date), "MMM dd")} at ${upcomingTrainings[0].location}` : "None scheduled"}
+               Next: {upcomingTrainings.length > 0 ? `${format(parseISO(upcomingTrainings[0].date), "MMM dd")} at ${upcomingTrainings[0].location}` : "None scheduled"}
             </p>
           </CardContent>
         </Card>
@@ -86,7 +164,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{totalPlayers}</div>
             <p className="text-xs text-muted-foreground">
-              Active members in the team.
+              Active players in the team.
             </p>
           </CardContent>
         </Card>

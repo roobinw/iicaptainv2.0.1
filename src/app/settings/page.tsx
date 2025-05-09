@@ -8,34 +8,82 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { updateUserProfile } from "@/services/userService"; // Firestore service
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SettingsPage() {
-  const { user, login, isLoading } = useAuth(); // Use login to update user details
+  const { user, isLoading: authIsLoading, firebaseUser } = useAuth();
   const { toast } = useToast();
-  const [name, setName] = useState(user?.name || "");
-  const [email, setEmail] = useState(user?.email || ""); // Email might not be editable easily
+  
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (isLoading || !user) {
-    return <div className="flex h-full items-center justify-center"><p>Loading settings...</p></div>;
+  useEffect(() => {
+    if (user) {
+      setName(user.name || "");
+      setEmail(user.email || "");
+      setAvatarUrl(user.avatarUrl || `https://picsum.photos/seed/${user.email}/80/80`);
+    }
+  }, [user]);
+
+  if (authIsLoading || !user || !firebaseUser) {
+    return (
+        <div className="space-y-6">
+            <div>
+                <Skeleton className="h-9 w-48 mb-1" />
+                <Skeleton className="h-5 w-72" />
+            </div>
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-7 w-32 mb-1" />
+                    <Skeleton className="h-5 w-64" />
+                </CardHeader>
+                <CardContent className="space-y-4 max-w-md">
+                    <div className="flex items-center gap-4 mb-6">
+                        <Skeleton className="h-20 w-20 rounded-full" />
+                        <div className="space-y-2">
+                            <Skeleton className="h-5 w-32" />
+                            <Skeleton className="h-10 w-full" />
+                        </div>
+                    </div>
+                    <Skeleton className="h-5 w-24 mb-1" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-5 w-24 mb-1" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-32" />
+                </CardContent>
+            </Card>
+        </div>
+    );
   }
   
   const getInitials = (nameStr: string) => {
+    if (!nameStr) return "?";
     return nameStr.split(' ').map(n => n[0]).join('').toUpperCase();
   }
 
-  const handleProfileUpdate = (e: React.FormEvent) => {
+  const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-
-    // Simulate update: re-login with new details
-    // In a real app, this would be an API call to update user profile
-    login(user.email, name, user.role); // Assuming email is key and role doesn't change here
-    
-    toast({
-      title: "Profile Updated",
-      description: "Your profile details have been saved.",
-    });
+    if (!firebaseUser) return;
+    setIsSubmitting(true);
+    try {
+      await updateUserProfile(firebaseUser.uid, { name }); // Only name is editable here for simplicity
+      // AuthProvider's onAuthStateChanged will pick up new user data from Firestore eventually,
+      // or we can force a refresh of user context if needed.
+      // For now, local state update and toast is sufficient.
+      toast({
+        title: "Profile Updated",
+        description: "Your profile details have been saved.",
+      });
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
+      toast({ title: "Update Failed", description: error.message || "Could not update profile.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -54,8 +102,8 @@ export default function SettingsPage() {
           <form onSubmit={handleProfileUpdate} className="space-y-4 max-w-md">
             <div className="flex items-center gap-4 mb-6">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="profile picture"/>
-                <AvatarFallback className="text-2xl">{getInitials(user.name)}</AvatarFallback>
+                <AvatarImage src={avatarUrl} alt={name} data-ai-hint="profile picture"/>
+                <AvatarFallback className="text-2xl">{getInitials(name)}</AvatarFallback>
               </Avatar>
               <div>
                 <Label htmlFor="avatarFile">Update Avatar</Label>
@@ -71,13 +119,15 @@ export default function SettingsPage() {
             <div className="space-y-1">
               <Label htmlFor="email">Email Address</Label>
               <Input id="email" type="email" value={email} disabled />
-               <p className="text-xs text-muted-foreground mt-1">Email address cannot be changed in this demo.</p>
+               <p className="text-xs text-muted-foreground mt-1">Email address cannot be changed.</p>
             </div>
             <div className="space-y-1">
               <Label htmlFor="role">Role</Label>
               <Input id="role" value={user.role.charAt(0).toUpperCase() + user.role.slice(1)} disabled />
             </div>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
           </form>
         </CardContent>
       </Card>
@@ -88,20 +138,16 @@ export default function SettingsPage() {
           <CardDescription>Change your account password.</CardDescription>
         </CardHeader>
         <CardContent className="max-w-md">
+            {/* Firebase password change typically involves re-authentication or sending a password reset email */}
+            <p className="text-muted-foreground">Password changes can be initiated via Firebase password reset flows (not implemented here).</p>
+            {/* 
             <div className="space-y-1">
                 <Label htmlFor="currentPassword">Current Password</Label>
                 <Input id="currentPassword" type="password" disabled />
             </div>
-            <div className="space-y-1 mt-4">
-                <Label htmlFor="newPassword">New Password</Label>
-                <Input id="newPassword" type="password" disabled />
-            </div>
-            <div className="space-y-1 mt-4">
-                <Label htmlFor="confirmNewPassword">Confirm New Password</Label>
-                <Input id="confirmNewPassword" type="password" disabled />
-            </div>
-            <Button className="mt-4" disabled>Change Password</Button>
-            <p className="text-xs text-muted-foreground mt-2">Password changes are not supported in this demo.</p>
+            ...
+            */}
+            <Button className="mt-4" disabled>Change Password (Not Implemented)</Button>
         </CardContent>
       </Card>
 
@@ -112,14 +158,9 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent>
            <p className="text-muted-foreground">Theme customization is not yet available.</p>
-           {/* Placeholder for theme toggle (light/dark) 
-           <div className="flex items-center space-x-2">
-             <Button variant="outline" disabled><Icons.Sun className="mr-2 h-4 w-4" /> Light</Button>
-             <Button variant="outline" disabled><Icons.Moon className="mr-2 h-4 w-4" /> Dark</Button>
-           </div>
-           */}
         </CardContent>
       </Card>
     </div>
   );
 }
+

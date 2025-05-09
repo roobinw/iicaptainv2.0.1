@@ -5,28 +5,46 @@ import type { Dispatch, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
 import type { Match, Training, User } from "@/types";
-import { updatePlayerAttendance } from "@/lib/mock-data"; // Assuming this exists
+import { updateMatchAttendance } from "@/services/matchService";
+import { updateTrainingAttendance } from "@/services/trainingService";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+
 
 type AttendanceStatus = "present" | "absent" | "excused" | "unknown";
 
 interface AttendanceTogglerProps {
   item: Match | Training;
-  player: User;
+  player: User; // User type now includes uid
   eventType: "match" | "training";
-  // This would typically be a mutation function or state updater from a hook
   onAttendanceChange: (playerId: string, status: AttendanceStatus) => void; 
-  // Force a re-render if needed (simplified state management)
   setForceUpdate?: Dispatch<SetStateAction<number>>; 
 }
 
 export function AttendanceToggler({ item, player, eventType, onAttendanceChange, setForceUpdate }: AttendanceTogglerProps) {
-  const currentStatus = item.attendance[player.id] || "unknown";
+  const { toast } = useToast();
+  // Player ID for attendance key is Firebase UID
+  const playerIdForAttendance = player.uid; 
+  const currentStatus = item.attendance[playerIdForAttendance] || "unknown";
 
-  const handleAttendance = (status: AttendanceStatus) => {
-    // In a real app, this would be an API call
-    updatePlayerAttendance(item.id, eventType, player.id, status);
-    onAttendanceChange(player.id, status);
-    if(setForceUpdate) setForceUpdate(val => val + 1); // Trigger re-render for mock
+  const handleAttendance = async (status: AttendanceStatus) => {
+    if (!item.id || !playerIdForAttendance) {
+        toast({title: "Error", description: "Missing item or player ID for attendance update.", variant: "destructive"});
+        return;
+    }
+    try {
+      if (eventType === "match") {
+        await updateMatchAttendance(item.id, playerIdForAttendance, status);
+      } else {
+        await updateTrainingAttendance(item.id, playerIdForAttendance, status);
+      }
+      onAttendanceChange(playerIdForAttendance, status); // Update local state in parent
+      if(setForceUpdate) setForceUpdate(val => val + 1); 
+      // toast({title: "Attendance Updated", description: `${player.name}'s status set to ${status}.`});
+    } catch (error: any) {
+      console.error("Error updating attendance:", error);
+      toast({title: "Update Failed", description: error.message || "Could not update attendance.", variant: "destructive"});
+    }
   };
 
   return (
@@ -71,7 +89,6 @@ export function AttendanceToggler({ item, player, eventType, onAttendanceChange,
   );
 }
 
-// Helper function to get status color - can be used for text or backgrounds
 export const getAttendanceStatusColor = (status: AttendanceStatus): string => {
   switch (status) {
     case "present":
@@ -84,7 +101,7 @@ export const getAttendanceStatusColor = (status: AttendanceStatus): string => {
       return "text-muted-foreground";
   }
 };
-// Helper function to get status display text
+
 export const getAttendanceStatusText = (status: AttendanceStatus): string => {
   switch (status) {
     case "present":
@@ -97,5 +114,3 @@ export const getAttendanceStatusText = (status: AttendanceStatus): string => {
       return "Unknown";
   }
 };
-
-import { cn } from "@/lib/utils";
