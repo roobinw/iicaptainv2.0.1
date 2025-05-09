@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuth } from "@/lib/auth";
@@ -163,4 +162,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
