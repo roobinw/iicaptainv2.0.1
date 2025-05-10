@@ -8,64 +8,64 @@ body {
 
 @layer base {
   :root {
-    /* Dark Mode Best Practices:
-       - Background: Very dark, but not pure black (e.g., HSL 220-240, Sat 10-20%, Lightness 8-15%)
-       - Foreground: Light grey/off-white (e.g., HSL 0, Sat 0%, Lightness 90-95%)
-       - Containers (Cards): Slightly lighter than background (e.g., Lightness +3-5% from background)
-       - Primary/Accent: Ensure good contrast (WCAG AA). Vibrant colors might need slight desaturation or brightness adjustment.
+    /* Dark Mode Coherent Palette:
+       - Base Hue: Cool tones (e.g., HSL around 220 for blues/greys)
+       - Background: Very dark, slightly desaturated (e.g., HSL 220, Sat 15-25%, Lightness 8-12%)
+       - Foreground: Light grey/off-white, not pure white for comfort (e.g., HSL 210, Sat 10-20%, Lightness 90-96%)
+       - Containers (Cards): Slightly lighter than background, same hue family (e.g., Lightness +3-5% from background)
+       - Primary/Accent: Ensure good contrast (WCAG AA). Primary should be distinct. Accent should complement.
     */
 
     /* Main Theme Colors */
-    --background: 222 45% 10%; /* Dark desaturated blue-grey */
-    --foreground: 210 40% 98%; /* Almost white, slightly cool */
+    --background: 220 20% 10%; /* Deep cool dark blue/grey */
+    --foreground: 210 20% 95%; /* Soft off-white */
 
-    --card: 222 45% 13%; /* Slightly lighter than background */
-    --card-foreground: 210 40% 98%;
+    --card: 220 20% 14%; /* Slightly lighter than background, same hue family */
+    --card-foreground: var(--foreground);
 
-    --popover: 222 45% 8%; /* Darker than background for popovers */
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 20% 9%; /* Darker than background for popovers, same hue family */
+    --popover-foreground: var(--foreground);
 
-    --primary: 217 91% 60%;  /* Vibrant Blue (e.g., #3B82F6 from Tailwind Blue 500) */
-    --primary-foreground: 210 40% 98%; /* White/Light text on primary */
+    --primary: 210 100% 56%;  /* Strong, vibrant Blue (e.g., Tailwind Blue 500) */
+    --primary-foreground: 210 100% 97%; /* Very light, almost white for max contrast on primary */
 
-    --secondary: 215 28% 17%; /* Muted, darker blue-grey */
-    --secondary-foreground: 210 40% 90%; /* Lighter grey for text on secondary */
+    --secondary: 220 15% 25%; /* Muted, darker cool grey-blue */
+    --secondary-foreground: 210 15% 85%; /* Lighter grey for text on secondary */
 
-    --muted: 215 20% 25%; /* Dark, slightly desaturated blue-grey for muted elements */
-    --muted-foreground: 215 20% 65%; /* Medium grey for muted text */
+    --muted: 220 10% 30%; /* Even more desaturated and slightly lighter grey-blue for muted elements */
+    --muted-foreground: 220 10% 60%; /* Medium grey for muted text, legible */
 
-    --accent: 173 90% 40%; /* Vibrant Teal/Cyan (adjusted for dark mode) */
-    --accent-foreground: 210 40% 98%; /* White/Light text on accent */
+    --accent: 160 70% 45%; /* Vibrant Teal/Cyan, contrasts well with blue primary */
+    --accent-foreground: var(--foreground); /* Consistent foreground for accents */
 
-    --destructive: 0 72% 51%; /* Bright Red (e.g., #EF4444 from Tailwind Red 500) */
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%; /* Bright Red (e.g., Tailwind Red 500) - kept for clarity */
+    --destructive-foreground: 210 20% 95%; /* Main foreground on destructive elements */
 
     /* Borders and Inputs */
-    --border: 215 28% 20%; /* Visible border color */
-    --input: 215 28% 15%;  /* Darker input background */
-    --ring: 217 91% 65%;   /* Slightly lighter blue for focus rings */
+    --border: 220 15% 22%; /* Subtle border, visible on dark backgrounds */
+    --input: 220 15% 18%;  /* Darker input background, distinct from card but related */
+    --ring: 210 100% 65%;   /* Slightly lighter blue for focus rings, related to primary */
 
     --radius: 0.75rem;
 
-    /* Sidebar specific theme - inheriting from main theme for consistency */
-    --sidebar-background: 222 45% 9%; /* Slightly darker than main background or same as popover */
-    --sidebar-foreground: 210 40% 85%; /* Light grey for sidebar text */
-    --sidebar-primary: var(--accent); /* Active items use main accent */
-    --sidebar-primary-foreground: var(--accent-foreground);
-    --sidebar-accent: 222 45% 15%; /* Hover/accent for sidebar items - slightly lighter than sidebar-bg */
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 222 45% 12%; /* Border for sidebar elements */
+    /* Sidebar specific theme - derived for coherence */
+    --sidebar-background: 220 20% 8%; /* Slightly darker & more defined than main background */
+    --sidebar-foreground: 210 15% 80%; /* Readable muted foreground for sidebar text */
+    --sidebar-primary: var(--primary); /* Active items use main primary color for strong visual cue */
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: 220 15% 18%; /* Hover/accent for sidebar items - aligns with input background */
+    --sidebar-accent-foreground: var(--foreground); /* Main foreground for hover text consistency */
+    --sidebar-border: 220 15% 15%; /* Border for sidebar elements, subtly visible */
     --sidebar-ring: var(--ring);
 
     /* Charts - ensure good contrast with dark background */
     --chart-1: var(--primary);
     --chart-2: var(--accent);
-    --chart-3: var(--destructive);
-    --chart-4: 120 70% 55%; /* A distinct, brighter green */
-    --chart-5: 45 90% 55%;  /* A distinct, brighter yellow/orange */
+    --chart-3: var(--destructive); /* Kept standard destructive */
+    --chart-4: 120 65% 50%; /* A distinct, visible green */
+    --chart-5: 40 85% 55%;  /* A distinct, visible orange/yellow */
   }
 
-  /* .dark class block is removed as :root now defines the dark theme directly */
 }
 
 @layer base {
