@@ -189,7 +189,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <div> 
            <div className="flex h-10 items-center justify-center mb-4 mt-2">
              <Link href="/dashboard" className="text-sidebar-foreground hidden md:block">
-              <Icons.TeamLogo className="mt-[5px]" />
+              <Icons.TeamLogo className="mt-[10px]" />
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
@@ -264,7 +264,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <div className="flex-1 overflow-auto">{mobileSidebarContent}</div>
             </SheetContent>
           </Sheet>
-          <div className="p-4 lg:p-6"> {/* Added padding that was removed from main */}
+          <div className="p-4 lg:p-6">
             {children}
           </div>
       </main>
