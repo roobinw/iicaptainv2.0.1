@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from "react";
@@ -59,8 +60,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
          // Logged in, has teamId, but on auth/onboarding page, redirect to dashboard.
         router.replace("/dashboard");
       }
-      // If user is logged in, has teamId and on marketing page, it's fine, they might be browsing.
-      // No explicit redirect from marketing to dashboard if already logged in. User can navigate.
     }
   }, [user, authIsLoading, router, pathname]);
 
@@ -74,29 +73,26 @@ export function AppLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // Handling redirection logic after loading state, ensures router is stable.
   if (!authIsLoading) {
     const isPublicPage = pathname === "/" || pathname.startsWith("/(marketing)");
     const isAuthFlowPage = pathname === "/login" || pathname === "/signup";
     const isOnboardingPage = pathname.startsWith("/onboarding");
 
-    // If user is not authenticated and trying to access a protected page
     if (!user && !isPublicPage && !isAuthFlowPage && !isOnboardingPage) {
        return ( 
            <div className="flex h-screen items-center justify-center bg-background">
                <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
                <p className="ml-4 text-lg text-foreground">Redirecting...</p>
            </div>
-       ); // This will be caught by useEffect to redirect to "/"
+       );
     }
-    // If user is authenticated but has no teamId and is not on an onboarding page
     if (user && !user.teamId && !isOnboardingPage) {
       return (
           <div className="flex h-screen items-center justify-center bg-background">
               <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
               <p className="ml-4 text-lg text-foreground">Finalizing setup or redirecting...</p>
           </div>
-      ); // This will be caught by useEffect to redirect to "/onboarding/create-team"
+      );
     }
   }
 
@@ -189,12 +185,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[70px_1fr] lg:grid-cols-[70px_1fr]">
-      {/* Desktop Sidebar */}
       <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg sticky top-0 h-screen">
-        <div> {/* Top part: logo and nav items */}
+        <div> 
            <div className="flex h-10 items-center justify-center mb-4 mt-2">
              <Link href="/dashboard" className="text-sidebar-foreground hidden md:block">
-              <Icons.TeamLogo />
+              <Icons.TeamLogo className="mt-[5px]" />
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
@@ -203,7 +198,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
         
-        {/* User Profile Dropdown for Desktop Sidebar - AT THE BOTTOM */}
         {user && (
             <div className="mt-auto p-1 flex justify-center"> 
               <DropdownMenu>
@@ -224,9 +218,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           )}
       </aside>
       
-      {/* Main Content Area */}
-      <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background overflow-auto">
-         {/* Mobile Sheet Trigger - positioned at top-left of main content for mobile */}
+      <main className="flex flex-1 flex-col bg-background overflow-auto">
         <Sheet>
             <SheetTrigger asChild>
               <Button
@@ -265,14 +257,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 )}
                <div className="flex h-10 items-center justify-center mt-2 mb-2">
                 <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
-                  <Icons.TeamLogo />
+                  <Icons.TeamLogo className="mt-[5px]" />
                   <span className="">{currentTeam?.name || "iiCaptain"}</span>
                 </Link>
               </div>
               <div className="flex-1 overflow-auto">{mobileSidebarContent}</div>
             </SheetContent>
           </Sheet>
-        {children}
+          <div className="p-4 lg:p-6"> {/* Added padding that was removed from main */}
+            {children}
+          </div>
       </main>
     </div>
   );
