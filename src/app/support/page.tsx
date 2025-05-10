@@ -99,7 +99,7 @@ export default function SupportPage() {
         </div>
       </div>
 
-      <Card className="max-w-2xl mx-auto shadow-lg">
+      <Card className="max-w-2xl shadow-lg"> {/* Removed mx-auto */}
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Icons.Support className="h-6 w-6 text-primary" /> Submit a New Ticket</CardTitle>
           <CardDescription>
@@ -150,3 +150,4 @@ export default function SupportPage() {
     </div>
   );
 }
+
