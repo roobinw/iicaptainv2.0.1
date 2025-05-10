@@ -116,13 +116,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <Link
                 href={item.href}
                 className={cn(
-                  "flex items-center justify-center h-10 w-10 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-9 md:w-9",
+                  "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-11 md:w-11",
                   pathname.startsWith(item.href) // Use startsWith for active state
                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
                     : "text-sidebar-foreground"
                 )}
               >
-                <IconComponent className="h-5 w-5" />
+                <IconComponent className="h-6 w-6" />
                 <span className="sr-only">{item.label}</span>
               </Link>
             </TooltipTrigger>
@@ -153,7 +153,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 : "text-sidebar-foreground"
             )}
           >
-            <IconComponent className="h-4 w-4" />
+            <IconComponent className="h-5 w-5" />
             {item.label}
           </Link>
         );
@@ -169,16 +169,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator className="bg-border" />
         <DropdownMenuItem onClick={() => router.push('/settings')} className="hover:bg-accent/50 cursor-pointer">
-            <SettingsIcon className="mr-2 h-4 w-4" />
+            <SettingsIcon className="mr-2 h-5 w-5" />
             <span>Settings</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push('/support')} className="hover:bg-accent/50 cursor-pointer">
-            <LifeBuoy className="mr-2 h-4 w-4" />
+            <LifeBuoy className="mr-2 h-5 w-5" />
             <span>Support</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-border"/>
         <DropdownMenuItem onClick={logout} className="hover:bg-accent/50 cursor-pointer">
-            <LogOut className="mr-2 h-4 w-4" />
+            <LogOut className="mr-2 h-5 w-5" />
             <span>Logout</span>
         </DropdownMenuItem>
     </>
@@ -186,12 +186,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[70px_1fr] lg:grid-cols-[70px_1fr]">
+    <div className="grid min-h-screen w-full md:grid-cols-[84px_1fr] lg:grid-cols-[84px_1fr]">
       <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg sticky top-0 h-screen">
         <div> 
            <div className="flex h-10 items-center justify-center mb-4 mt-2">
              <Link href="/dashboard" className="text-sidebar-foreground hidden md:block">
-              <Icons.TeamLogo className="mt-[10px]" />
+              <Icons.TeamLogo className="mt-[10px] h-7 w-7" />
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
@@ -204,8 +204,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <div className="mt-auto p-1 flex justify-center"> 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full w-10 h-10">
-                    <Avatar className="h-8 w-8">
+                  <Button variant="ghost" size="icon" className="rounded-full w-12 h-12">
+                    <Avatar className="h-10 w-10">
                       <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar desktop"/>
                       <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                     </Avatar>
@@ -229,7 +229,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     size="icon"
                     className="shrink-0" 
                 >
-                    <PanelLeft className="h-5 w-5" />
+                    <PanelLeft className="h-6 w-6" />
                     <span className="sr-only">Toggle navigation menu</span>
                 </Button>
                 </SheetTrigger>
@@ -240,7 +240,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="flex items-center justify-between w-full h-auto px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                                 <div className="flex items-center gap-2 truncate">
-                                    <Avatar className="h-7 w-7">
+                                    <Avatar className="h-8 w-8">
                                         <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar mobile"/>
                                         <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                                     </Avatar>
@@ -249,7 +249,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                                         <span className="text-xs text-sidebar-foreground/70 truncate">{user.email}</span>
                                     </div>
                                 </div>
-                                <ChevronDown className="h-4 w-4 text-sidebar-foreground/70" />
+                                <ChevronDown className="h-5 w-5 text-sidebar-foreground/70" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent side="bottom" align="start" className="w-56 mt-1 bg-card text-card-foreground border-border shadow-xl">
@@ -260,7 +260,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     )}
                 <div className="flex h-10 items-center justify-center mt-2 mb-2">
                     <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
-                    <Icons.TeamLogo className="mt-[5px]" />
+                    <Icons.TeamLogo className="mt-[5px] h-7 w-7" />
                     <span className="">{currentTeam?.name || "iiCaptain"}</span>
                     </Link>
                 </div>
@@ -276,3 +276,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
+
+    
