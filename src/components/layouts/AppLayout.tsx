@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ReactNode } from "react";
@@ -20,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Icons } from "@/components/icons";
 import { PanelLeft, LogOut, Settings as SettingsIcon, ChevronDown } from "lucide-react"; 
+import { useEffect } from "react"; // Added useEffect
 
 interface NavItem {
   href: string;
@@ -40,32 +40,66 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
+  useEffect(() => {
+    if (!authIsLoading) { 
+      if (!user) {
+        const publicPaths = ["/", "/login", "/signup"]; 
+        const isPublicPage = publicPaths.includes(pathname);
+        const isOnboardingPage = pathname.startsWith("/onboarding");
+
+        if (!isPublicPage && !isOnboardingPage) {
+          router.replace("/"); // Redirect to landing page
+        }
+      } else if (user && !user.teamId && !pathname.startsWith("/onboarding")) {
+        router.replace("/onboarding/create-team");
+      }
+    }
+  }, [user, authIsLoading, router, pathname]);
+
 
   if (authIsLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <Icons.Dashboard className="h-12 w-12 animate-spin text-primary" />
+        <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
          <p className="ml-4 text-lg text-foreground">Loading Application...</p>
       </div>
     );
   }
 
-  if (!user || (user && !user.teamId && pathname !== "/onboarding/create-team" && pathname !== "/signup" )) {
+  // This check might be hit if useEffect hasn't redirected yet, or as a safety net.
+  // Ensure it doesn't try to navigate directly during render.
+  if (!authIsLoading && !user) {
+     const publicPaths = ["/", "/login", "/signup"];
+     if (!publicPaths.includes(pathname) && !pathname.startsWith("/onboarding")) {
+        return ( // Show a loading/redirecting message instead of direct navigation
+            <div className="flex h-screen items-center justify-center bg-background">
+                <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
+                <p className="ml-4 text-lg text-foreground">Redirecting...</p>
+            </div>
+        );
+     }
+     // If on a public/onboarding page while !user, let the page render (children)
+  }
+  
+  // If user exists but no teamId, and not on onboarding, useEffect should handle it.
+  // This is a fallback.
+  if (!authIsLoading && user && !user.teamId && !pathname.startsWith("/onboarding")) {
     return (
         <div className="flex h-screen items-center justify-center bg-background">
-            <Icons.Dashboard className="h-12 w-12 animate-spin text-primary" />
-            <p className="ml-4 text-lg text-foreground">Verifying access or redirecting...</p>
+            <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
+            <p className="ml-4 text-lg text-foreground">Finalizing setup or redirecting...</p>
         </div>
     );
   }
-  
+
+
   const getInitials = (name: string | undefined) => {
     if (!name) return "?";
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
 
   const sidebarNavigation = (
-    <nav className="grid items-start justify-items-center gap-3 px-2"> {/* Increased gap from 1 to 3 */}
+    <nav className="grid items-start justify-items-center gap-3 px-2 py-4"> 
       {navItems.map((item) => {
         if (item.adminOnly && user?.role !== "admin") {
           return null;
@@ -87,7 +121,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <span className="sr-only">{item.label}</span>
               </Link>
             </TooltipTrigger>
-            <TooltipContent side="right" className="bg-sidebar text-sidebar-foreground border-sidebar-border">
+            <TooltipContent side="right" className="bg-card text-card-foreground border-border">
               {item.label}
             </TooltipContent>
           </Tooltip>
@@ -97,7 +131,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   );
 
   const mobileSidebarContent = (
-     <nav className="grid items-start gap-2 px-2 text-sm font-medium">
+     <nav className="grid items-start gap-2 px-2 py-4 text-sm font-medium">
       {navItems.map((item) => {
         if (item.adminOnly && user?.role !== "admin") {
           return null;
@@ -126,58 +160,59 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[70px_1fr] lg:grid-cols-[70px_1fr]">
       {/* Desktop Sidebar */}
-      <div className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between">
+      <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 rounded-r-lg shadow-lg">
         <div>
-          <div className="flex h-14 items-center justify-center border-b border-sidebar-border px-2 lg:h-[60px]">
+          {/* User profile section at the top of sidebar */}
+          {user && (
+            <div className="mb-4 border-b border-sidebar-border pb-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="w-full h-auto justify-center p-1">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar"/>
+                      <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                    </Avatar>
+                    <span className="sr-only">User Menu</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="right" align="start" className="ml-1 w-56 bg-card text-card-foreground border-border shadow-xl">
+                  <DropdownMenuLabel className="truncate">
+                    <div className="font-semibold">{user.name}</div>
+                    <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-border" />
+                  <DropdownMenuItem onClick={() => router.push('/settings')} className="hover:bg-accent/50">
+                    <SettingsIcon className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled className="opacity-50">
+                    Support (soon)
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border"/>
+                  <DropdownMenuItem onClick={logout} className="hover:bg-accent/50">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Logout</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+           <div className="flex h-10 items-center justify-center mb-4">
             <Link href="/dashboard" className="text-sidebar-foreground">
               <Icons.TeamLogo />
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
-          <div className="flex-1 overflow-auto py-2">
+          <div className="flex-1 overflow-auto">
             {sidebarNavigation}
           </div>
         </div>
-        {/* User profile section at the bottom of sidebar */}
-        {user && (
-          <div className="mt-auto border-t border-sidebar-border p-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="w-full h-auto justify-center p-1">
-                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar"/>
-                    <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                  </Avatar>
-                  <span className="sr-only">User Menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="right" align="start" className="ml-1 w-56">
-                <DropdownMenuLabel className="truncate">
-                  <div className="font-semibold">{user.name}</div>
-                  <div className="text-xs text-muted-foreground truncate">{user.email}</div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push('/settings')}>
-                  <SettingsIcon className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled>
-                  Support (soon)
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Logout</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
-      </div>
+        {/* Moved User profile to the top */}
+      </aside>
       
       <div className="flex flex-col">
         {/* Header */}
-        <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
+        <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6 sticky top-0 z-40">
           <Sheet>
             <SheetTrigger asChild>
               <Button
@@ -189,17 +224,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <span className="sr-only">Toggle navigation menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col bg-sidebar p-0 text-sidebar-foreground w-[250px]">
-               <div className="flex h-14 items-center border-b border-sidebar-border px-4">
-                <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
-                  <Icons.TeamLogo />
-                  <span className="">{currentTeam?.name || "iiCaptain"}</span>
-                </Link>
-              </div>
-              <div className="flex-1 overflow-auto py-2">{mobileSidebarContent}</div>
-                {/* User profile section at the bottom of mobile sidebar */}
-                {user && (
-                <div className="mt-auto border-t border-sidebar-border p-2">
+            <SheetContent side="left" className="flex flex-col bg-sidebar p-0 text-sidebar-foreground w-[250px] rounded-r-lg shadow-xl">
+               {/* User profile for mobile */}
+               {user && (
+                <div className="border-b border-sidebar-border p-2">
                     <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="flex items-center justify-between w-full h-auto px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
@@ -216,19 +244,19 @@ export function AppLayout({ children }: { children: ReactNode }) {
                             <ChevronDown className="h-4 w-4 text-sidebar-foreground/70" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent side="top" align="start" className="w-56 mb-1">
+                    <DropdownMenuContent side="bottom" align="start" className="w-56 mt-1 bg-card text-card-foreground border-border shadow-xl">
                         <DropdownMenuLabel className="truncate">
                             <div className="font-semibold">{user.name}</div>
                             <div className="text-xs text-muted-foreground truncate">{user.email}</div>
                         </DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => router.push('/settings')}>
+                        <DropdownMenuSeparator className="bg-border"/>
+                        <DropdownMenuItem onClick={() => router.push('/settings')} className="hover:bg-accent/50">
                             <SettingsIcon className="mr-2 h-4 w-4" />
                             <span>Settings</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem disabled>Support (soon)</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={logout}>
+                        <DropdownMenuItem disabled className="opacity-50">Support (soon)</DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-border"/>
+                        <DropdownMenuItem onClick={logout} className="hover:bg-accent/50">
                         <LogOut className="mr-2 h-4 w-4" />
                         <span>Logout</span>
                         </DropdownMenuItem>
@@ -236,13 +264,19 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     </DropdownMenu>
                 </div>
                 )}
+               <div className="flex h-10 items-center justify-center mt-2 mb-2">
+                <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
+                  <Icons.TeamLogo />
+                  <span className="">{currentTeam?.name || "iiCaptain"}</span>
+                </Link>
+              </div>
+              <div className="flex-1 overflow-auto">{mobileSidebarContent}</div>
             </SheetContent>
           </Sheet>
           {/* Team Name in Header */}
           <div className="flex-1">
             <h1 className="text-lg font-semibold text-foreground">{currentTeam?.name || "Team Dashboard"}</h1>
           </div>
-          {/* Optional: Add search or other header elements here - keeping user menu in sidebar */}
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background overflow-auto">
           {children}
@@ -251,4 +285,3 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-
