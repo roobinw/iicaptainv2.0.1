@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from "react";
@@ -64,7 +65,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }
 
   const sidebarNavigation = (
-    <nav className="grid items-start justify-items-center gap-1 px-2">
+    <nav className="grid items-start justify-items-center gap-3 px-2"> {/* Increased gap from 1 to 3 */}
       {navItems.map((item) => {
         if (item.adminOnly && user?.role !== "admin") {
           return null;
@@ -127,7 +128,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {/* Desktop Sidebar */}
       <div className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between">
         <div>
-          <div className="flex h-14 items-center justify-center border-b px-2 lg:h-[60px]">
+          <div className="flex h-14 items-center justify-center border-b border-sidebar-border px-2 lg:h-[60px]">
             <Link href="/dashboard" className="text-sidebar-foreground">
               <Icons.TeamLogo />
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
@@ -250,3 +251,4 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
