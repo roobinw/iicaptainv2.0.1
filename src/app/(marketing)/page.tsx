@@ -75,12 +75,12 @@ export default function LandingPage() {
             </div>
              <div className="mt-16 max-w-4xl mx-auto">
                 <Image 
-                    src="https://picsum.photos/seed/appdashboard/1200/600" 
-                    alt="iiCaptain Dashboard Mockup" 
+                    src="https://picsum.photos/seed/soccerfield/1200/600" 
+                    alt="People playing soccer on a field" 
                     width={1200} 
                     height={600}
                     className="rounded-lg shadow-2xl border border-border"
-                    data-ai-hint="app dashboard"
+                    data-ai-hint="soccer game"
                 />
             </div>
           </div>
