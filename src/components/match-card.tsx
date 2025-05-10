@@ -2,7 +2,7 @@
 
 import { format, parseISO } from "date-fns";
 import { Icons } from "@/components/icons";
-import type { Match } from "@/types"; 
+import type { Match, Training } from "@/types"; 
 import { EventCardBase } from "./event-card-base";
 
 interface MatchCardProps {
@@ -29,7 +29,7 @@ export function MatchCard({ match, onEdit, onDelete, dndListeners }: MatchCardPr
           </>
         );
       }}
-      onEdit={onEdit} 
+      onEdit={onEdit ? (item) => onEdit(item as Match) : undefined} 
       onDelete={onDelete}
       dndListeners={dndListeners} // Pass down dndListeners
     />

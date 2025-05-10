@@ -2,7 +2,7 @@
 
 import { format, parseISO } from "date-fns";
 import { Icons } from "@/components/icons";
-import type { Training } from "@/types";
+import type { Training, Match } from "@/types";
 import { EventCardBase } from "./event-card-base";
 
 interface TrainingCardProps {
@@ -28,7 +28,7 @@ export function TrainingCard({ training, onEdit, onDelete, dndListeners }: Train
           </>
         );
       }}
-      onEdit={onEdit} 
+      onEdit={onEdit ? (item) => onEdit(item as Training) : undefined} 
       onDelete={onDelete}
       dndListeners={dndListeners} // Pass down dndListeners
     />
