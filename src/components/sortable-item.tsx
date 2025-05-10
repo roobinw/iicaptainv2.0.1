@@ -1,22 +1,20 @@
-
 "use client";
 
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Icons } from './icons'; // Assuming Icons.GripVertical exists
 import { cn } from '@/lib/utils';
 
 interface SortableItemProps {
   id: string;
-  children: React.ReactNode;
+  children: React.ReactNode; // Should be a single ReactElement that can accept dndListeners
   disabled?: boolean;
 }
 
 export function SortableItem(props: SortableItemProps) {
   const {
-    attributes,
-    listeners,
+    attributes, // for the sortable node itself
+    listeners,  // for the drag handle specifically
     setNodeRef,
     transform,
     transition,
@@ -26,23 +24,20 @@ export function SortableItem(props: SortableItemProps) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 10 : undefined, // Ensure dragging item is on top
+    zIndex: isDragging ? 10 : undefined,
     opacity: isDragging ? 0.8 : 1,
   };
 
+  // The main div gets the setNodeRef and general attributes.
+  // The listeners for dragging are passed to the child, which should apply them to its handle.
   return (
-    <div ref={setNodeRef} style={style} className={cn("relative", props.disabled && "cursor-default")}>
-      {!props.disabled && (
-        <button 
-          {...attributes} 
-          {...listeners} 
-          className="absolute top-2 right-10 z-10 p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
-          aria-label="Drag to reorder"
-        >
-          <Icons.GripVertical className="w-5 h-5" />
-        </button>
-      )}
-      {props.children}
+    <div ref={setNodeRef} style={style} {...attributes} className={cn(props.disabled && "cursor-default")}>
+      {/* Pass listeners to the child component (e.g., MatchCard/TrainingCard) */}
+      {/* Ensure children is a single ReactElement for cloneElement to work correctly and pass props */}
+      {React.isValidElement(props.children) ? 
+        React.cloneElement(props.children as React.ReactElement, { dndListeners: props.disabled ? undefined : listeners })
+        : props.children
+      }
     </div>
   );
 }

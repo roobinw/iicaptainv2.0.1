@@ -4,16 +4,15 @@ import { format, parseISO } from "date-fns";
 import { Icons } from "@/components/icons";
 import type { Training } from "@/types";
 import { EventCardBase } from "./event-card-base";
-import type { Dispatch, SetStateAction } from "react";
 
 interface TrainingCardProps {
   training: Training;
   onEdit?: (training: Training) => void;
   onDelete?: (trainingId: string) => void;
-  // setForceUpdateList?: Dispatch<SetStateAction<number>>; // Prop removed
+  dndListeners?: any; // For drag-and-drop handle
 }
 
-export function TrainingCard({ training, onEdit, onDelete }: TrainingCardProps) {
+export function TrainingCard({ training, onEdit, onDelete, dndListeners }: TrainingCardProps) {
   return (
     <EventCardBase
       item={training}
@@ -31,7 +30,7 @@ export function TrainingCard({ training, onEdit, onDelete }: TrainingCardProps) 
       }}
       onEdit={onEdit} 
       onDelete={onDelete}
-      // setForceUpdateList={setForceUpdateList} // Prop removed
+      dndListeners={dndListeners} // Pass down dndListeners
     />
   );
 }

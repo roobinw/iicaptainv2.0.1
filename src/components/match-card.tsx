@@ -4,16 +4,15 @@ import { format, parseISO } from "date-fns";
 import { Icons } from "@/components/icons";
 import type { Match } from "@/types"; 
 import { EventCardBase } from "./event-card-base";
-import type { Dispatch, SetStateAction } from "react";
 
 interface MatchCardProps {
   match: Match;
   onEdit?: (match: Match) => void;
   onDelete?: (matchId: string) => void;
-  // setForceUpdateList?: Dispatch<SetStateAction<number>>; // Prop removed
+  dndListeners?: any; // For drag-and-drop handle
 }
 
-export function MatchCard({ match, onEdit, onDelete }: MatchCardProps) {
+export function MatchCard({ match, onEdit, onDelete, dndListeners }: MatchCardProps) {
   return (
     <EventCardBase
       item={match}
@@ -32,7 +31,7 @@ export function MatchCard({ match, onEdit, onDelete }: MatchCardProps) {
       }}
       onEdit={onEdit} 
       onDelete={onDelete}
-      // setForceUpdateList={setForceUpdateList} // Prop removed
+      dndListeners={dndListeners} // Pass down dndListeners
     />
   );
 }

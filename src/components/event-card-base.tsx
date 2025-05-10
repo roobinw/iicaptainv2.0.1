@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode, Dispatch, SetStateAction } from "react";
+import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,9 +23,9 @@ interface EventCardBaseProps {
   icon: ReactNode;
   titlePrefix?: string;
   renderDetails: (item: Match | Training) => ReactNode;
-  onEdit?: (item: Match | Training) => void; // Admin only
-  onDelete?: (itemId: string) => void; // Admin only
-  // setForceUpdateList?: Dispatch<SetStateAction<number>>; // Prop removed as it's no longer needed by AttendanceToggler for page refresh
+  onEdit?: (item: Match | Training) => void; 
+  onDelete?: (itemId: string) => void; 
+  dndListeners?: any; // For drag-and-drop handle, passed from SortableItem
 }
 
 export function EventCardBase({
@@ -36,7 +36,7 @@ export function EventCardBase({
   renderDetails,
   onEdit,
   onDelete,
-  // setForceUpdateList // Prop removed
+  dndListeners, 
 }: EventCardBaseProps) {
   const { user: currentUser, currentTeam } = useAuth(); 
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
@@ -82,6 +82,7 @@ export function EventCardBase({
             updatedAttendanceState[member.uid] = initialAttendanceFromItem[member.uid] || 'present';
         });
     } else {
+        // If memberList is empty but item.attendance has entries (e.g. from old data before memberList fetch)
         Object.keys(initialAttendanceFromItem).forEach(memberUid => {
             updatedAttendanceState[memberUid] = initialAttendanceFromItem[memberUid] || 'present';
         });
@@ -102,7 +103,6 @@ export function EventCardBase({
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
 
-  // Calculate presentCount based on the local currentAttendance state
   const presentCount = Object.values(currentAttendance).filter(status => status === 'present').length;
   
   const eventName = eventType === "match" ? (item as Match).opponent : (item as Training).location;
@@ -110,23 +110,30 @@ export function EventCardBase({
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
       <CardHeader>
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-start"> {/* items-start to align to top */}
           <div>
             <CardTitle className="flex items-center gap-2">
                {icon} {currentTeam?.name || "Your Team"} {eventType === "match" ? titlePrefix : ""} {eventName}
             </CardTitle>
             <CardDescription className="mt-1">{renderDetails(item)}</CardDescription>
           </div>
-          {isAdmin && (onEdit || onDelete) && (
-            <div className="flex gap-1">
+
+          {/* Action buttons container */}
+          {isAdmin && (onEdit || onDelete || dndListeners) && (
+            <div className="flex items-center gap-0.5"> {/* Reduced gap for tighter packing */}
               {onEdit && (
-                <Button variant="ghost" size="icon" onClick={() => onEdit(item)} aria-label={`Edit ${eventType}`}>
+                <Button variant="ghost" size="icon" onClick={() => onEdit(item)} aria-label={`Edit ${eventType}`} className="h-7 w-7">
                   <Icons.Edit className="h-4 w-4" />
                 </Button>
               )}
               {onDelete && (
-                <Button variant="ghost" size="icon" onClick={() => onDelete(item.id)} aria-label={`Delete ${eventType}`}>
+                <Button variant="ghost" size="icon" onClick={() => onDelete(item.id)} aria-label={`Delete ${eventType}`} className="h-7 w-7">
                   <Icons.Delete className="h-4 w-4 text-destructive" />
+                </Button>
+              )}
+              {dndListeners && ( 
+                <Button variant="ghost" size="icon" {...dndListeners} aria-label="Reorder" className="h-7 w-7 cursor-grab active:cursor-grabbing">
+                  <Icons.MoreVertical className="h-4 w-4" />
                 </Button>
               )}
             </div>
@@ -152,7 +159,6 @@ export function EventCardBase({
           <DialogContent 
             className="sm:max-w-[425px] md:max-w-[600px]"
             onInteractOutside={(e) => {
-               // Check if the click target or its parent is an attendance button to prevent closing
               const target = e.target as HTMLElement;
               if (target.closest('.flex.items-center.gap-1 > button[aria-label^="Mark as"]')) {
                 e.preventDefault();
@@ -198,11 +204,10 @@ export function EventCardBase({
                         </div>
                       </div>
                        <AttendanceToggler 
-                           item={{...item, attendance: currentAttendance}} // Pass item with the local currentAttendance
+                           item={{...item, attendance: currentAttendance}} 
                            player={member} 
                            eventType={eventType} 
                            onAttendanceChange={handleAttendanceChange} 
-                           // setForceUpdate={setForceUpdateList} // Prop removed
                        />
                     </div>
                   ))}
