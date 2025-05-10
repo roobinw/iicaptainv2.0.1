@@ -80,12 +80,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // This block handles rendering a loading/redirecting state if auth is done but conditions for staying are not met.
   // It aims to prevent rendering the layout for pages the user shouldn't see.
   if (!authIsLoading) {
-    const isPublicPage = pathname === "/" || pathname.startsWith("/(marketing)");
+    const isPublicPage = pathname === "/" || pathname.startsWith("/(marketing)"); // (marketing) group is public
     const isAuthFlowPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
     const isOnboardingPage = pathname.startsWith("/onboarding");
 
     if (!user && !isPublicPage && !isAuthFlowPage && !isOnboardingPage) {
-       // User not logged in and trying to access a protected page
+       // User not logged in and trying to access a protected page (neither public, auth nor onboarding)
        return ( 
            <div className="flex h-screen items-center justify-center bg-background">
                <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
@@ -102,7 +102,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
       );
     }
-     if (user && user.teamId && (isAuthFlowPage || isOnboardingPage || (isPublicPage && pathname === "/"))) {
+     if (user && user.teamId && (isAuthFlowPage || isOnboardingPage || (isPublicPage && pathname === "/"))) { // User is on landing page, but should be on dashboard
         // User logged in with team, but on auth/onboarding/root landing
         return (
              <div className="flex h-screen items-center justify-center bg-background">
@@ -139,7 +139,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     : "text-sidebar-foreground"
                 )}
               >
-                <IconComponent className="h-[2.16rem] w-[2.16rem] md:h-7 md:w-7" /> 
+                <IconComponent className="h-[2.0rem] w-[2.0rem] md:h-6 md:w-6" /> 
                 <span className="sr-only">{item.label}</span>
               </Link>
             </TooltipTrigger>
@@ -187,7 +187,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[144px_1fr] lg:grid-cols-[144px_1fr]"> 
+    <div className="grid min-h-screen w-full md:grid-cols-[130px_1fr] lg:grid-cols-[130px_1fr]"> 
       <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg sticky top-0 h-screen">
         <div> 
            <div className="flex h-10 items-center justify-center mb-4 mt-2">
@@ -249,10 +249,33 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   </div>
                 
                 <div className="flex-1 overflow-auto">{sidebarNavigation(true)}</div>
-
+                 {user && (
+                    <div className="mt-auto p-1 flex justify-center md:hidden"> 
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="rounded-full w-12 h-12">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar mobile"/>
+                              <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                            </Avatar>
+                            <span className="sr-only">User Menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent side="top" align="center" className="w-56 mb-1 bg-card text-card-foreground border-border shadow-xl">
+                          {userProfileDropdownContent}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  )}
                 </SheetContent>
             </Sheet>
-             <div className="flex-1"></div> 
+             <div className="flex-1">
+                {currentTeam && (
+                    <div className="flex items-center justify-center h-full">
+                        <h1 className="text-lg font-semibold text-foreground">{currentTeam.name}</h1>
+                    </div>
+                )}
+             </div> 
              {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
