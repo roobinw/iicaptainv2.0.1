@@ -316,18 +316,20 @@ This is a top-level collection where each document represents a support ticket.
                           request.resource.data.userName != null &&
                           request.resource.data.userEmail != null;
 
-          // A user can read their own tickets.
+          // A user can ONLY read their OWN tickets.
           allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
 
           // A user can update certain fields of their own tickets 
-          // (e.g., add more info, but not critical fields like userId or createdAt).
-          // App logic will control which fields can actually be updated by the user.
+          // (e.g., add more info to message, or change status if app logic allows).
+          // Critical fields like userId, teamId, userName, userEmail, createdAt should not be changed by user after creation.
+          // Status changes might be restricted to support personnel in a real app (not handled by these client rules).
           allow update: if isSignedIn() && resource.data.userId == request.auth.uid &&
-                          request.resource.data.userId == resource.data.userId &&
-                          request.resource.data.teamId == resource.data.teamId && 
-                          request.resource.data.userName == resource.data.userName &&
-                          request.resource.data.userEmail == resource.data.userEmail &&
-                          request.resource.data.createdAt.toMillis() == resource.data.createdAt.toMillis(); 
+                          request.resource.data.userId == resource.data.userId && // Cannot change ownership
+                          request.resource.data.teamId == resource.data.teamId && // Cannot change team association
+                          request.resource.data.userName == resource.data.userName && // Username at submission time
+                          request.resource.data.userEmail == resource.data.userEmail && // Email at submission time
+                          request.resource.data.createdAt.toMillis() == resource.data.createdAt.toMillis(); // Creation time immutable
+                          // Subject, message, status, updatedAt can be updated by owner.
           
           // Deleting tickets is generally an admin function for the support system, not by end-users directly.
           allow delete: if false; 
@@ -373,7 +375,7 @@ You can create these indexes in the Firebase console:
         3. `name` (Ascending)
     *   **Query scope:** Collection
 
-*   **Collection:** `tickets` (New index, if you plan to list tickets per user)
+*   **Collection:** `tickets` 
     *   **Fields:**
         1. `userId` (Ascending)
         2. `createdAt` (Descending)
