@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"; 
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet"; 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
@@ -56,7 +56,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       } else if (user && !user.teamId && !isOnboardingPage) {
         router.replace("/onboarding/create-team");
       }
-      else if (user && user.teamId && (isAuthPage || isOnboardingPage)) {
+      else if (user && user.teamId && (isAuthPage || isOnboardingPage || isMarketingPage)) {
         router.replace("/dashboard");
       }
     }
@@ -125,7 +125,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <span className="sr-only">{item.label}</span>
               </Link>
             </TooltipTrigger>
-             {/* Show tooltips on right for desktop, adjust for mobile if needed or rely on SR only */}
             <TooltipContent side={isMobileContext ? "right" : "right"} className="bg-card text-card-foreground border-border">
               {item.label}
             </TooltipContent>
@@ -176,7 +175,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
            <div className="flex h-10 items-center justify-center mb-4 mt-2">
              <Link 
                 href="/dashboard" 
-                className="text-sidebar-foreground flex justify-center" // Removed md:hidden and md:flex
+                className="text-sidebar-foreground flex justify-center"
             >
               <Icons.TeamLogo className="mt-[10px] h-10 w-10" /> 
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
@@ -221,6 +220,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="flex flex-col bg-sidebar p-2 text-sidebar-foreground w-[120px] shadow-xl">
+                 <SheetHeader>
+                    <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                 </SheetHeader>
                  <div className="flex h-10 items-center justify-center mb-4 mt-2">
                      <Link href="/dashboard" className="flex items-center justify-center" onClick={() => setIsMobileSheetOpen(false)}>
                         <Icons.TeamLogo className="h-10 w-10 text-sidebar-foreground" /> 
@@ -250,6 +252,24 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 )}
                 </SheetContent>
             </Sheet>
+             {/* Removed current team name display from mobile top bar header */}
+             <div className="flex-1"></div> {/* This will push the avatar to the right */}
+             {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full w-10 h-10 md:hidden">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar mobile top"/>
+                      <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                    </Avatar>
+                    <span className="sr-only">User Menu</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 bg-card text-card-foreground border-border shadow-xl md:hidden">
+                  {userProfileDropdownContent}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
         </header>
           <div className="p-4 lg:p-6">
             {children}
