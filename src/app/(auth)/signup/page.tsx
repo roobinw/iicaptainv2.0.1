@@ -90,7 +90,7 @@ export default function SignupPage() {
   if (authIsLoading || (!authIsLoading && user && user.teamId)) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <Icons.Dashboard className="h-12 w-12 animate-spin text-primary" />
+        <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
         <p className="ml-4 text-lg text-foreground">Loading...</p>
       </div>
     );
@@ -174,7 +174,7 @@ export default function SignupPage() {
             )}
           />
           <Button type="submit" className="w-full" disabled={isSubmitting || authIsLoading || isGoogleSubmitting}>
-            {isSubmitting ? <Icons.Dashboard className="animate-spin" /> : "Create Account & Team"}
+            {isSubmitting ? <Icons.TeamLogo className="animate-spin" /> : "Create Account & Team"}
           </Button>
         </form>
       </Form>
@@ -191,7 +191,7 @@ export default function SignupPage() {
       </div>
 
       <Button variant="outline" className="w-full" onClick={handleGoogleSignup} disabled={isGoogleSubmitting || authIsLoading || isSubmitting}>
-         {isGoogleSubmitting ? <Icons.Dashboard className="animate-spin mr-2" /> : <Icons.Google className="mr-2 h-5 w-5" />}
+         {isGoogleSubmitting ? <Icons.TeamLogo className="animate-spin mr-2" /> : <Icons.Google className="mr-2 h-5 w-5" />}
         Sign up with Google
       </Button>
 

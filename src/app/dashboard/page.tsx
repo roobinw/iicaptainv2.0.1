@@ -116,7 +116,7 @@ export default function DashboardPage() {
   if (!user || !user.teamId || !currentTeam) {
     return (
          <div className="flex h-full items-center justify-center">
-            <Icons.Dashboard className="h-12 w-12 animate-spin text-primary" />
+            <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
             <p className="ml-4 text-lg">Loading team data or redirecting...</p>
         </div>
     );

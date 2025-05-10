@@ -93,7 +93,7 @@ export default function CreateTeamPage() {
   if (authIsLoading || (user && user.teamId)) {
      return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <Icons.Dashboard className="h-12 w-12 animate-spin text-primary" />
+        <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
         <p className="ml-4 text-lg text-foreground">Loading...</p>
       </div>
     );
@@ -103,7 +103,7 @@ export default function CreateTeamPage() {
   if (!firebaseUser && !authIsLoading) {
     return (
          <div className="flex h-screen items-center justify-center bg-background">
-            <Icons.Dashboard className="h-12 w-12 animate-spin text-primary" />
+            <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
             <p className="ml-4 text-lg text-foreground">Redirecting...</p>
         </div>
     );
@@ -136,7 +136,7 @@ export default function CreateTeamPage() {
             )}
           />
           <Button type="submit" className="w-full" disabled={isSubmitting || authIsLoading}>
-            {isSubmitting ? "Creating Team..." : "Create Team"}
+            {isSubmitting ? <Icons.TeamLogo className="animate-spin" /> : "Create Team"}
           </Button>
         </form>
       </Form>
