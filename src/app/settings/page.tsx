@@ -12,29 +12,59 @@ import { useState, useEffect } from "react";
 import { updateUserProfile } from "@/services/userService"; 
 import { Skeleton } from "@/components/ui/skeleton";
 import { updateTeamName } from "@/services/teamService"; 
-// import { uploadAvatar } from "@/services/storageService"; // Removed as avatar is now a URL
 import { Icons } from "@/components/icons";
 import type { User } from "@/types";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+
+const passwordChangeSchema = z.object({
+  currentPassword: z.string().min(1, { message: "Current password is required." }),
+  newPassword: z.string().min(6, { message: "New password must be at least 6 characters." }),
+  confirmNewPassword: z.string(),
+}).refine((data) => data.newPassword === data.confirmNewPassword, {
+  message: "New passwords don't match.",
+  path: ["confirmNewPassword"],
+});
+
+type PasswordChangeFormValues = z.infer<typeof passwordChangeSchema>;
 
 export default function SettingsPage() {
-  const { user, firebaseUser, currentTeam, isLoading: authIsLoading, refreshTeamData, refreshAuthUser } = useAuth();
+  const { user, firebaseUser, currentTeam, isLoading: authIsLoading, refreshTeamData, refreshAuthUser, changePassword } = useAuth();
   const { toast } = useToast();
   
   const [name, setName] = useState("");
   const [email, setEmail] = useState(""); 
-  const [avatarUrlInput, setAvatarUrlInput] = useState(""); // For URL input
+  const [avatarUrlInput, setAvatarUrlInput] = useState("");
   
   const [currentTeamNameInput, setCurrentTeamNameInput] = useState(""); 
   
   const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
   const [isSubmittingTeam, setIsSubmittingTeam] = useState(false);
+  const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
 
+  const passwordForm = useForm<PasswordChangeFormValues>({
+    resolver: zodResolver(passwordChangeSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmNewPassword: "",
+    },
+  });
 
   useEffect(() => {
     if (user) {
       setName(user.name || "");
       setEmail(user.email || ""); 
-      setAvatarUrlInput(user.avatarUrl || ""); // Initialize with current avatar URL or empty string
+      setAvatarUrlInput(user.avatarUrl || "");
     }
     if (currentTeam) {
       setCurrentTeamNameInput(currentTeam.name || "");
@@ -58,7 +88,7 @@ export default function SettingsPage() {
                         <Skeleton className="h-20 w-20 rounded-full" />
                         <div className="space-y-2">
                             <Skeleton className="h-5 w-32" />
-                            <Skeleton className="h-10 w-full" /> {/* For URL input placeholder */}
+                            <Skeleton className="h-10 w-full" />
                         </div>
                     </div>
                     <Skeleton className="h-5 w-24 mb-1" />
@@ -81,11 +111,25 @@ export default function SettingsPage() {
                     </CardContent>
                 </Card>
             )}
+             <Card>
+                <CardHeader>
+                    <Skeleton className="h-7 w-32 mb-1" />
+                    <Skeleton className="h-5 w-64" />
+                </CardHeader>
+                <CardContent className="space-y-4 max-w-md">
+                    <Skeleton className="h-5 w-24 mb-1" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-5 w-24 mb-1" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-5 w-24 mb-1" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-40" />
+                </CardContent>
+            </Card>
         </div>
     );
   }
   
-  // These checks are fine as they are after the loading skeleton.
   if (!user || !firebaseUser) {
       return <p>Loading user data or redirecting...</p>;
   }
@@ -104,7 +148,6 @@ export default function SettingsPage() {
     if (!firebaseUser || !user) return; 
     setIsSubmittingProfile(true);
     try {
-      // Explicitly define the type for updatePayload to include avatarUrl as string | null
       const updatePayload: { name?: string; avatarUrl?: string | null } = {};
       
       if (name !== user.name) {
@@ -112,12 +155,10 @@ export default function SettingsPage() {
       }
 
       const trimmedAvatarInput = avatarUrlInput.trim();
-      // Determine the effective current avatar URL (empty string if undefined/null) for comparison
       const currentEffectiveAvatarUrl = user.avatarUrl || ""; 
 
-      // Only include avatarUrl in payload if it has actually changed
       if (trimmedAvatarInput !== currentEffectiveAvatarUrl) {
-          updatePayload.avatarUrl = trimmedAvatarInput === "" ? null : trimmedAvatarInput; // Set to null if user clears it
+          updatePayload.avatarUrl = trimmedAvatarInput === "" ? null : trimmedAvatarInput;
       }
       
       if (Object.keys(updatePayload).length > 0) {
@@ -157,6 +198,22 @@ export default function SettingsPage() {
       toast({ title: "Team Update Failed", description: error.message || "Could not update team name.", variant: "destructive" });
     } finally {
       setIsSubmittingTeam(false);
+    }
+  };
+
+  const handlePasswordChangeSubmit = async (data: PasswordChangeFormValues) => {
+    setIsSubmittingPassword(true);
+    try {
+      await changePassword(data.currentPassword, data.newPassword);
+      toast({
+        title: "Password Updated",
+        description: "Your password has been successfully changed.",
+      });
+      passwordForm.reset();
+    } catch (error: any) {
+      // Toast is handled in changePassword function in AuthContext
+    } finally {
+      setIsSubmittingPassword(false);
     }
   };
 
@@ -229,9 +286,9 @@ export default function SettingsPage() {
           <CardContent className="max-w-md">
             <form onSubmit={handleTeamNameUpdate} className="space-y-4">
               <div className="space-y-1">
-                <Label htmlFor="teamName">Team Name</Label>
+                <Label htmlFor="teamNameInput">Team Name</Label> {/* Changed id to avoid conflict */}
                 <Input 
-                  id="teamName" 
+                  id="teamNameInput" 
                   value={currentTeamNameInput} 
                   onChange={(e) => setCurrentTeamNameInput(e.target.value)} 
                   disabled={isSubmittingTeam}
@@ -246,15 +303,59 @@ export default function SettingsPage() {
         </Card>
       )}
 
-
       <Card>
         <CardHeader>
-          <CardTitle>Password</CardTitle>
-          <CardDescription>Change your account password.</CardDescription>
+          <CardTitle>Change Password</CardTitle>
+          <CardDescription>Update your account password.</CardDescription>
         </CardHeader>
         <CardContent className="max-w-md">
-            <p className="text-muted-foreground">Password changes are handled via Firebase's built-in mechanisms (e.g., password reset emails), not directly in this app section for now.</p>
-            <Button className="mt-4" disabled>Change Password (Not Implemented)</Button>
+          <Form {...passwordForm}>
+            <form onSubmit={passwordForm.handleSubmit(handlePasswordChangeSubmit)} className="space-y-4">
+              <FormField
+                control={passwordForm.control}
+                name="currentPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Current Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} disabled={isSubmittingPassword} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={passwordForm.control}
+                name="newPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>New Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} disabled={isSubmittingPassword} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={passwordForm.control}
+                name="confirmNewPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirm New Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} disabled={isSubmittingPassword} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={isSubmittingPassword}>
+                {isSubmittingPassword ? <Icons.Dashboard className="animate-spin mr-2" /> : <Icons.KeyRound className="mr-2 h-4 w-4" /> }
+                {isSubmittingPassword ? "Changing Password..." : "Change Password"}
+              </Button>
+            </form>
+          </Form>
         </CardContent>
       </Card>
 

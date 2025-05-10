@@ -9,15 +9,18 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signOut as firebaseSignOut,
-  // GoogleAuthProvider, // Removed as per previous request
-  // signInWithPopup, // Removed as per previous request
-  type User as FirebaseUser 
+  GoogleAuthProvider,
+  signInWithPopup,
+  type User as FirebaseUser,
+  EmailAuthProvider, // Added for re-authentication
+  reauthenticateWithCredential, // Added for re-authentication
+  updatePassword // Added for password update
 } from "firebase/auth";
 import { doc, setDoc, getDoc, serverTimestamp, collection } from "firebase/firestore";
 import { auth, db } from "./firebase"; 
 import { useToast } from "@/hooks/use-toast";
 import { createTeam, getTeamById } from "@/services/teamService";
-import { getUserProfile } from "@/services/userService"; // Added
+import { getUserProfile } from "@/services/userService";
 
 interface AuthContextType {
   user: User | null;
@@ -25,11 +28,12 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   isLoading: boolean;
   login: (email: string, password?: string) => Promise<void>; 
-  // loginWithGoogle: () => Promise<void>; // Removed
+  loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   signup: (email: string, name: string, teamName: string, password?: string) => Promise<void>; 
   refreshTeamData: () => Promise<void>;
-  refreshAuthUser: () => Promise<void>; // Added
+  refreshAuthUser: () => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>; // Added
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,7 +84,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setCurrentTeam(null);
           }
         } else {
-          // This case should ideally not happen if a profile is created on signup/login
           setUser(null);
           setCurrentTeam(null);
         }
@@ -123,15 +126,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               }
             }
           } else {
-            // Firebase Auth user exists (e.g. new Google sign-in), but no Firestore user profile. Create one.
-            // This case should be less common with email/password signups that create profiles immediately
             const userDocRef = doc(db, "users", fbUser.uid);
             const newUserData: Omit<User, 'id' | 'createdAt'> & { createdAt: any } = {
               uid: fbUser.uid,
               email: fbUser.email!.toLowerCase(), 
               name: fbUser.displayName || "New User", 
-              role: "player", // Default role, might need adjustment based on flow
-              teamId: undefined, // No team initially for a user profile created this way
+              role: "player", 
+              teamId: undefined, 
               avatarUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.email!.toLowerCase()}/80/80`,
               createdAt: serverTimestamp(),
             };
@@ -149,14 +150,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           }
         } else {
-          // No Firebase Auth user (logged out)
           setUser(null);
           setFirebaseUser(null);
           setCurrentTeam(null);
           
-          const marketingPaths = ["/", "/privacy", "/terms"]; // Add other explicit marketing paths if any
-          const isMarketingPage = marketingPaths.includes(pathname) || pathname.startsWith("/(marketing)"); // Check actual folder for marketing
-          const isAuthPage = pathname.startsWith("/(auth)"); // Check actual folder for auth (login, signup)
+          const marketingPaths = ["/", "/privacy", "/terms"];
+          const isMarketingPage = marketingPaths.includes(pathname) || pathname.startsWith("/(marketing)");
+          const isAuthPage = pathname.startsWith("/(auth)");
           const isOnboardingPage = pathname.startsWith("/onboarding");
           
           if (!isMarketingPage && !isAuthPage && !isOnboardingPage) {
@@ -209,7 +209,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will handle fetching user profile and team
     } catch (error: any) {
       console.error("Firebase login error (AuthContext):", error);
       let errorMessage = "Failed to login. Please check your credentials.";
@@ -228,22 +227,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // const loginWithGoogle = async () => { ... }; // Removed
+  const loginWithGoogle = async () => {
+    if (!auth) {
+      toast({ title: "Login Error", description: "Firebase authentication is not available.", variant: "destructive" });
+      throw new Error("Firebase auth not initialized");
+    }
+    setIsLoading(true);
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      // onAuthStateChanged will handle user profile creation/fetch and redirection.
+    } catch (error: any) {
+      console.error("Google sign-in error:", error);
+      let errorMessage = "Failed to sign in with Google. Please try again.";
+      if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = "Google sign-in was cancelled.";
+      } else if (error.code === 'auth/account-exists-with-different-credential') {
+        errorMessage = "An account already exists with the same email address but different sign-in credentials. Sign in using a provider associated with this email address.";
+      }
+      toast({ title: "Google Sign-In Failed", description: errorMessage, variant: "destructive" });
+      setIsLoading(false);
+      throw error;
+    }
+  };
 
   const logout = async () => {
     setIsLoading(true);
     try {
       await firebaseSignOut(auth);
-      // setUser(null); // Handled by onAuthStateChanged
-      // setFirebaseUser(null); // Handled by onAuthStateChanged
-      // setCurrentTeam(null); // Handled by onAuthStateChanged
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
-      // router.replace("/"); // Handled by onAuthStateChanged
     } catch (error: any) {
       console.error("Error signing out: ", error);
       toast({ title: "Logout Failed", description: error.message, variant: "destructive" });
     } 
-    // setIsLoading(false); // onAuthStateChanged will set loading to false
   };
   
   const signup = async (email: string, name: string, teamName: string, password?: string) => {
@@ -282,7 +298,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         createdAt: serverTimestamp(),
       });
       
-      // onAuthStateChanged will pick up the new user, fetch profile, and redirect.
       toast({
         title: "Account & Team Created!",
         description: "Welcome to iiCaptain! Redirecting...",
@@ -305,6 +320,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    if (!firebaseUser || !firebaseUser.email) {
+      toast({ title: "Error", description: "User not authenticated or email missing.", variant: "destructive" });
+      throw new Error("User not authenticated or email missing.");
+    }
+    try {
+      const credential = EmailAuthProvider.credential(firebaseUser.email, currentPassword);
+      await reauthenticateWithCredential(firebaseUser, credential);
+      await updatePassword(firebaseUser, newPassword);
+      // Toast for success is handled in the component calling this.
+    } catch (error: any) {
+      console.error("Error changing password:", error);
+      let errorMessage = "Failed to change password.";
+      if (error.code === 'auth/wrong-password') {
+        errorMessage = "Incorrect current password.";
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = "The new password is too weak.";
+      } else if (error.code === 'auth/requires-recent-login') {
+        errorMessage = "This operation is sensitive and requires recent authentication. Please log in again before retrying this request.";
+      }
+      toast({ title: "Password Change Failed", description: errorMessage, variant: "destructive" });
+      throw error;
+    }
+  };
+
   const refreshTeamData = useCallback(async () => {
     if (user?.teamId) {
       setIsLoading(true);
@@ -314,7 +354,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, fetchAndSetCurrentTeam]); 
 
   return (
-    <AuthContext.Provider value={{ user, currentTeam, firebaseUser, isLoading, login, /* loginWithGoogle, */ logout, signup, refreshTeamData, refreshAuthUser }}>
+    <AuthContext.Provider value={{ user, currentTeam, firebaseUser, isLoading, login, loginWithGoogle, logout, signup, refreshTeamData, refreshAuthUser, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

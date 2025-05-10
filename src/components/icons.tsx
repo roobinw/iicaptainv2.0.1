@@ -1,7 +1,7 @@
 
 import {
   LayoutDashboard,
-  CalendarDays, // Changed from CalendarCheck for better clarity
+  CalendarDays, 
   Users,
   LogOut,
   PlusCircle,
@@ -21,13 +21,14 @@ import {
   Search,
   ArrowLeft,
   GripVertical,
-  Dumbbell, // Keep Dumbbell for Trainings
-  MoreVertical, // Used in Sidebar as default action icon
+  Dumbbell, 
+  MoreVertical, 
+  KeyRound, // Added for password change
 } from "lucide-react";
 
 export const Icons = {
   Dashboard: LayoutDashboard,
-  Matches: CalendarDays, // Using CalendarDays for Matches
+  Matches: CalendarDays, 
   Trainings: Dumbbell, 
   Players: Users,
   Logout: LogOut,
@@ -39,7 +40,7 @@ export const Icons = {
   MoreHorizontal: MoreHorizontal,
   Settings: Settings,
   User: UserCircle,
-  Attendance: ClipboardList, // Good for attendance tracking
+  Attendance: ClipboardList, 
   AlertCircle: AlertCircle,
   CheckCircle2: CheckCircle2,
   XCircle: XCircle,
@@ -49,6 +50,7 @@ export const Icons = {
   ArrowLeft: ArrowLeft,
   GripVertical: GripVertical,
   MoreVertical: MoreVertical,
+  KeyRound: KeyRound, // Added
   TeamLogo: () => ( 
     <svg
       xmlns="http://www.w3.org/2000/svg"
