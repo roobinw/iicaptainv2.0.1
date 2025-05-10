@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from "react";
@@ -19,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Icons } from "@/components/icons";
 import { PanelLeft, LogOut, Settings as SettingsIcon, ChevronDown } from "lucide-react"; 
-import { useEffect } from "react"; // Added useEffect
+import { useEffect } from "react";
 
 interface NavItem {
   href: string;
@@ -47,8 +48,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
         const isPublicPage = publicPaths.includes(pathname);
         const isOnboardingPage = pathname.startsWith("/onboarding");
 
-        if (!isPublicPage && !isOnboardingPage) {
-          router.replace("/"); // Redirect to landing page
+        if (!isPublicPage && !isOnboardingPage && pathname !== "/(marketing)") { // Adjusted condition for marketing layout
+          router.replace("/"); 
         }
       } else if (user && !user.teamId && !pathname.startsWith("/onboarding")) {
         router.replace("/onboarding/create-team");
@@ -66,23 +67,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // This check might be hit if useEffect hasn't redirected yet, or as a safety net.
-  // Ensure it doesn't try to navigate directly during render.
   if (!authIsLoading && !user) {
      const publicPaths = ["/", "/login", "/signup"];
-     if (!publicPaths.includes(pathname) && !pathname.startsWith("/onboarding")) {
-        return ( // Show a loading/redirecting message instead of direct navigation
+     if (!publicPaths.includes(pathname) && !pathname.startsWith("/onboarding") && pathname !== "/(marketing)") {
+        return ( 
             <div className="flex h-screen items-center justify-center bg-background">
                 <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
                 <p className="ml-4 text-lg text-foreground">Redirecting...</p>
             </div>
         );
      }
-     // If on a public/onboarding page while !user, let the page render (children)
   }
   
-  // If user exists but no teamId, and not on onboarding, useEffect should handle it.
-  // This is a fallback.
   if (!authIsLoading && user && !user.teamId && !pathname.startsWith("/onboarding")) {
     return (
         <div className="flex h-screen items-center justify-center bg-background">
@@ -162,9 +158,19 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 rounded-r-lg shadow-lg">
         <div>
-          {/* User profile section at the top of sidebar */}
-          {user && (
-            <div className="mb-4 border-b border-sidebar-border pb-2">
+           <div className="flex h-10 items-center justify-center mb-4">
+            <Link href="/dashboard" className="text-sidebar-foreground">
+              <Icons.TeamLogo />
+              <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
+            </Link>
+          </div>
+          <div className="flex-1 overflow-auto">
+            {sidebarNavigation}
+          </div>
+        </div>
+        {/* User profile section at the bottom of sidebar */}
+        {user && (
+            <div className="mt-auto border-t border-sidebar-border pt-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="w-full h-auto justify-center p-1">
@@ -175,7 +181,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     <span className="sr-only">User Menu</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent side="right" align="start" className="ml-1 w-56 bg-card text-card-foreground border-border shadow-xl">
+                <DropdownMenuContent side="right" align="end" className="ml-1 w-56 bg-card text-card-foreground border-border shadow-xl">
                   <DropdownMenuLabel className="truncate">
                     <div className="font-semibold">{user.name}</div>
                     <div className="text-xs text-muted-foreground truncate">{user.email}</div>
@@ -197,17 +203,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </DropdownMenu>
             </div>
           )}
-           <div className="flex h-10 items-center justify-center mb-4">
-            <Link href="/dashboard" className="text-sidebar-foreground">
-              <Icons.TeamLogo />
-              <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
-            </Link>
-          </div>
-          <div className="flex-1 overflow-auto">
-            {sidebarNavigation}
-          </div>
-        </div>
-        {/* Moved User profile to the top */}
       </aside>
       
       <div className="flex flex-col">
