@@ -121,7 +121,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     : "text-sidebar-foreground"
                 )}
               >
-                <IconComponent className="h-[1.8rem] w-[1.8rem]" /> 
+                <IconComponent className="h-[2.16rem] w-[2.16rem]" /> {/* Approx 20% bigger (1.8*1.2) */}
                 <span className="sr-only">{item.label}</span>
               </Link>
             </TooltipTrigger>
@@ -169,7 +169,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[120px_1fr] lg:grid-cols-[120px_1fr]"> 
+    <div className="grid min-h-screen w-full md:grid-cols-[144px_1fr] lg:grid-cols-[144px_1fr]"> {/* Approx 20% wider (120*1.2) */}
       <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg sticky top-0 h-screen">
         <div> 
            <div className="flex h-10 items-center justify-center mb-4 mt-2">
@@ -219,9 +219,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     <span className="sr-only">Toggle navigation menu</span>
                 </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="flex flex-col bg-sidebar p-2 text-sidebar-foreground w-[120px] shadow-xl">
+                <SheetContent side="left" className="flex flex-col bg-sidebar p-2 text-sidebar-foreground w-[144px] shadow-xl"> {/* Approx 20% wider (120*1.2) */}
                  <SheetHeader>
-                    <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                    <SheetTitle className="sr-only">Navigation Menu</SheetTitle> {/* Added for accessibility compliance */}
                  </SheetHeader>
                  <div className="flex h-10 items-center justify-center mb-4 mt-2">
                      <Link href="/dashboard" className="flex items-center justify-center" onClick={() => setIsMobileSheetOpen(false)}>
@@ -232,28 +232,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 
                 <div className="flex-1 overflow-auto">{sidebarNavigation(true)}</div>
 
-                 {user && (
-                    <div className="mt-auto p-1 flex justify-center"> 
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="rounded-full w-12 h-12">
-                                <Avatar className="h-10 w-10">
-                                <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar mobile"/>
-                                <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                                </Avatar>
-                                <span className="sr-only">User Menu</span>
-                            </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent side="right" align="end" className="w-56 ml-2 bg-card text-card-foreground border-border shadow-xl">
-                            {userProfileDropdownContent}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                )}
+                 {/* User profile dropdown at the bottom of the mobile slide-out sidebar is removed */}
+                 {/* The profile button is still accessible from the top-right header on mobile */}
                 </SheetContent>
             </Sheet>
-             {/* Removed current team name display from mobile top bar header */}
-             <div className="flex-1"></div> {/* This will push the avatar to the right */}
+             <div className="flex-1"></div> 
              {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -279,3 +262,4 @@ export function AppLayout({ children }: { children: ReactNode }) {
   );
 }
     
+
