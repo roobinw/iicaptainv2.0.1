@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ReactNode } from "react";
@@ -19,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Icons } from "@/components/icons";
-import { PanelLeft, LogOut, Settings as SettingsIcon, ChevronDown } from "lucide-react"; // Added ChevronDown
+import { PanelLeft, LogOut, Settings as SettingsIcon, ChevronDown } from "lucide-react"; 
 
 interface NavItem {
   href: string;
@@ -33,7 +32,6 @@ const navItems: NavItem[] = [
   { href: "/matches", label: "Matches", icon: "Matches" },
   { href: "/trainings", label: "Trainings", icon: "Trainings" },
   { href: "/players", label: "Players", icon: "Players" },
-  // { href: "/settings", label: "Settings", icon: "Settings" }, // Settings is now part of user menu
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -66,7 +64,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }
 
   const sidebarNavigation = (
-    <nav className="grid items-start gap-1 px-2">
+    <nav className="grid items-start justify-items-center gap-1 px-2">
       {navItems.map((item) => {
         if (item.adminOnly && user?.role !== "admin") {
           return null;
@@ -252,4 +250,3 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-
