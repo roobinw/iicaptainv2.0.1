@@ -358,16 +358,6 @@ export default function SettingsPage() {
           </Form>
         </CardContent>
       </Card>
-
-       <Card>
-        <CardHeader>
-          <CardTitle>Theme</CardTitle>
-          <CardDescription>Customize the look and feel of the application.</CardDescription>
-        </CardHeader>
-        <CardContent>
-           <p className="text-muted-foreground">Theme customization is not yet available.</p>
-        </CardContent>
-      </Card>
     </div>
   );
 }
