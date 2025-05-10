@@ -5,7 +5,7 @@ import type { ReactNode, Dispatch, SetStateAction } from "react";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"; 
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"; 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
@@ -65,10 +65,13 @@ export function EventCardBase({
           setMemberList([]);
           const initialAttendanceFromItem = item.attendance || {};
           const fallbackAttendance: Record<string, AttendanceStatus> = {};
-           memberList.forEach(member => { 
-            fallbackAttendance[member.uid] = initialAttendanceFromItem[member.uid] || 'present';
-          });
-          setCurrentAttendance(fallbackAttendance);
+           // memberList could be stale here if getAllUsersByTeam failed, so initialize with empty array or last known state
+           // For safety, let's assume it might be empty if fetch failed.
+           // If there's a desire to use previous memberList if fetch fails:
+           // const membersToIterate = memberList.length > 0 ? memberList : [];
+           // membersToIterate.forEach(member => { ... })
+           // However, it's safer to clear or rely on fetchedMembers even if it's an empty array from catch
+          setCurrentAttendance(initialAttendanceFromItem); // Fallback to item's attendance or empty {}
         })
         .finally(() => setIsLoadingMembers(false));
     } else {
@@ -76,18 +79,22 @@ export function EventCardBase({
       setCurrentAttendance(item.attendance || {}); 
       setIsLoadingMembers(false);
     }
+  // Rerun if item.id changes (new item selected) or if user/team context changes
   }, [currentUser?.teamId, item.id, eventType]); 
 
   useEffect(() => {
-    if (item.attendance) {
-        const initialAttendanceFromItem = item.attendance || {};
-        const updatedAttendance: Record<string, AttendanceStatus> = { ...currentAttendance }; 
+    // This effect ensures that if item.attendance prop changes externally
+    // (e.g. parent list re-fetches and passes updated item),
+    // the internal currentAttendance state is updated accordingly,
+    // especially initializing new members to 'present'.
+    const initialAttendanceFromItem = item.attendance || {};
+    const updatedAttendanceState: Record<string, AttendanceStatus> = {};
 
-        memberList.forEach(member => {
-            updatedAttendance[member.uid] = initialAttendanceFromItem[member.uid] || 'present';
-        });
-        setCurrentAttendance(updatedAttendance);
-    }
+    memberList.forEach(member => {
+        updatedAttendanceState[member.uid] = initialAttendanceFromItem[member.uid] || 'present';
+    });
+    setCurrentAttendance(updatedAttendanceState);
+    
   }, [item.attendance, memberList]);
 
 
@@ -112,7 +119,7 @@ export function EventCardBase({
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="flex items-center gap-2">
-              {eventType === "match" ? (
+               {eventType === "match" ? (
                 <>
                   {currentTeam?.name || "Your Team"} {titlePrefix} {eventName}
                 </>
@@ -141,9 +148,9 @@ export function EventCardBase({
         </div>
       </CardHeader>
       <CardContent className="flex-grow">
-        <p className="text-sm text-muted-foreground">
+         <p className="text-sm text-muted-foreground">
             Attendance: {isLoadingMembers && memberList.length === 0 ? ( 
-                <Skeleton className="h-4 w-20 inline-block" />
+                <span className="inline-block"><Skeleton className="h-4 w-20" /></span>
             ) : (
                 <span className="font-semibold text-primary">{presentCount} / {memberList.length}</span>
             )} members present.
