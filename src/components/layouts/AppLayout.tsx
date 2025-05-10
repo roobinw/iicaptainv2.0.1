@@ -48,11 +48,19 @@ export function AppLayout({ children }: { children: ReactNode }) {
         const isPublicPage = publicPaths.includes(pathname);
         const isOnboardingPage = pathname.startsWith("/onboarding");
 
-        if (!isPublicPage && !isOnboardingPage && pathname !== "/(marketing)") { // Adjusted condition for marketing layout
+        // If not a public page, not onboarding, and not already on the marketing root, redirect to marketing root.
+        // The marketing root page "/" already handles redirecting to /dashboard or /onboarding/create-team if user is logged in.
+        if (!isPublicPage && !isOnboardingPage && pathname !== "/") { 
           router.replace("/"); 
         }
       } else if (user && !user.teamId && !pathname.startsWith("/onboarding")) {
+        // User is logged in but has no teamId, and is not on an onboarding page, redirect to create team.
         router.replace("/onboarding/create-team");
+      }
+      // If user is logged in, has a teamId, and is on a public/auth page, redirect to dashboard.
+      // This logic is also handled by the individual auth pages and the root "/" page, but can be reinforced here.
+      else if (user && user.teamId && (pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname.startsWith("/onboarding"))) {
+        router.replace("/dashboard");
       }
     }
   }, [user, authIsLoading, router, pathname]);
@@ -67,16 +75,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!authIsLoading && !user) {
-     const publicPaths = ["/", "/login", "/signup"];
-     if (!publicPaths.includes(pathname) && !pathname.startsWith("/onboarding") && pathname !== "/(marketing)") {
-        return ( 
-            <div className="flex h-screen items-center justify-center bg-background">
-                <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
-                <p className="ml-4 text-lg text-foreground">Redirecting...</p>
-            </div>
-        );
-     }
+  // This check is more for robustness. useEffect should handle redirection.
+  if (!authIsLoading && !user && !pathname.startsWith("/onboarding") && pathname !== "/" && pathname !== "/login" && pathname !== "/signup" ) {
+     return ( 
+         <div className="flex h-screen items-center justify-center bg-background">
+             <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
+             <p className="ml-4 text-lg text-foreground">Redirecting...</p>
+         </div>
+     );
   }
   
   if (!authIsLoading && user && !user.teamId && !pathname.startsWith("/onboarding")) {
@@ -156,7 +162,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[70px_1fr] lg:grid-cols-[70px_1fr]">
       {/* Desktop Sidebar */}
-      <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 rounded-r-lg shadow-lg">
+      <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg">
         <div>
            <div className="flex h-10 items-center justify-center mb-4">
             <Link href="/dashboard" className="text-sidebar-foreground">
@@ -219,7 +225,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <span className="sr-only">Toggle navigation menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col bg-sidebar p-0 text-sidebar-foreground w-[250px] rounded-r-lg shadow-xl">
+            <SheetContent side="left" className="flex flex-col bg-sidebar p-0 text-sidebar-foreground w-[250px] shadow-xl">
                {/* User profile for mobile */}
                {user && (
                 <div className="border-b border-sidebar-border p-2">
