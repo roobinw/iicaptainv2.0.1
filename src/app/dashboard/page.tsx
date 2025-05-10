@@ -11,14 +11,14 @@ import { useEffect, useState } from "react";
 import type { Match, Training, User } from "@/types";
 import { getMatches } from "@/services/matchService";
 import { getTrainings } from "@/services/trainingService";
-import { getPlayersByTeam } from "@/services/userService";
+import { getAllUsersByTeam } from "@/services/userService"; // Changed from getPlayersByTeam
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
   const { user, currentTeam, isLoading: authIsLoading } = useAuth();
   const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([]);
   const [upcomingTrainings, setUpcomingTrainings] = useState<Training[]>([]);
-  const [totalPlayers, setTotalPlayers] = useState(0);
+  const [totalTeamMembers, setTotalTeamMembers] = useState(0); // Renamed for clarity
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
@@ -62,8 +62,8 @@ export default function DashboardPage() {
           .slice(0, 2);
         setUpcomingTrainings(futureTrainings);
         
-        const players = await getPlayersByTeam(teamId);
-        setTotalPlayers(players.length);
+        const teamMembers = await getAllUsersByTeam(teamId); // Changed to getAllUsersByTeam
+        setTotalTeamMembers(teamMembers.length); // Updated state setter
 
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -174,13 +174,13 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Players</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Members</CardTitle> 
             <Icons.Players className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalPlayers}</div>
+            <div className="text-2xl font-bold">{totalTeamMembers}</div>
             <p className="text-xs text-muted-foreground">
-              Active players in {currentTeam?.name || "the team"}.
+              Active members in {currentTeam?.name || "the team"}.
             </p>
           </CardContent>
         </Card>
