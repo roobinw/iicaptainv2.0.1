@@ -35,10 +35,14 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!authIsLoading && user && user.teamId) { 
-      router.replace("/dashboard");
-    } else if (!authIsLoading && user && !user.teamId) { 
-      router.replace("/onboarding/create-team");
+    // This effect only redirects if the user IS authenticated.
+    // If user is null, it does nothing, allowing the user to stay on the login page.
+    if (!authIsLoading && user) {
+      if (user.teamId) {
+        router.replace("/dashboard");
+      } else {
+        router.replace("/onboarding/create-team");
+      }
     }
   }, [user, authIsLoading, router]);
 
@@ -54,7 +58,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       await login(data.email, data.password);
-      // AuthProvider's onAuthStateChanged handles redirect
+      // AuthProvider's onAuthStateChanged handles redirect after successful login
     } catch (error: any) {
       // Error toast is handled by the login function in AuthContext
     } finally {
@@ -63,7 +67,7 @@ export default function LoginPage() {
   }
 
 
-  if (authIsLoading || (!authIsLoading && user && user.teamId)) {
+  if (authIsLoading || (!authIsLoading && user)) { // Show loading if auth is processing OR if user is truthy (about to be redirected)
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
@@ -72,6 +76,7 @@ export default function LoginPage() {
     );
   }
 
+  // If !authIsLoading and !user, render the login form
   return (
     <AuthLayout>
       <div className="flex flex-col space-y-2 text-center mb-6">
@@ -128,3 +133,4 @@ export default function LoginPage() {
     </AuthLayout>
   );
 }
+
