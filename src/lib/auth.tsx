@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { User, UserRole, Team } from "@/types";
@@ -9,8 +8,8 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signOut as firebaseSignOut,
-  GoogleAuthProvider, // Added
-  signInWithPopup,      // Added
+  GoogleAuthProvider,
+  signInWithPopup,
   type User as FirebaseUser 
 } from "firebase/auth";
 import { doc, setDoc, getDoc, serverTimestamp, collection } from "firebase/firestore";
@@ -24,7 +23,7 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   isLoading: boolean;
   login: (email: string, password?: string) => Promise<void>; 
-  loginWithGoogle: () => Promise<void>; // Added
+  loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   signup: (email: string, name: string, teamName: string, password?: string) => Promise<void>; 
   refreshTeamData: () => Promise<void>;
@@ -203,6 +202,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     const provider = new GoogleAuthProvider();
     try {
+      // IMPORTANT: For "auth/unauthorized-domain" errors, you MUST add the domain
+      // (e.g., localhost, or your deployed app's domain) to the list of authorized domains
+      // in your Firebase project settings: Firebase Console -> Authentication -> Settings -> Authorized domains.
       await signInWithPopup(auth, provider);
       // onAuthStateChanged will handle user creation/update and redirection.
     } catch (error: any) {
@@ -214,6 +216,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         errorMessage = "Google Sign-In popup was closed. Please try again.";
       } else if (error.code === 'auth/cancelled-popup-request') {
         errorMessage = "Multiple Google Sign-In popups were opened. Please try again.";
+      } else if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = "This domain is not authorized for Google Sign-In. Please add it to your Firebase project's Authentication settings (Sign-in method > Authorized domains).";
+        console.error("IMPORTANT: To fix 'auth/unauthorized-domain', add the current domain (e.g., localhost or your app's domain) to the Firebase console: Authentication -> Settings -> Authorized domains.");
       }
       toast({
         title: "Google Sign-In Failed",
