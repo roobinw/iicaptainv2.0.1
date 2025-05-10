@@ -178,7 +178,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[70px_1fr] lg:grid-cols-[70px_1fr]">
       {/* Desktop Sidebar */}
-      <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg">
+      <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg sticky top-0 h-screen">
         <div>
            <div className="flex h-10 items-center justify-center mb-4">
             <Link href="/dashboard" className="text-sidebar-foreground">
@@ -190,7 +190,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             {sidebarNavigation}
           </div>
         </div>
-        {/* User profile section removed from bottom of desktop sidebar */}
+        {/* User profile section for desktop sidebar, moved to header */}
       </aside>
       
       <div className="flex flex-col">
@@ -246,7 +246,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <h1 className="text-lg font-semibold text-foreground">{currentTeam?.name || "Team Dashboard"}</h1>
           </div>
 
-          {/* User Profile Dropdown - NEW LOCATION in Header */}
+          {/* User Profile Dropdown - in Header */}
           {user && (
             <div className="ml-auto flex items-center">
               <DropdownMenu>
@@ -273,5 +273,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
+    
 
     
