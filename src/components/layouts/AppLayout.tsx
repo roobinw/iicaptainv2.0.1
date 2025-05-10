@@ -48,17 +48,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
         const isPublicPage = publicPaths.includes(pathname);
         const isOnboardingPage = pathname.startsWith("/onboarding");
 
-        // If not a public page, not onboarding, and not already on the marketing root, redirect to marketing root.
-        // The marketing root page "/" already handles redirecting to /dashboard or /onboarding/create-team if user is logged in.
         if (!isPublicPage && !isOnboardingPage && pathname !== "/") { 
           router.replace("/"); 
         }
       } else if (user && !user.teamId && !pathname.startsWith("/onboarding")) {
-        // User is logged in but has no teamId, and is not on an onboarding page, redirect to create team.
         router.replace("/onboarding/create-team");
       }
-      // If user is logged in, has a teamId, and is on a public/auth page, redirect to dashboard.
-      // This logic is also handled by the individual auth pages and the root "/" page, but can be reinforced here.
       else if (user && user.teamId && (pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname.startsWith("/onboarding"))) {
         router.replace("/dashboard");
       }
@@ -75,7 +70,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // This check is more for robustness. useEffect should handle redirection.
   if (!authIsLoading && !user && !pathname.startsWith("/onboarding") && pathname !== "/" && pathname !== "/login" && pathname !== "/signup" ) {
      return ( 
          <div className="flex h-screen items-center justify-center bg-background">
@@ -158,6 +152,28 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </nav>
   );
 
+  const userProfileDropdownContent = (
+    <>
+        <DropdownMenuLabel className="truncate">
+            <div className="font-semibold">{user?.name}</div>
+            <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator className="bg-border" />
+        <DropdownMenuItem onClick={() => router.push('/settings')} className="hover:bg-accent/50 cursor-pointer">
+            <SettingsIcon className="mr-2 h-4 w-4" />
+            <span>Settings</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled className="opacity-50">
+            Support (soon)
+        </DropdownMenuItem>
+        <DropdownMenuSeparator className="bg-border"/>
+        <DropdownMenuItem onClick={logout} className="hover:bg-accent/50 cursor-pointer">
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Logout</span>
+        </DropdownMenuItem>
+    </>
+  );
+
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[70px_1fr] lg:grid-cols-[70px_1fr]">
@@ -174,41 +190,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             {sidebarNavigation}
           </div>
         </div>
-        {/* User profile section at the bottom of sidebar */}
-        {user && (
-            <div className="mt-auto border-t border-sidebar-border pt-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="w-full h-auto justify-center p-1">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar"/>
-                      <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                    </Avatar>
-                    <span className="sr-only">User Menu</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent side="right" align="end" className="ml-1 w-56 bg-card text-card-foreground border-border shadow-xl">
-                  <DropdownMenuLabel className="truncate">
-                    <div className="font-semibold">{user.name}</div>
-                    <div className="text-xs text-muted-foreground truncate">{user.email}</div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-border" />
-                  <DropdownMenuItem onClick={() => router.push('/settings')} className="hover:bg-accent/50">
-                    <SettingsIcon className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem disabled className="opacity-50">
-                    Support (soon)
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-border"/>
-                  <DropdownMenuItem onClick={logout} className="hover:bg-accent/50">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Logout</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
+        {/* User profile section removed from bottom of desktop sidebar */}
       </aside>
       
       <div className="flex flex-col">
@@ -226,7 +208,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col bg-sidebar p-0 text-sidebar-foreground w-[250px] shadow-xl">
-               {/* User profile for mobile */}
                {user && (
                 <div className="border-b border-sidebar-border p-2">
                     <DropdownMenu>
@@ -246,21 +227,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent side="bottom" align="start" className="w-56 mt-1 bg-card text-card-foreground border-border shadow-xl">
-                        <DropdownMenuLabel className="truncate">
-                            <div className="font-semibold">{user.name}</div>
-                            <div className="text-xs text-muted-foreground truncate">{user.email}</div>
-                        </DropdownMenuLabel>
-                        <DropdownMenuSeparator className="bg-border"/>
-                        <DropdownMenuItem onClick={() => router.push('/settings')} className="hover:bg-accent/50">
-                            <SettingsIcon className="mr-2 h-4 w-4" />
-                            <span>Settings</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem disabled className="opacity-50">Support (soon)</DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-border"/>
-                        <DropdownMenuItem onClick={logout} className="hover:bg-accent/50">
-                        <LogOut className="mr-2 h-4 w-4" />
-                        <span>Logout</span>
-                        </DropdownMenuItem>
+                        {userProfileDropdownContent}
                     </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -274,10 +241,30 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <div className="flex-1 overflow-auto">{mobileSidebarContent}</div>
             </SheetContent>
           </Sheet>
-          {/* Team Name in Header */}
+          
           <div className="flex-1">
             <h1 className="text-lg font-semibold text-foreground">{currentTeam?.name || "Team Dashboard"}</h1>
           </div>
+
+          {/* User Profile Dropdown - NEW LOCATION in Header */}
+          {user && (
+            <div className="ml-auto flex items-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar"/>
+                      <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                    </Avatar>
+                    <span className="sr-only">User Menu</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 bg-card text-card-foreground border-border shadow-xl">
+                  {userProfileDropdownContent}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background overflow-auto">
           {children}
@@ -286,3 +273,5 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
+    
