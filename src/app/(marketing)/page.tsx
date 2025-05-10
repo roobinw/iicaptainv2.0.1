@@ -35,7 +35,7 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="py-4 px-6 shadow-md sticky top-0 z-50 bg-background/80 backdrop-blur-md">
+      <header className="py-4 px-6 shadow-md sticky top-0 z-50 bg-background/90 backdrop-blur-lg">
         <div className="container mx-auto flex justify-between items-center">
           <Link href="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
             <Icons.TeamLogo className="h-8 w-8" />
@@ -57,58 +57,71 @@ export default function LandingPage() {
         <section className="py-20 md:py-32 text-center bg-gradient-to-br from-card via-background to-background">
           <div className="container mx-auto px-6">
             
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
+            <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold mb-8 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent leading-tight">
               Welcome to iiCaptain
             </h1>
-            <p className="text-lg sm:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
+            <p className="text-xl sm:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto">
               The ultimate platform to manage your sports team effortlessly. Schedule matches, track training, manage players, and conquer the league!
             </p>
-            <div className="space-y-4 sm:space-y-0 sm:space-x-4">
-              <Link href="/signup">
-                <Button size="lg" className="px-8 py-3 text-lg w-full sm:w-auto shadow-lg hover:shadow-primary/50 transition-shadow">Get Started Free</Button>
+            <div className="space-y-4 sm:space-y-0 sm:flex sm:justify-center sm:space-x-4">
+              <Link href="/signup" passHref>
+                <Button size="xl" className="px-10 py-4 text-xl w-full sm:w-auto shadow-lg hover:shadow-primary/50 transition-all duration-300 transform hover:scale-105">Get Started Free</Button>
               </Link>
-              <Link href="/login">
-                <Button variant="secondary" size="lg" className="px-8 py-3 text-lg w-full sm:w-auto">
+              <Link href="/login" passHref>
+                <Button variant="outline" size="xl" className="px-10 py-4 text-xl w-full sm:w-auto hover:bg-primary/10 transition-colors duration-300">
                   I already have an account
                 </Button>
               </Link>
             </div>
-             <div className="mt-16 max-w-4xl mx-auto">
+             <div className="mt-20 max-w-5xl mx-auto">
                 <Image 
                     src="https://picsum.photos/seed/soccerfield/1200/600" 
                     alt="People playing soccer on a field" 
                     width={1200} 
                     height={600}
-                    className="rounded-lg shadow-2xl border border-border"
+                    className="rounded-xl shadow-2xl border-2 border-border/50"
                     data-ai-hint="soccer game"
+                    priority
                 />
             </div>
           </div>
         </section>
 
         {/* Features Section */}
-        <section className="py-16 bg-background">
+        <section className="py-20 md:py-28 bg-secondary/20">
           <div className="container mx-auto px-6">
-            <h2 className="text-3xl sm:text-4xl font-bold text-center mb-16">Why Choose <span className="text-primary">iiCaptain</span>?</h2>
-            <div className="grid md:grid-cols-3 gap-8 text-center">
-              <div className="p-8 bg-card rounded-xl shadow-xl hover:shadow-2xl transition-shadow transform hover:-translate-y-1">
-                <Icons.Matches className="h-16 w-16 text-primary mx-auto mb-6" />
-                <h3 className="text-2xl font-semibold mb-3">Schedule Management</h3>
-                <p className="text-muted-foreground">
+            <h2 className="text-4xl sm:text-5xl font-bold text-center mb-20">Why Choose <span className="text-primary">iiCaptain</span>?</h2>
+            <div className="grid md:grid-cols-3 gap-10">
+              <div className="p-8 bg-card rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+                <div className="mb-6 flex justify-center">
+                   <div className="p-4 bg-primary/10 rounded-full">
+                      <Icons.Matches className="h-12 w-12 text-primary" />
+                   </div>
+                </div>
+                <h3 className="text-2xl font-semibold mb-4 text-center">Schedule Management</h3>
+                <p className="text-muted-foreground leading-relaxed text-center">
                   Easily create and manage match and training schedules. Keep everyone informed with automated reminders and clear views.
                 </p>
               </div>
-              <div className="p-8 bg-card rounded-xl shadow-xl hover:shadow-2xl transition-shadow transform hover:-translate-y-1">
-                <Icons.Players className="h-16 w-16 text-primary mx-auto mb-6" />
-                <h3 className="text-2xl font-semibold mb-3">Player Roster</h3>
-                <p className="text-muted-foreground">
+              <div className="p-8 bg-card rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+                <div className="mb-6 flex justify-center">
+                   <div className="p-4 bg-primary/10 rounded-full">
+                     <Icons.Players className="h-12 w-12 text-primary" />
+                   </div>
+                </div>
+                <h3 className="text-2xl font-semibold mb-4 text-center">Player Roster</h3>
+                <p className="text-muted-foreground leading-relaxed text-center">
                   Maintain a comprehensive list of your team members with roles, contact details, and performance notes.
                 </p>
               </div>
-              <div className="p-8 bg-card rounded-xl shadow-xl hover:shadow-2xl transition-shadow transform hover:-translate-y-1">
-                <Icons.Attendance className="h-16 w-16 text-primary mx-auto mb-6" />
-                <h3 className="text-2xl font-semibold mb-3">Attendance Tracking</h3>
-                <p className="text-muted-foreground">
+              <div className="p-8 bg-card rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+                 <div className="mb-6 flex justify-center">
+                    <div className="p-4 bg-primary/10 rounded-full">
+                      <Icons.Attendance className="h-12 w-12 text-primary" />
+                    </div>
+                 </div>
+                <h3 className="text-2xl font-semibold mb-4 text-center">Attendance Tracking</h3>
+                <p className="text-muted-foreground leading-relaxed text-center">
                   Mark attendance for matches and training sessions. Know who's available and track commitment effortlessly.
                 </p>
               </div>
@@ -117,29 +130,30 @@ export default function LandingPage() {
         </section>
         
         {/* Testimonial / Social Proof (Placeholder) */}
-        <section className="py-16 bg-card">
+        <section className="py-20 md:py-28 bg-background">
             <div className="container mx-auto px-6 text-center">
-                <h2 className="text-3xl sm:text-4xl font-bold mb-12">Loved by Teams Worldwide</h2>
+                <h2 className="text-4xl sm:text-5xl font-bold mb-16">Loved by Teams Worldwide</h2>
                 <div className="max-w-3xl mx-auto">
-                    <blockquote className="p-6 bg-background rounded-xl shadow-lg">
-                        <p className="text-lg italic text-muted-foreground mb-4">
+                    <div className="p-8 bg-card rounded-2xl shadow-2xl relative">
+                        <Icons.TeamLogo className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 h-16 w-16 text-primary bg-card p-3 rounded-full border-4 border-background shadow-lg" />
+                        <p className="text-xl italic text-foreground mt-8 mb-6 leading-relaxed">
                             "iiCaptain has revolutionized how we manage our team. Scheduling is a breeze, and communication has never been better!"
                         </p>
-                        <footer className="font-semibold text-primary">- Coach Alex, The Roaring Lions</footer>
-                    </blockquote>
+                        <footer className="font-semibold text-lg text-primary">- Coach Alex, The Roaring Lions</footer>
+                    </div>
                 </div>
             </div>
         </section>
 
          {/* Call to Action Section */}
-        <section className="py-20 md:py-32 text-center bg-background">
+        <section className="py-24 md:py-36 text-center bg-gradient-to-b from-background to-card">
             <div className="container mx-auto px-6">
-                <h2 className="text-3xl sm:text-4xl font-bold mb-6">Ready to Elevate Your Team?</h2>
-                <p className="text-lg sm:text-xl text-muted-foreground mb-10 max-w-xl mx-auto">
+                <h2 className="text-4xl sm:text-5xl font-bold mb-8 tracking-tight">Ready to Elevate Your Team?</h2>
+                <p className="text-xl sm:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto">
                     Join iiCaptain today and experience seamless team management. Spend less time organizing and more time winning.
                 </p>
-                <Link href="/signup">
-                    <Button size="lg" className="px-10 py-4 text-xl shadow-lg hover:shadow-primary/50 transition-shadow">
+                <Link href="/signup" passHref>
+                    <Button size="xl" className="px-12 py-5 text-xl shadow-xl hover:shadow-primary/60 transition-all duration-300 transform hover:scale-105">
                         Sign Up Now &amp; Conquer
                     </Button>
                 </Link>
@@ -148,19 +162,19 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="py-12 bg-card border-t border-border">
+      <footer className="py-16 bg-card border-t border-border/50">
         <div className="container mx-auto text-center">
-            <Link href="/" className="flex items-center justify-center gap-2 text-xl font-bold text-primary mb-4">
-                <Icons.TeamLogo className="h-7 w-7" />
+            <Link href="/" className="inline-flex items-center justify-center gap-2 text-2xl font-bold text-primary mb-6">
+                <Icons.TeamLogo className="h-8 w-8" />
                 <span>iiCaptain</span>
             </Link>
-          <p className="text-muted-foreground">&copy; {new Date().getFullYear()} iiCaptain. All rights reserved.</p>
-           <p className="text-sm text-muted-foreground/80 mt-2">
+          <p className="text-muted-foreground mb-4">&copy; {new Date().getFullYear()} iiCaptain. All rights reserved.</p>
+           <p className="text-sm text-muted-foreground/80 mt-1">
             Built with passion for teams everywhere.
           </p>
-          <div className="mt-4 space-x-4">
-            <Link href="/privacy" className="text-sm text-muted-foreground hover:text-primary">Privacy Policy</Link>
-            <Link href="/terms" className="text-sm text-muted-foreground hover:text-primary">Terms of Service</Link>
+          <div className="mt-6 space-x-6">
+            <Link href="/privacy" className="text-sm text-muted-foreground hover:text-primary transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="text-sm text-muted-foreground hover:text-primary transition-colors">Terms of Service</Link>
           </div>
         </div>
       </footer>
