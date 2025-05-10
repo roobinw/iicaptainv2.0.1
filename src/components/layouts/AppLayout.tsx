@@ -116,13 +116,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <Link
                 href={item.href}
                 className={cn(
-                  "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-11 md:w-11",
+                  "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-11 md:w-11", // Original size for nav items
                   pathname.startsWith(item.href) // Use startsWith for active state
                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
                     : "text-sidebar-foreground"
                 )}
               >
-                <IconComponent className="h-6 w-6" />
+                <IconComponent className="h-6 w-6" /> {/* Original icon size for nav items */}
                 <span className="sr-only">{item.label}</span>
               </Link>
             </TooltipTrigger>
@@ -186,12 +186,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[84px_1fr] lg:grid-cols-[84px_1fr]">
+    <div className="grid min-h-screen w-full md:grid-cols-[100px_1fr] lg:grid-cols-[100px_1fr]"> {/* Adjusted sidebar width */}
       <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg sticky top-0 h-screen">
         <div> 
            <div className="flex h-10 items-center justify-center mb-4 mt-2">
              <Link href="/dashboard" className="text-sidebar-foreground hidden md:block">
-              <Icons.TeamLogo className="mt-[10px] h-7 w-7" />
+              <Icons.TeamLogo className="mt-[10px] h-8 w-8" /> {/* Increased size */}
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
@@ -260,7 +260,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     )}
                 <div className="flex h-10 items-center justify-center mt-2 mb-2">
                     <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
-                    <Icons.TeamLogo className="mt-[5px] h-7 w-7" />
+                    <Icons.TeamLogo className="mt-[5px] h-8 w-8" /> {/* Increased size */}
                     <span className="">{currentTeam?.name || "iiCaptain"}</span>
                     </Link>
                 </div>
@@ -276,6 +276,4 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-
-
     
