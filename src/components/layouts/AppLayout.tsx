@@ -14,13 +14,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"; // Added SheetHeader, SheetTitle
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"; 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Icons } from "@/components/icons";
-import { PanelLeft, LogOut, Settings as SettingsIcon, ChevronDown, LifeBuoy } from "lucide-react"; 
-import { useEffect } from "react";
+import { PanelLeft, LogOut, Settings as SettingsIcon, LifeBuoy } from "lucide-react"; 
+import { useEffect, useState } from "react";
 
 interface NavItem {
   href: string;
@@ -34,31 +34,29 @@ const navItems: NavItem[] = [
   { href: "/matches", label: "Matches", icon: "Matches" },
   { href: "/trainings", label: "Trainings", icon: "Trainings" },
   { href: "/players", label: "Players", icon: "Players" },
-  // Settings is not a main nav item, accessed via user dropdown
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, currentTeam, logout, isLoading: authIsLoading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
+
 
   useEffect(() => {
     if (!authIsLoading) { 
       const isMarketingPage = pathname === "/" || pathname.startsWith("/(marketing)");
-      const isAuthPage = pathname.startsWith("/(auth)"); // Covers /login, /signup
+      const isAuthPage = pathname.startsWith("/(auth)"); 
       const isOnboardingPage = pathname.startsWith("/onboarding");
 
       if (!user) {
-        // If not logged in, and not on a public/auth/onboarding page, redirect to landing.
         if (!isMarketingPage && !isAuthPage && !isOnboardingPage) {
           router.replace("/"); 
         }
       } else if (user && !user.teamId && !isOnboardingPage) {
-        // Logged in, but no teamId, and not on onboarding, redirect to create team.
         router.replace("/onboarding/create-team");
       }
       else if (user && user.teamId && (isAuthPage || isOnboardingPage)) {
-         // Logged in, has teamId, but on auth/onboarding page, redirect to dashboard.
         router.replace("/dashboard");
       }
     }
@@ -103,7 +101,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
 
-  const sidebarNavigation = (
+  const sidebarNavigation = (isMobileContext = false) => (
     <nav className="grid items-start justify-items-center gap-3 px-2 py-4"> 
       {navItems.map((item) => {
         if (item.adminOnly && user?.role !== "admin") {
@@ -111,10 +109,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
         }
         const IconComponent = Icons[item.icon];
         return (
-          <Tooltip key={item.href}>
+          <Tooltip key={item.href} delayDuration={0}>
             <TooltipTrigger asChild>
               <Link
                 href={item.href}
+                onClick={() => isMobileContext && setIsMobileSheetOpen(false)} // Close sheet on mobile nav
                 className={cn(
                   "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-11 md:w-11", 
                   pathname.startsWith(item.href) 
@@ -126,7 +125,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <span className="sr-only">{item.label}</span>
               </Link>
             </TooltipTrigger>
-            <TooltipContent side="right" className="bg-card text-card-foreground border-border">
+             {/* Show tooltips on right for desktop, adjust for mobile if needed or rely on SR only */}
+            <TooltipContent side={isMobileContext ? "right" : "right"} className="bg-card text-card-foreground border-border">
               {item.label}
             </TooltipContent>
           </Tooltip>
@@ -135,31 +135,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </nav>
   );
 
-  const mobileSidebarContent = (
-     <nav className="grid items-start gap-2 px-2 py-4 text-sm font-medium">
-      {navItems.map((item) => {
-        if (item.adminOnly && user?.role !== "admin") {
-          return null;
-        }
-        const IconComponent = Icons[item.icon];
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-              pathname.startsWith(item.href) 
-                ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                : "text-sidebar-foreground"
-            )}
-          >
-            <IconComponent className="h-5 w-5" />
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
 
   const userProfileDropdownContent = (
     <>
@@ -168,16 +143,25 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator className="bg-border" />
-        <DropdownMenuItem onClick={() => router.push('/settings')} className="hover:bg-accent/50 cursor-pointer">
+        <DropdownMenuItem 
+            onClick={() => { router.push('/settings'); setIsMobileSheetOpen(false); }} 
+            className="hover:bg-accent/50 cursor-pointer"
+        >
             <SettingsIcon className="mr-2 h-5 w-5" />
             <span>Settings</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => router.push('/support')} className="hover:bg-accent/50 cursor-pointer">
+        <DropdownMenuItem 
+            onClick={() => { router.push('/support'); setIsMobileSheetOpen(false); }} 
+            className="hover:bg-accent/50 cursor-pointer"
+        >
             <LifeBuoy className="mr-2 h-5 w-5" />
             <span>Support</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-border"/>
-        <DropdownMenuItem onClick={logout} className="hover:bg-accent/50 cursor-pointer">
+        <DropdownMenuItem 
+            onClick={() => { logout(); setIsMobileSheetOpen(false);}} 
+            className="hover:bg-accent/50 cursor-pointer"
+        >
             <LogOut className="mr-2 h-5 w-5" />
             <span>Logout</span>
         </DropdownMenuItem>
@@ -192,14 +176,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
            <div className="flex h-10 items-center justify-center mb-4 mt-2">
              <Link 
                 href="/dashboard" 
-                className="text-sidebar-foreground hidden md:flex md:justify-center"
+                className="text-sidebar-foreground flex justify-center" // Removed md:hidden and md:flex
             >
               <Icons.TeamLogo className="mt-[10px] h-10 w-10" /> 
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
           <div className="flex-1 overflow-auto">
-            {sidebarNavigation}
+            {sidebarNavigation(false)}
           </div>
         </div>
         
@@ -225,7 +209,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       
       <main className="flex flex-1 flex-col bg-background overflow-auto">
         <header className="sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b bg-background px-4 md:hidden">
-            <Sheet>
+            <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
                 <SheetTrigger asChild>
                 <Button
                     variant="outline"
@@ -236,46 +220,36 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     <span className="sr-only">Toggle navigation menu</span>
                 </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="flex flex-col bg-sidebar p-0 text-sidebar-foreground w-[250px] shadow-xl">
-                 <SheetHeader className="p-4 border-b border-sidebar-border">
-                    <SheetTitle className="text-lg font-semibold text-sidebar-foreground text-center">
-                        {currentTeam?.name || "Menu"}
-                    </SheetTitle>
-                 </SheetHeader>
-                {user && ( 
-                    <div className="border-b border-sidebar-border p-2">
+                <SheetContent side="left" className="flex flex-col bg-sidebar p-2 text-sidebar-foreground w-[120px] shadow-xl">
+                 <div className="flex h-10 items-center justify-center mb-4 mt-2">
+                     <Link href="/dashboard" className="flex items-center justify-center" onClick={() => setIsMobileSheetOpen(false)}>
+                        <Icons.TeamLogo className="h-10 w-10 text-sidebar-foreground" /> 
+                        <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
+                    </Link>
+                  </div>
+                
+                <div className="flex-1 overflow-auto">{sidebarNavigation(true)}</div>
+
+                 {user && (
+                    <div className="mt-auto p-1 flex justify-center"> 
                         <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="flex items-center justify-between w-full h-auto px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                                <div className="flex items-center gap-2 truncate">
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar mobile"/>
-                                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex flex-col items-start truncate">
-                                        <span className="text-sm font-medium truncate">{user.name}</span>
-                                        <span className="text-xs text-sidebar-foreground/70 truncate">{user.email}</span>
-                                    </div>
-                                </div>
-                                <ChevronDown className="h-5 w-5 text-sidebar-foreground/70" />
+                            <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="rounded-full w-12 h-12">
+                                <Avatar className="h-10 w-10">
+                                <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar mobile"/>
+                                <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                                </Avatar>
+                                <span className="sr-only">User Menu</span>
                             </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent side="bottom" align="start" className="w-56 mt-1 bg-card text-card-foreground border-border shadow-xl">
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent side="right" align="end" className="w-56 ml-2 bg-card text-card-foreground border-border shadow-xl">
                             {userProfileDropdownContent}
-                        </DropdownMenuContent>
+                            </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-                    )}
-                <div className="flex h-10 items-center justify-center mt-2 mb-2">
-                    <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
-                    <Icons.TeamLogo className="mt-[10px] h-10 w-10" /> 
-                    <span className="">{currentTeam?.name || "iiCaptain"}</span>
-                    </Link>
-                </div>
-                <div className="flex-1 overflow-auto">{mobileSidebarContent}</div>
+                )}
                 </SheetContent>
             </Sheet>
-             {/* This div is now removed to pull content up, no more team name display here */}
         </header>
           <div className="p-4 lg:p-6">
             {children}
