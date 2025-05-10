@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const teamData = await getTeamById(teamId);
       setCurrentTeam(teamData);
-      if (!teamData && pathname !== "/onboarding/create-team" && pathname !== "/login" && pathname !== "/signup") {
+      if (!teamData && pathname !== "/onboarding/create-team" && pathname !== "/login" && pathname !== "/signup" && pathname !== "/") {
         toast({ title: "Team Not Found", description: "Your assigned team could not be loaded.", variant: "destructive" });
         router.replace("/onboarding/create-team");
       }
@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("AuthContext: Error fetching team data in fetchAndSetCurrentTeam:", error);
       setCurrentTeam(null);
       toast({ title: "Error Loading Team", description: error.message || "Could not load your team's data.", variant: "destructive" });
-      if (pathname !== "/onboarding/create-team" && pathname !== "/login" && pathname !== "/signup") {
+      if (pathname !== "/onboarding/create-team" && pathname !== "/login" && pathname !== "/signup" && pathname !== "/") {
         router.replace("/onboarding/create-team");
       }
       return null;
@@ -86,16 +86,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (userData.teamId) {
               const fetchedTeam = await fetchAndSetCurrentTeam(userData.teamId);
               if (fetchedTeam) {
-                if (pathname === "/login" || pathname === "/signup" || pathname === "/onboarding/create-team") {
+                if (pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname === "/onboarding/create-team") {
                    router.replace("/dashboard");
                 }
-              } else { // Team not found or error, fetchAndSetCurrentTeam handles redirection if needed
-                // setCurrentTeam(null) already handled by fetchAndSetCurrentTeam
+              } else { 
+                // Team not found or error, fetchAndSetCurrentTeam handles redirection if needed
               }
             } else {
               // User profile exists but no teamId
               setCurrentTeam(null);
-              if (pathname !== "/onboarding/create-team" && pathname !== "/signup") { 
+              if (pathname !== "/onboarding/create-team" && pathname !== "/signup" && pathname !== "/") { 
                    router.replace("/onboarding/create-team");
               }
             }
@@ -105,22 +105,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               uid: fbUser.uid,
               email: fbUser.email!.toLowerCase(), 
               name: fbUser.displayName || "New User", 
-              role: "player", // Default role, will be updated if they create a team
-              teamId: undefined, // No teamId yet
+              role: "player", 
+              teamId: undefined, 
               avatarUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.email!.toLowerCase()}/80/80`,
               createdAt: serverTimestamp(),
             };
             await setDoc(userDocRef, newUserData);
-             // Simulate the structure of a fetched user for context, createdAt will be properly set on next full read
             const userForContext = { 
                 ...newUserData, 
                 id: fbUser.uid, 
-                createdAt: new Date().toISOString(), // Approximate for immediate context
-                teamId: undefined // Explicitly undefined
+                createdAt: new Date().toISOString(), 
+                teamId: undefined 
             } as User;
             setUser(userForContext);
             setCurrentTeam(null);
-            if (pathname !== "/onboarding/create-team" && pathname !== "/signup") { 
+            if (pathname !== "/onboarding/create-team" && pathname !== "/signup" && pathname !== "/") { 
                  router.replace("/onboarding/create-team");
             }
           }
@@ -129,9 +128,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(null);
           setFirebaseUser(null);
           setCurrentTeam(null);
-          const nonAuthRoutes = ["/login", "/signup"];
-          if (!nonAuthRoutes.includes(pathname) && !pathname.startsWith("/onboarding")) { 
-            router.replace("/login");
+          
+          const publicPaths = ["/", "/login", "/signup"]; 
+          // Add other marketing pages like "/privacy", "/terms" to publicPaths if they exist
+          
+          const isPublicOrOnboarding = 
+            publicPaths.includes(pathname) || 
+            pathname.startsWith("/onboarding");
+
+          if (!isPublicOrOnboarding) {
+            router.replace("/"); 
           }
         }
       } catch (error: any) {
@@ -152,9 +158,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           variant: "destructive",
         });
         
-        const nonAuthRoutes = ["/login", "/signup"];
-        if (!nonAuthRoutes.includes(pathname) && !pathname.startsWith("/onboarding")) {
-           router.replace("/login");
+        const publicPaths = ["/", "/login", "/signup"];
+        const isPublicOrOnboarding = 
+            publicPaths.includes(pathname) || 
+            pathname.startsWith("/onboarding");
+        
+        if (!isPublicOrOnboarding) {
+           router.replace("/");
         }
       } finally {
         setIsLoading(false);
@@ -202,11 +212,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      // IMPORTANT: For "auth/unauthorized-domain" errors, you MUST add the domain
-      // (e.g., localhost, or your deployed app's domain) to the list of authorized domains
-      // in your Firebase project settings: Firebase Console -> Authentication -> Settings -> Authorized domains.
       await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle user creation/update and redirection.
     } catch (error: any) {
       console.error("Google Sign-In error (AuthContext):", error);
       let errorMessage = "Failed to sign in with Google. Please try again.";
