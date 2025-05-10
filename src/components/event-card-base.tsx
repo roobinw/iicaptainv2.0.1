@@ -64,14 +64,7 @@ export function EventCardBase({
           console.error(`Failed to fetch team members for ${eventType} card:`, err);
           setMemberList([]);
           const initialAttendanceFromItem = item.attendance || {};
-          // const fallbackAttendance: Record<string, AttendanceStatus> = {};
-           // memberList could be stale here if getAllUsersByTeam failed, so initialize with empty array or last known state
-           // For safety, let's assume it might be empty if fetch failed.
-           // If there's a desire to use previous memberList if fetch fails:
-           // const membersToIterate = memberList.length > 0 ? memberList : [];
-           // membersToIterate.forEach(member => { ... })
-           // However, it's safer to clear or rely on fetchedMembers even if it's an empty array from catch
-          setCurrentAttendance(initialAttendanceFromItem); // Fallback to item's attendance or empty {}
+          setCurrentAttendance(initialAttendanceFromItem); 
         })
         .finally(() => setIsLoadingMembers(false));
     } else {
@@ -79,14 +72,9 @@ export function EventCardBase({
       setCurrentAttendance(item.attendance || {}); 
       setIsLoadingMembers(false);
     }
-  // Rerun if item.id changes (new item selected) or if user/team context changes
   }, [currentUser?.teamId, item.id, eventType, item.attendance]); 
 
   useEffect(() => {
-    // This effect ensures that if item.attendance prop changes externally
-    // (e.g. parent list re-fetches and passes updated item),
-    // the internal currentAttendance state is updated accordingly,
-    // especially initializing new members to 'present'.
     const initialAttendanceFromItem = item.attendance || {};
     const updatedAttendanceState: Record<string, AttendanceStatus> = {};
 
@@ -121,7 +109,7 @@ export function EventCardBase({
             <CardTitle className="flex items-center gap-2">
                {eventType === "match" ? (
                 <>
-                  {currentTeam?.name || "Your Team"} {titlePrefix} {eventName}
+                  {icon} {currentTeam?.name || "Your Team"} {titlePrefix} {eventName}
                 </>
               ) : (
                 <>
