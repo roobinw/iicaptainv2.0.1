@@ -35,7 +35,7 @@ body {
     --muted: 220 10% 30%; /* Even more desaturated and slightly lighter grey-blue for muted elements */
     --muted-foreground: 220 10% 60%; /* Medium grey for muted text, legible */
 
-    --accent: 160 70% 45%; /* Vibrant Teal/Cyan, contrasts well with blue primary */
+    --accent: 210 100% 56%; /* Using primary blue as accent */
     --accent-foreground: var(--foreground); /* Consistent foreground for accents */
 
     --destructive: 0 72% 51%; /* Bright Red (e.g., Tailwind Red 500) - kept for clarity */
@@ -60,7 +60,7 @@ body {
 
     /* Charts - ensure good contrast with dark background */
     --chart-1: var(--primary);
-    --chart-2: var(--accent);
+    --chart-2: var(--accent); /* This will now be the same as primary */
     --chart-3: var(--destructive); /* Kept standard destructive */
     --chart-4: 120 65% 50%; /* A distinct, visible green */
     --chart-5: 40 85% 55%;  /* A distinct, visible orange/yellow */
