@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TeamEase",
-  description: "Manage your sports team with ease.",
+  title: "iiCaptain",
+  description: "Manage your sports team with ease using iiCaptain.",
 };
 
 export default function RootLayout({

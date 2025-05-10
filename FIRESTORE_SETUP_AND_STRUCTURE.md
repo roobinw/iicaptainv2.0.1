@@ -1,6 +1,6 @@
-# Firestore Database Setup and Structure for TeamEase
+# Firestore Database Setup and Structure for iiCaptain
 
-This guide explains how to set up your Firestore database in the Firebase console and outlines the data structure that the TeamEase application is designed to work with.
+This guide explains how to set up your Firestore database in the Firebase console and outlines the data structure that the iiCaptain application is designed to work with.
 
 ## 1. Creating Firestore Database in Firebase Console
 
@@ -313,6 +313,6 @@ You can create these indexes in the Firebase console:
 
 **Note on Index Creation Time:** Composite indexes can take a few minutes to build, especially if you already have data in your collections. Firestore will indicate the status of index creation in the console.
 
-By following this structure, implementing robust security rules, and creating the necessary indexes, your TeamEase application will have a solid foundation for managing team data securely and efficiently for multiple teams.
+By following this structure, implementing robust security rules, and creating the necessary indexes, your iiCaptain application will have a solid foundation for managing team data securely and efficiently for multiple teams.
 
     

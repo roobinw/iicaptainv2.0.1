@@ -238,7 +238,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // onAuthStateChanged will handle setting user, team, and redirecting.
       toast({
         title: "Account & Team Created!",
-        description: "Welcome to TeamEase! Redirecting...",
+        description: "Welcome to iiCaptain! Redirecting...",
       });
     } catch (error: any) {
       console.error("Firebase signup error (AuthContext):", error);

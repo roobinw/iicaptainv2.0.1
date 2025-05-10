@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Icons } from "@/components/icons";
 import { PanelLeft } from "lucide-react";
-// Removed useEffect import as it's no longer used here
+
 
 interface NavItem {
   href: string;
@@ -39,7 +39,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  // useEffect for redirection has been removed. AuthProvider handles this.
 
   if (authIsLoading) {
     return (
@@ -99,7 +98,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
             <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
               <Icons.TeamLogo />
-              <span className="">{currentTeam?.name || "TeamEase"}</span>
+              <span className="">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
           <div className="flex-1 overflow-auto py-2 px-2">
@@ -124,7 +123,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                <div className="flex h-14 items-center border-b px-4">
                 <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
                   <Icons.TeamLogo />
-                  <span className="">{currentTeam?.name || "TeamEase"}</span>
+                  <span className="">{currentTeam?.name || "iiCaptain"}</span>
                 </Link>
               </div>
               <div className="flex-1 overflow-auto py-2 px-2">{sidebarContent}</div>
