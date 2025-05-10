@@ -56,9 +56,7 @@ export default function LandingPage() {
       <main className="flex-grow">
         <section className="py-20 md:py-32 text-center bg-gradient-to-br from-card via-background to-background">
           <div className="container mx-auto px-6">
-            <div className="mb-8">
-                <Icons.TeamLogo className="h-20 w-20 sm:h-24 sm:w-24 text-primary mx-auto " />
-            </div>
+            
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
               Welcome to iiCaptain
             </h1>
