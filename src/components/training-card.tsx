@@ -10,17 +10,17 @@ interface TrainingCardProps {
   training: Training;
   onEdit?: (training: Training) => void;
   onDelete?: (trainingId: string) => void;
-  setForceUpdateList?: Dispatch<SetStateAction<number>>;
+  // setForceUpdateList?: Dispatch<SetStateAction<number>>; // Prop removed
 }
 
-export function TrainingCard({ training, onEdit, onDelete, setForceUpdateList }: TrainingCardProps) {
+export function TrainingCard({ training, onEdit, onDelete }: TrainingCardProps) {
   return (
     <EventCardBase
       item={training}
       eventType="training"
       icon={<Icons.Trainings className="h-5 w-5 text-primary" />}
       titlePrefix="" 
-      renderDetails={(itemDetails) => { // Renamed item to itemDetails
+      renderDetails={(itemDetails) => { 
         const currentTraining = itemDetails as Training;
         return (
           <>
@@ -29,10 +29,9 @@ export function TrainingCard({ training, onEdit, onDelete, setForceUpdateList }:
           </>
         );
       }}
-      onEdit={onEdit} // Directly pass onEdit if its signature matches EventCardBase's expectation for a Training
-      onDelete={onDelete} // Directly pass onDelete if its signature matches EventCardBase's expectation
-      setForceUpdateList={setForceUpdateList}
+      onEdit={onEdit} 
+      onDelete={onDelete}
+      // setForceUpdateList={setForceUpdateList} // Prop removed
     />
   );
 }
-

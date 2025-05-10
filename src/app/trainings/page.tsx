@@ -243,7 +243,7 @@ export default function TrainingsPage() {
                     training={training} 
                     onEdit={isAdmin ? handleEditTraining : undefined} 
                     onDelete={isAdmin ? handleDeleteTraining : undefined}
-                    setForceUpdateList={setForceUpdateCounter}
+                    // setForceUpdateList={setForceUpdateCounter} // Prop removed
                   />
                 </SortableItem>
               ))}

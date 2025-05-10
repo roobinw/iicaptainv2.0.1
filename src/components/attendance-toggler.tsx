@@ -18,15 +18,17 @@ interface AttendanceTogglerProps {
   player: PlayerUser;
   eventType: "match" | "training";
   onAttendanceChange: (playerId: string, status: AttendanceStatus) => void;
-  setForceUpdate?: Dispatch<SetStateAction<number>>;
+  // setForceUpdate?: Dispatch<SetStateAction<number>>; // Prop removed
 }
 
-export function AttendanceToggler({ item, player, eventType, onAttendanceChange, setForceUpdate }: AttendanceTogglerProps) {
+export function AttendanceToggler({ item, player, eventType, onAttendanceChange }: AttendanceTogglerProps) {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
 
   const playerIdForAttendance = player.uid;
-  const currentStatus: AttendanceStatus = item.attendance[playerIdForAttendance] || "present"; // Default to "present"
+  // Ensure currentAttendance is correctly sourced from item.attendance, defaulting if necessary
+  const currentStatus: AttendanceStatus = item.attendance?.[playerIdForAttendance] || "present";
+
 
   const handleAttendance = async (newStatus: AttendanceStatus) => {
     if (!item.id || !playerIdForAttendance) {
@@ -39,9 +41,8 @@ export function AttendanceToggler({ item, player, eventType, onAttendanceChange,
     }
 
     onAttendanceChange(playerIdForAttendance, newStatus); // Optimistic update in parent (EventCardBase)
-    // The setForceUpdate here triggers a page-level re-fetch, which might be too disruptive.
-    // However, it's kept for now as it was part of the existing logic to refresh lists.
-    if(setForceUpdate) setForceUpdate(val => val + 1);
+    // Removed setForceUpdate call:
+    // if(setForceUpdate) setForceUpdate(val => val + 1); 
 
     try {
       if (eventType === "match") {
@@ -53,7 +54,9 @@ export function AttendanceToggler({ item, player, eventType, onAttendanceChange,
       console.error("Error updating attendance in Firestore:", error);
       toast({title: "Update Failed", description: error.message || "Could not save attendance change.", variant: "destructive"});
       // Revert optimistic update if Firestore save fails
-      onAttendanceChange(playerIdForAttendance, currentStatus);
+      // Get the original status from the item prop before the optimistic update was applied
+      const originalStatusBeforeOptimisticChange = item.attendance?.[playerIdForAttendance] || "present";
+      onAttendanceChange(playerIdForAttendance, originalStatusBeforeOptimisticChange);
     }
   };
 
@@ -119,7 +122,7 @@ export const getAttendanceStatusColor = (status: AttendanceStatus): string => {
       return "text-red-600 dark:text-red-400";
     case "excused":
       return "text-yellow-600 dark:text-yellow-400";
-    default: // This includes "unknown" or any other case, will default to present if not specified
+    default: 
       return "text-muted-foreground";
   }
 };
@@ -132,7 +135,7 @@ export const getAttendanceStatusText = (status: AttendanceStatus): string => {
       return "Absent";
     case "excused":
       return "Excused";
-    default: // This includes "unknown" or any other case
-      return "Unknown"; // Keep "Unknown" as a possible display text if status explicitly becomes "unknown"
+    default: 
+      return "Unknown"; 
   }
 };

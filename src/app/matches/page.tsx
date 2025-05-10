@@ -24,8 +24,6 @@ export default function MatchesPage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isAddMatchDialogOpen, setIsAddMatchDialogOpen] = useState(false);
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
-  // forceUpdateList can be removed if optimistic updates are sufficient or if specific state changes trigger re-renders.
-  // For now, keeping it to ensure list re-fetches after mutations.
   const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
 
 
@@ -40,7 +38,6 @@ export default function MatchesPage() {
     setIsLoadingData(true);
     try {
       const fetchedMatches = await getMatches(teamId);
-      // Sorting is now handled by getMatches query by default (order, then date/time)
       setMatches(fetchedMatches);
     } catch (error) {
       console.error("Error fetching matches:", error);
@@ -54,22 +51,19 @@ export default function MatchesPage() {
     if (!authLoading && user && user.teamId && currentTeam) {
         fetchMatches(user.teamId);
     } else if (!authLoading && (!user || !user.teamId || !currentTeam)) {
-      // User not logged in, or no team context, AuthProvider should redirect. Clear data.
       setMatches([]);
       setIsLoadingData(false);
     }
-     // Add forceUpdateCounter to dependencies to refetch when it changes
   }, [authLoading, user, currentTeam, forceUpdateCounter, toast]);
 
 
   useEffect(() => {
-    // Open dialog if #add is in URL and user is admin
     if (typeof window !== 'undefined' && window.location.hash === "#add" && user?.role === "admin") {
       setIsAddMatchDialogOpen(true);
       setEditingMatch(null); 
-      window.location.hash = ""; // Clear hash to prevent re-opening on refresh
+      window.location.hash = ""; 
     }
-  }, [user?.role]); // Re-run when user role might change
+  }, [user?.role]);
 
 
   const handleAddMatch = async (data: Omit<Match, "id" | "attendance" | "order">) => {
@@ -98,7 +92,6 @@ export default function MatchesPage() {
         return;
     }
     try {
-      // Ensure date is string "yyyy-MM-dd", other fields as is from form
       const updatePayload = { ...data, date: typeof data.date === 'string' ? data.date : (data.date as Date).toISOString().split('T')[0] };
       await updateMatch(user.teamId, editingMatch.id, updatePayload);
       toast({ title: "Match Updated", description: `Match against ${data.opponent} updated.` });
@@ -133,17 +126,16 @@ export default function MatchesPage() {
       if (oldIndex === -1 || newIndex === -1) return;
 
       const newOrderedMatches = arrayMove(matches, oldIndex, newIndex);
-      setMatches(newOrderedMatches); // Optimistic UI update
+      setMatches(newOrderedMatches); 
 
       try {
-        // Persist the new order to Firestore
         const orderUpdates = newOrderedMatches.map((match, index) => ({ id: match.id, order: index }));
         await updateMatchesOrder(user.teamId, orderUpdates);
         toast({ title: "Order Updated", description: "Match order saved." });
       } catch (error) {
         console.error("Error updating match order:", error);
         toast({ title: "Error", description: "Could not save match order.", variant: "destructive" });
-        fetchMatches(user.teamId); // Revert optimistic update by refetching
+        fetchMatches(user.teamId); 
       }
     }
   }
@@ -166,7 +158,6 @@ export default function MatchesPage() {
   }
 
   if (!user || !user.teamId || !currentTeam) {
-    // This state should ideally be handled by AuthProvider redirecting
     return <div className="flex h-full items-center justify-center"><p>Loading team data or redirecting...</p></div>;
   }
 
@@ -183,7 +174,7 @@ export default function MatchesPage() {
         {isAdmin && (
           <Dialog open={isAddMatchDialogOpen} onOpenChange={(isOpen) => {
             setIsAddMatchDialogOpen(isOpen);
-            if (!isOpen) setEditingMatch(null); // Reset editing state when dialog closes
+            if (!isOpen) setEditingMatch(null); 
           }}>
             <DialogTrigger asChild>
               <Button>
@@ -202,7 +193,7 @@ export default function MatchesPage() {
               </DialogHeader>
               <AddMatchForm 
                 onSubmit={editingMatch ? handleUpdateMatch : handleAddMatch} 
-                initialData={editingMatch} // Pass null if not editing
+                initialData={editingMatch} 
                 onClose={() => {
                   setIsAddMatchDialogOpen(false);
                   setEditingMatch(null);
@@ -245,7 +236,7 @@ export default function MatchesPage() {
                     match={match} 
                     onEdit={isAdmin ? handleEditMatch : undefined} 
                     onDelete={isAdmin ? handleDeleteMatch : undefined}
-                    setForceUpdateList={setForceUpdateCounter} 
+                    // setForceUpdateList={setForceUpdateCounter} // Prop removed
                   />
                 </SortableItem>
               ))}

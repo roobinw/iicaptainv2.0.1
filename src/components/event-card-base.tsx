@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ReactNode, Dispatch, SetStateAction } from "react";
@@ -26,7 +25,7 @@ interface EventCardBaseProps {
   renderDetails: (item: Match | Training) => ReactNode;
   onEdit?: (item: Match | Training) => void; // Admin only
   onDelete?: (itemId: string) => void; // Admin only
-  setForceUpdateList?: Dispatch<SetStateAction<number>>; // To trigger parent list refresh
+  // setForceUpdateList?: Dispatch<SetStateAction<number>>; // Prop removed as it's no longer needed by AttendanceToggler for page refresh
 }
 
 export function EventCardBase({
@@ -37,7 +36,7 @@ export function EventCardBase({
   renderDetails,
   onEdit,
   onDelete,
-  setForceUpdateList
+  // setForceUpdateList // Prop removed
 }: EventCardBaseProps) {
   const { user: currentUser, currentTeam } = useAuth(); 
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
@@ -78,14 +77,11 @@ export function EventCardBase({
     const initialAttendanceFromItem = item.attendance || {};
     const updatedAttendanceState: Record<string, AttendanceStatus> = {};
 
-    // Ensure memberList is populated before trying to initialize attendance based on it
     if (memberList.length > 0) {
         memberList.forEach(member => {
             updatedAttendanceState[member.uid] = initialAttendanceFromItem[member.uid] || 'present';
         });
     } else {
-        // If memberList is empty, just use whatever is in initialAttendanceFromItem
-        // This handles the case where members haven't loaded yet or there are no members
         Object.keys(initialAttendanceFromItem).forEach(memberUid => {
             updatedAttendanceState[memberUid] = initialAttendanceFromItem[memberUid] || 'present';
         });
@@ -106,6 +102,7 @@ export function EventCardBase({
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
 
+  // Calculate presentCount based on the local currentAttendance state
   const presentCount = Object.values(currentAttendance).filter(status => status === 'present').length;
   
   const eventName = eventType === "match" ? (item as Match).opponent : (item as Training).location;
@@ -155,9 +152,11 @@ export function EventCardBase({
           <DialogContent 
             className="sm:max-w-[425px] md:max-w-[600px]"
             onInteractOutside={(e) => {
-              // Prevent closing the dialog when clicking on attendance buttons
-              // which might be misinterpreted as an "outside" click during re-renders.
-              e.preventDefault();
+               // Check if the click target or its parent is an attendance button to prevent closing
+              const target = e.target as HTMLElement;
+              if (target.closest('.flex.items-center.gap-1 > button[aria-label^="Mark as"]')) {
+                e.preventDefault();
+              }
             }}
           >
             <DialogHeader>
@@ -199,11 +198,11 @@ export function EventCardBase({
                         </div>
                       </div>
                        <AttendanceToggler 
-                           item={{...item, attendance: currentAttendance}} 
+                           item={{...item, attendance: currentAttendance}} // Pass item with the local currentAttendance
                            player={member} 
                            eventType={eventType} 
                            onAttendanceChange={handleAttendanceChange} 
-                           setForceUpdate={setForceUpdateList} 
+                           // setForceUpdate={setForceUpdateList} // Prop removed
                        />
                     </div>
                   ))}
@@ -218,4 +217,3 @@ export function EventCardBase({
     </Card>
   );
 }
-
