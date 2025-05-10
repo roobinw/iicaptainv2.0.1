@@ -64,7 +64,7 @@ export function EventCardBase({
           console.error(`Failed to fetch team members for ${eventType} card:`, err);
           setMemberList([]);
           const initialAttendanceFromItem = item.attendance || {};
-          const fallbackAttendance: Record<string, AttendanceStatus> = {};
+          // const fallbackAttendance: Record<string, AttendanceStatus> = {};
            // memberList could be stale here if getAllUsersByTeam failed, so initialize with empty array or last known state
            // For safety, let's assume it might be empty if fetch failed.
            // If there's a desire to use previous memberList if fetch fails:
@@ -80,7 +80,7 @@ export function EventCardBase({
       setIsLoadingMembers(false);
     }
   // Rerun if item.id changes (new item selected) or if user/team context changes
-  }, [currentUser?.teamId, item.id, eventType]); 
+  }, [currentUser?.teamId, item.id, eventType, item.attendance]); 
 
   useEffect(() => {
     // This effect ensures that if item.attendance prop changes externally
@@ -148,13 +148,13 @@ export function EventCardBase({
         </div>
       </CardHeader>
       <CardContent className="flex-grow">
-         <p className="text-sm text-muted-foreground">
+         <div className="text-sm text-muted-foreground">
             Attendance: {isLoadingMembers && memberList.length === 0 ? ( 
                 <span className="inline-block"><Skeleton className="h-4 w-20" /></span>
             ) : (
                 <span className="font-semibold text-primary">{presentCount} / {memberList.length}</span>
             )} members present.
-        </p>
+        </div>
       </CardContent>
       <CardFooter className="border-t pt-4">
         <Dialog open={isAttendanceDialogOpen} onOpenChange={setIsAttendanceDialogOpen}>
