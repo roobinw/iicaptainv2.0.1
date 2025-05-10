@@ -42,18 +42,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!authIsLoading) { 
+      const isMarketingPage = pathname === "/" || pathname.startsWith("/(marketing)");
+      const isAuthPage = pathname === "/login" || pathname === "/signup";
+      const isOnboardingPage = pathname.startsWith("/onboarding");
+
       if (!user) {
-        // Allow access to landing page, login, signup, and onboarding without auth
-        const allowedUnauthenticatedPaths = ["/", "/login", "/signup"];
-        if (!allowedUnauthenticatedPaths.includes(pathname) && !pathname.startsWith("/onboarding") && !pathname.startsWith("/(marketing)")) {
-          router.replace("/"); // Redirect to landing page if not logged in and not on an allowed page
+        if (!isMarketingPage && !isAuthPage && !isOnboardingPage) {
+          router.replace("/"); 
         }
-      } else if (user && !user.teamId && !pathname.startsWith("/onboarding")) {
-        // User is logged in but has no team, redirect to create-team
+      } else if (user && !user.teamId && !isOnboardingPage) {
         router.replace("/onboarding/create-team");
       }
-      else if (user && user.teamId && (pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname.startsWith("/onboarding"))) {
-        // User is logged in, has a team, and is on a public/onboarding page, redirect to dashboard
+      else if (user && user.teamId && (isMarketingPage || isAuthPage || isOnboardingPage)) {
         router.replace("/dashboard");
       }
     }
@@ -69,16 +69,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // Further checks after loading is complete
   if (!authIsLoading) {
     const isPublicPage = pathname === "/" || pathname.startsWith("/(marketing)");
     const isAuthFlowPage = pathname === "/login" || pathname === "/signup";
     const isOnboardingPage = pathname.startsWith("/onboarding");
 
     if (!user && !isPublicPage && !isAuthFlowPage && !isOnboardingPage) {
-       // Actively redirect if no user and not on a page that allows unauthenticated access.
-       // This can happen if useEffect runs, sets isLoading to false, but user is still null
-       // and the initial path was, for example, /dashboard.
        return ( 
            <div className="flex h-screen items-center justify-center bg-background">
                <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
@@ -87,7 +83,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
        );
     }
     if (user && !user.teamId && !isOnboardingPage) {
-      // User is authenticated but has no teamId and is not on an onboarding page.
       return (
           <div className="flex h-screen items-center justify-center bg-background">
               <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
@@ -202,7 +197,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         
         {/* User Profile Dropdown for Desktop Sidebar - AT THE BOTTOM */}
         {user && (
-            <div className="mt-auto p-1 flex justify-center"> {/* Centering the icon button */}
+            <div className="mt-auto p-1 flex justify-center"> 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full w-10 h-10">
@@ -236,7 +231,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col bg-sidebar p-0 text-sidebar-foreground w-[250px] shadow-xl">
-               {user && ( // User Profile Dropdown - at the top of mobile sidebar (remains unchanged)
+               {user && ( 
                 <div className="border-b border-sidebar-border p-2">
                     <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -270,11 +265,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </SheetContent>
           </Sheet>
           
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold text-foreground">{currentTeam?.name || "Team Dashboard"}</h1>
-          </div>
-
-          {/* User Profile Dropdown - REMOVED FROM HEADER */}
+          {/* Team name display removed from here */}
+          
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background overflow-auto">
           {children}
