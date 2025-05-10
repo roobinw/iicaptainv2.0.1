@@ -1,3 +1,4 @@
+
 // 'use server';  // Removed to run client-side
 
 import { db, auth as firebaseAuth } from '@/lib/firebase'; // Import auth as firebaseAuth
@@ -31,7 +32,7 @@ const fromFirestoreUser = (docSnap: any): User | null => {
     name: data.name,
     email: data.email,
     role: data.role,
-    avatarUrl: data.avatarUrl,
+    avatarUrl: data.avatarUrl, // This could be null/undefined from Firestore
     teamId: data.teamId,
     createdAt: processTimestamp(data.createdAt as Timestamp | undefined),
   } as User;
@@ -137,7 +138,7 @@ export const addPlayerProfileToTeam = async (
 };
 
 
-export const updateUserProfile = async (uid: string, data: Partial<Omit<User, 'id' | 'uid' | 'email' | 'createdAt'>>): Promise<void> => {
+export const updateUserProfile = async (uid: string, data: Partial<Omit<User, 'id' | 'uid' | 'email' | 'createdAt' | 'avatarUrl'> & { avatarUrl?: string | null }>): Promise<void> => {
    if (!db) {
     console.error("Firestore not initialized in updateUserProfile");
     throw new Error("Firestore not initialized");
@@ -147,12 +148,18 @@ export const updateUserProfile = async (uid: string, data: Partial<Omit<User, 'i
   }
   const userDocRef = doc(db, 'users', uid);
   
-  const { teamId, role, name, avatarUrl } = data; 
-  const updateData: Partial<User> = {};
-  if (teamId !== undefined) updateData.teamId = teamId;
-  if (role !== undefined) updateData.role = role;
-  if (name !== undefined) updateData.name = name;
-  if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+  // Construct the data object for Firestore update carefully
+  // Explicitly typed to allow avatarUrl to be string or null
+  const updateData: { [key: string]: any } = {}; 
+
+  if (data.teamId !== undefined) updateData.teamId = data.teamId;
+  if (data.role !== undefined) updateData.role = data.role;
+  if (data.name !== undefined) updateData.name = data.name;
+  
+  // Special handling for avatarUrl to allow setting it to null
+  if (data.hasOwnProperty('avatarUrl')) { 
+    updateData.avatarUrl = data.avatarUrl; // This will correctly pass null to Firestore if data.avatarUrl is null
+  }
 
   if (Object.keys(updateData).length === 0) {
     console.warn("updateUserProfile called with no data to update for UID:", uid);
