@@ -19,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Icons } from "@/components/icons";
-import { PanelLeft, LogOut, Settings as SettingsIcon, ChevronDown } from "lucide-react"; 
+import { PanelLeft, LogOut, Settings as SettingsIcon, ChevronDown, LifeBuoy } from "lucide-react"; 
 import { useEffect } from "react";
 
 interface NavItem {
@@ -34,6 +34,7 @@ const navItems: NavItem[] = [
   { href: "/matches", label: "Matches", icon: "Matches" },
   { href: "/trainings", label: "Trainings", icon: "Trainings" },
   { href: "/players", label: "Players", icon: "Players" },
+  // Settings is not a main nav item, accessed via user dropdown
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -116,7 +117,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 href={item.href}
                 className={cn(
                   "flex items-center justify-center h-10 w-10 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-9 md:w-9",
-                  pathname === item.href
+                  pathname.startsWith(item.href) // Use startsWith for active state
                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
                     : "text-sidebar-foreground"
                 )}
@@ -147,7 +148,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             href={item.href}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-              pathname === item.href
+              pathname.startsWith(item.href) // Use startsWith for active state
                 ? "bg-sidebar-primary text-sidebar-primary-foreground"
                 : "text-sidebar-foreground"
             )}
@@ -171,8 +172,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <SettingsIcon className="mr-2 h-4 w-4" />
             <span>Settings</span>
         </DropdownMenuItem>
-        <DropdownMenuItem disabled className="opacity-50">
-            Support (soon)
+        <DropdownMenuItem onClick={() => router.push('/support')} className="hover:bg-accent/50 cursor-pointer">
+            <LifeBuoy className="mr-2 h-4 w-4" />
+            <span>Support</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-border"/>
         <DropdownMenuItem onClick={logout} className="hover:bg-accent/50 cursor-pointer">
@@ -219,51 +221,54 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </aside>
       
       <main className="flex flex-1 flex-col bg-background overflow-auto">
-        <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="shrink-0 md:hidden fixed top-4 left-4 z-50 bg-card text-card-foreground" 
-              >
-                <PanelLeft className="h-5 w-5" />
-                <span className="sr-only">Toggle navigation menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col bg-sidebar p-0 text-sidebar-foreground w-[250px] shadow-xl">
-               {user && ( 
-                <div className="border-b border-sidebar-border p-2">
-                    <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="flex items-center justify-between w-full h-auto px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                            <div className="flex items-center gap-2 truncate">
-                                <Avatar className="h-7 w-7">
-                                    <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar mobile"/>
-                                    <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex flex-col items-start truncate">
-                                    <span className="text-sm font-medium truncate">{user.name}</span>
-                                    <span className="text-xs text-sidebar-foreground/70 truncate">{user.email}</span>
+        <header className="sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b bg-background px-4 md:hidden">
+            <Sheet>
+                <SheetTrigger asChild>
+                <Button
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0" 
+                >
+                    <PanelLeft className="h-5 w-5" />
+                    <span className="sr-only">Toggle navigation menu</span>
+                </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="flex flex-col bg-sidebar p-0 text-sidebar-foreground w-[250px] shadow-xl">
+                {user && ( 
+                    <div className="border-b border-sidebar-border p-2">
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="flex items-center justify-between w-full h-auto px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                                <div className="flex items-center gap-2 truncate">
+                                    <Avatar className="h-7 w-7">
+                                        <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar mobile"/>
+                                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex flex-col items-start truncate">
+                                        <span className="text-sm font-medium truncate">{user.name}</span>
+                                        <span className="text-xs text-sidebar-foreground/70 truncate">{user.email}</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <ChevronDown className="h-4 w-4 text-sidebar-foreground/70" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent side="bottom" align="start" className="w-56 mt-1 bg-card text-card-foreground border-border shadow-xl">
-                        {userProfileDropdownContent}
-                    </DropdownMenuContent>
-                    </DropdownMenu>
+                                <ChevronDown className="h-4 w-4 text-sidebar-foreground/70" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent side="bottom" align="start" className="w-56 mt-1 bg-card text-card-foreground border-border shadow-xl">
+                            {userProfileDropdownContent}
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                    )}
+                <div className="flex h-10 items-center justify-center mt-2 mb-2">
+                    <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
+                    <Icons.TeamLogo className="mt-[5px]" />
+                    <span className="">{currentTeam?.name || "iiCaptain"}</span>
+                    </Link>
                 </div>
-                )}
-               <div className="flex h-10 items-center justify-center mt-2 mb-2">
-                <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
-                  <Icons.TeamLogo className="mt-[5px]" />
-                  <span className="">{currentTeam?.name || "iiCaptain"}</span>
-                </Link>
-              </div>
-              <div className="flex-1 overflow-auto">{mobileSidebarContent}</div>
-            </SheetContent>
-          </Sheet>
+                <div className="flex-1 overflow-auto">{mobileSidebarContent}</div>
+                </SheetContent>
+            </Sheet>
+             <div className="ml-auto text-lg font-semibold">{currentTeam?.name || "iiCaptain"}</div>
+        </header>
           <div className="p-4 lg:p-6">
             {children}
           </div>

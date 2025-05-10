@@ -40,3 +40,16 @@ export interface Training {
   attendance: Record<string, "present" | "absent" | "excused" | "unknown">; // User's Firebase UID: status
   order?: number; // For DND ordering
 }
+
+export interface Ticket {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  teamId?: string; // Optional, if user is part of a team
+  subject: string;
+  message: string;
+  status: "open" | "in-progress" | "resolved" | "closed";
+  createdAt: string; // ISO string
+  updatedAt?: string; // ISO string
+}

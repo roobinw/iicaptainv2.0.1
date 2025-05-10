@@ -23,7 +23,8 @@ import {
   GripVertical,
   Dumbbell, 
   MoreVertical, 
-  KeyRound, // Added for password change
+  KeyRound, 
+  LifeBuoy, // Added for Support
 } from "lucide-react";
 
 export const Icons = {
@@ -50,7 +51,8 @@ export const Icons = {
   ArrowLeft: ArrowLeft,
   GripVertical: GripVertical,
   MoreVertical: MoreVertical,
-  KeyRound: KeyRound, // Added
+  KeyRound: KeyRound, 
+  Support: LifeBuoy, // Added
   TeamLogo: () => ( 
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -66,10 +68,5 @@ export const Icons = {
     </svg>
   ),
   CalendarDays: CalendarDays,
-  Google: () => (
-    <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
-      <title>Google</title>
-      <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.85 3.18-1.73 4.1-1.02 1.08-2.58 2.26-4.8 2.26-5.72 0-10.32-4.58-10.32-10.32s4.6-10.32 10.32-10.32c3.32 0 5.18 1.34 6.38 2.48l2.84-2.78C19.58 1.18 16.62 0 12.48 0 5.88 0 .02 5.88.02 12.48s5.86 12.48 12.46 12.48c3.24 0 6.08-1.08 8.1-3.24s3.12-5.64 3.12-8.76c0-.72-.08-1.36-.2-2.04h-11.02Z" fill="currentColor"/>
-    </svg>
-  ),
 };
+
