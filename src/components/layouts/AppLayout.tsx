@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from "react";
@@ -184,8 +185,53 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg sticky top-0 h-screen">
         <div> {/* Top part: logo and nav items */}
-           <div className="flex h-10 items-center justify-center mb-4">
-            <Link href="/dashboard" className="text-sidebar-foreground">
+           <div className="flex h-10 items-center justify-center mb-4"> {/* Added SheetTrigger here for mobile */}
+             <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 md:hidden h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" // Ensure visibility on sidebar bg
+                >
+                  <PanelLeft className="h-5 w-5" />
+                  <span className="sr-only">Toggle navigation menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="flex flex-col bg-sidebar p-0 text-sidebar-foreground w-[250px] shadow-xl">
+                 {user && ( 
+                  <div className="border-b border-sidebar-border p-2">
+                      <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="flex items-center justify-between w-full h-auto px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                              <div className="flex items-center gap-2 truncate">
+                                  <Avatar className="h-7 w-7">
+                                      <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar mobile"/>
+                                      <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex flex-col items-start truncate">
+                                      <span className="text-sm font-medium truncate">{user.name}</span>
+                                      <span className="text-xs text-sidebar-foreground/70 truncate">{user.email}</span>
+                                  </div>
+                              </div>
+                              <ChevronDown className="h-4 w-4 text-sidebar-foreground/70" />
+                          </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent side="bottom" align="start" className="w-56 mt-1 bg-card text-card-foreground border-border shadow-xl">
+                          {userProfileDropdownContent}
+                      </DropdownMenuContent>
+                      </DropdownMenu>
+                  </div>
+                  )}
+                 <div className="flex h-10 items-center justify-center mt-2 mb-2">
+                  <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
+                    <Icons.TeamLogo />
+                    <span className="">{currentTeam?.name || "iiCaptain"}</span>
+                  </Link>
+                </div>
+                <div className="flex-1 overflow-auto">{mobileSidebarContent}</div>
+              </SheetContent>
+            </Sheet>
+            <Link href="/dashboard" className="text-sidebar-foreground hidden md:block"> {/* Hide logo on mobile if PanelLeft is shown */}
               <Icons.TeamLogo />
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
@@ -216,15 +262,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
           )}
       </aside>
       
-      <div className="flex flex-col">
-        {/* Header */}
-        <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6 sticky top-0 z-40">
-          <Sheet>
+      {/* Main Content Area - Header Removed */}
+      <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background overflow-auto">
+         {/* Mobile Sheet Trigger - moved to top of main content if header is gone */}
+        <Sheet>
             <SheetTrigger asChild>
               <Button
                 variant="outline"
                 size="icon"
-                className="shrink-0 md:hidden"
+                className="shrink-0 md:hidden fixed top-4 left-4 z-50 bg-card text-card-foreground" // Example fixed positioning
               >
                 <PanelLeft className="h-5 w-5" />
                 <span className="sr-only">Toggle navigation menu</span>
@@ -264,14 +310,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <div className="flex-1 overflow-auto">{mobileSidebarContent}</div>
             </SheetContent>
           </Sheet>
-          
-          {/* Team name display removed from here */}
-          
-        </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background overflow-auto">
-          {children}
-        </main>
-      </div>
+        {children}
+      </main>
     </div>
   );
 }
+
