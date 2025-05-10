@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"; // Added SheetHeader, SheetTitle
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
@@ -122,7 +122,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     : "text-sidebar-foreground"
                 )}
               >
-                <IconComponent className="h-6 w-6" /> 
+                <IconComponent className="h-[1.8rem] w-[1.8rem]" /> 
                 <span className="sr-only">{item.label}</span>
               </Link>
             </TooltipTrigger>
@@ -186,13 +186,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[100px_1fr] lg:grid-cols-[100px_1fr]"> 
+    <div className="grid min-h-screen w-full md:grid-cols-[120px_1fr] lg:grid-cols-[120px_1fr]"> 
       <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg sticky top-0 h-screen">
         <div> 
            <div className="flex h-10 items-center justify-center mb-4 mt-2">
              <Link 
                 href="/dashboard" 
-                className="text-sidebar-foreground hidden md:block md:flex md:justify-center"
+                className="text-sidebar-foreground hidden md:flex md:justify-center"
             >
               <Icons.TeamLogo className="mt-[10px] h-10 w-10" /> 
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
@@ -237,6 +237,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="flex flex-col bg-sidebar p-0 text-sidebar-foreground w-[250px] shadow-xl">
+                 <SheetHeader className="p-4 border-b border-sidebar-border">
+                    <SheetTitle className="text-lg font-semibold text-sidebar-foreground text-center">
+                        {currentTeam?.name || "Menu"}
+                    </SheetTitle>
+                 </SheetHeader>
                 {user && ( 
                     <div className="border-b border-sidebar-border p-2">
                         <DropdownMenu>
@@ -263,13 +268,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     )}
                 <div className="flex h-10 items-center justify-center mt-2 mb-2">
                     <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
-                    <Icons.TeamLogo className="mt-[5px] h-8 w-8" /> 
+                    <Icons.TeamLogo className="mt-[10px] h-10 w-10" /> 
                     <span className="">{currentTeam?.name || "iiCaptain"}</span>
                     </Link>
                 </div>
                 <div className="flex-1 overflow-auto">{mobileSidebarContent}</div>
                 </SheetContent>
             </Sheet>
+             {/* This div is now removed to pull content up, no more team name display here */}
         </header>
           <div className="p-4 lg:p-6">
             {children}
