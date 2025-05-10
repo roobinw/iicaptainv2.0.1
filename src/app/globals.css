@@ -8,45 +8,45 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 96%; /* Slightly lighter grey */
-    --foreground: 220 10% 10%; /* Dark neutral for text */
+    --background: 20 56% 94%; /* F7EBE8 - Light Beige */
+    --foreground: 240 7% 13%; /* 1E1E24 - Very Dark Grey/Black */
 
     --card: 0 0% 100%; /* White */
-    --card-foreground: 220 10% 10%;
+    --card-foreground: 240 7% 13%; /* 1E1E24 */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 10% 10%;
+    --popover: 0 0% 100%; /* White */
+    --popover-foreground: 240 7% 13%; /* 1E1E24 */
 
-    --primary: 233 60% 35%; /* Maintained Dark Blue */
-    --primary-foreground: 0 0% 98%; 
+    --primary: 0 79% 60%; /* E54B4B - Red */
+    --primary-foreground: 0 0% 100%; /* White for contrast on Red */
 
-    --secondary: 220 15% 90%; /* Lighter grey/blue */
-    --secondary-foreground: 233 60% 35%; 
+    --secondary: 30 3% 90%; /* Light Grey, derived from 444140 */
+    --secondary-foreground: 30 3% 26%; /* 444140 - Dark Grey for text on light grey */
 
-    --muted: 220 10% 90%; /* Light muted grey */
-    --muted-foreground: 220 10% 40%; /* Softer grey text */
+    --muted: 20 30% 90%; /* Desaturated, slightly darker F7EBE8 */
+    --muted-foreground: 30 3% 45%; /* Mid-grey */
 
-    --accent: 188 90% 40%; /* Maintained Teal, slightly brighter */
-    --accent-foreground: 0 0% 100%; 
+    --accent: 16 100% 76%; /* FFA987 - Light Orange/Salmon */
+    --accent-foreground: 240 7% 13%; /* 1E1E24 for contrast on Light Orange */
 
-    --destructive: 0 75% 55%; /* Softer red */
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 79% 60%; /* E54B4B - Red */
+    --destructive-foreground: 0 0% 100%; /* White */
 
-    --border: 220 15% 85%; /* Softer border */
-    --input: 220 15% 85%;
-    --ring: 188 90% 45%; /* Teal for focus rings */
+    --border: 20 30% 85%; /* Subtle border related to muted */
+    --input: 20 30% 85%; /* Subtle border related to muted */
+    --ring: 16 100% 76%; /* FFA987 - Light Orange/Salmon for focus rings */
 
-    --radius: 0.75rem; /* Increased radius for more rounded corners */
+    --radius: 0.75rem; /* Maintained radius */
 
-    /* Sidebar specific theme - for thin dark sidebar */
-    --sidebar-background: 220 15% 12%; /* Very Dark Blue/Grey */
-    --sidebar-foreground: 220 15% 80%; /* Light grey text */
-    --sidebar-primary: 188 90% 45%;    /* Teal for active/hover icons */
-    --sidebar-primary-foreground: 0 0% 100%; /* White text on teal */
-    --sidebar-accent: 220 15% 20%;     /* Slightly lighter dark for icon hover */
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 220 15% 18%;    /* Border for sidebar elements */
-    --sidebar-ring: 188 90% 50%;
+    /* Sidebar specific theme */
+    --sidebar-background: 240 7% 13%; /* 1E1E24 - Very Dark Grey/Black */
+    --sidebar-foreground: 20 56% 94%;    /* F7EBE8 - Light Beige */
+    --sidebar-primary: 16 100% 76%;    /* FFA987 - Light Orange/Salmon for active/hover */
+    --sidebar-primary-foreground: 240 7% 13%; /* 1E1E24 - Dark text on Light Orange */
+    --sidebar-accent: 30 3% 26%;     /* 444140 - Dark Grey for icon hover background */
+    --sidebar-accent-foreground: 20 56% 94%; /* F7EBE8 - Light Beige */
+    --sidebar-border: 240 7% 18%;    /* Slightly lighter than sidebar background */
+    --sidebar-ring: 16 100% 76%;      /* FFA987 */
 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -56,44 +56,43 @@ body {
   }
 
   .dark {
-    /* Dark theme adjustments - making it consistent with the new sidebar style if used globally */
-    --background: 220 15% 10%; 
-    --foreground: 0 0% 96%;
+    --background: 240 7% 13%; /* 1E1E24 */
+    --foreground: 20 56% 94%; /* F7EBE8 */
 
-    --card: 220 15% 15%;
-    --card-foreground: 0 0% 96%;
+    --card: 30 3% 26%; /* 444140 */
+    --card-foreground: 20 56% 94%; /* F7EBE8 */
 
-    --popover: 220 15% 15%;
-    --popover-foreground: 0 0% 96%;
+    --popover: 30 3% 26%; /* 444140 */
+    --popover-foreground: 20 56% 94%; /* F7EBE8 */
 
-    --primary: 188 90% 45%; /* Teal as primary in dark mode for consistency */
-    --primary-foreground: 220 10% 10%;
+    --primary: 16 100% 76%; /* FFA987 - Light Orange/Salmon (lighter for dark mode primary) */
+    --primary-foreground: 240 7% 13%; /* 1E1E24 */
 
-    --secondary: 220 15% 25%;
-    --secondary-foreground: 0 0% 96%;
+    --secondary: 240 7% 20%; /* Darker grey, lighter than main bg */
+    --secondary-foreground: 20 56% 94%; /* F7EBE8 */
 
-    --muted: 220 15% 20%;
-    --muted-foreground: 220 10% 60%;
+    --muted: 240 7% 18%; /* Dark muted */
+    --muted-foreground: 20 30% 70%; /* Lighter muted text */
 
-    --accent: 233 60% 50%; /* Dark blue as accent in dark mode */
-    --accent-foreground: 0 0% 98%;
+    --accent: 0 79% 60%; /* E54B4B - Red (swapped with light primary) */
+    --accent-foreground: 0 0% 100%; /* White */
 
-    --destructive: 0 65% 50%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 85% 65%; /* E54B4B - Brighter Red for dark mode */
+    --destructive-foreground: 0 0% 100%; /* White */
 
-    --border: 220 15% 22%;
-    --input: 220 15% 22%;
-    --ring: 188 90% 50%;
+    --border: 240 7% 22%;
+    --input: 240 7% 22%;
+    --ring: 16 100% 76%; /* FFA987 */
 
-    /* Dark Sidebar specific theme (already dark, minor tweaks if necessary) */
-    --sidebar-background: 220 15% 8%; /* Even darker for depth */
-    --sidebar-foreground: 220 15% 75%; 
-    --sidebar-primary: 188 90% 50%; 
-    --sidebar-primary-foreground: 220 10% 5%;
-    --sidebar-accent: 220 15% 18%; 
-    --sidebar-accent-foreground: 0 0% 93%;
-    --sidebar-border: 220 15% 12%;
-    --sidebar-ring: 188 90% 55%;
+    /* Dark Sidebar specific theme */
+    --sidebar-background: 240 7% 8%; /* Even darker for depth */
+    --sidebar-foreground: 20 56% 94%; 
+    --sidebar-primary: 16 100% 76%; /* FFA987 */
+    --sidebar-primary-foreground: 240 7% 13%; /* 1E1E24 */
+    --sidebar-accent: 240 7% 18%; 
+    --sidebar-accent-foreground: 20 56% 94%;
+    --sidebar-border: 240 7% 12%;
+    --sidebar-ring: 16 100% 76%;
   }
 }
 
