@@ -46,18 +46,23 @@ export function AppLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!authIsLoading) { 
       const isMarketingPage = pathname === "/" || pathname.startsWith("/(marketing)");
-      const isAuthPage = pathname.startsWith("/(auth)"); 
+      const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
       const isOnboardingPage = pathname.startsWith("/onboarding");
 
-      if (!user) {
+      if (!user) { // User is not authenticated
+        // Allow access to marketing, auth, and onboarding pages
         if (!isMarketingPage && !isAuthPage && !isOnboardingPage) {
-          router.replace("/"); 
+          router.replace("/"); // Redirect to landing for any other protected page
         }
-      } else if (user && !user.teamId && !isOnboardingPage) {
-        router.replace("/onboarding/create-team");
-      }
-      else if (user && user.teamId && (isAuthPage || isOnboardingPage || isMarketingPage)) {
-        router.replace("/dashboard");
+      } else { // User IS authenticated
+        if (!user.teamId && !isOnboardingPage) {
+          // User authenticated but no teamId, and not on onboarding
+          router.replace("/onboarding/create-team");
+        } else if (user.teamId && (isAuthPage || isOnboardingPage || (isMarketingPage && pathname === "/"))) {
+          // User authenticated with teamId, but on auth, onboarding, or root landing page
+           router.replace("/dashboard");
+        }
+        // If user is authenticated with teamId and on a valid app page or non-root marketing page, do nothing.
       }
     }
   }, [user, authIsLoading, router, pathname]);
@@ -71,13 +76,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </div>
     );
   }
-
+  
+  // This block handles rendering a loading/redirecting state if auth is done but conditions for staying are not met.
+  // It aims to prevent rendering the layout for pages the user shouldn't see.
   if (!authIsLoading) {
     const isPublicPage = pathname === "/" || pathname.startsWith("/(marketing)");
-    const isAuthFlowPage = pathname.startsWith("/(auth)");
+    const isAuthFlowPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
     const isOnboardingPage = pathname.startsWith("/onboarding");
 
     if (!user && !isPublicPage && !isAuthFlowPage && !isOnboardingPage) {
+       // User not logged in and trying to access a protected page
        return ( 
            <div className="flex h-screen items-center justify-center bg-background">
                <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
@@ -86,12 +94,22 @@ export function AppLayout({ children }: { children: ReactNode }) {
        );
     }
     if (user && !user.teamId && !isOnboardingPage) {
+      // User logged in but no team, and not on onboarding
       return (
           <div className="flex h-screen items-center justify-center bg-background">
               <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
               <p className="ml-4 text-lg text-foreground">Finalizing setup or redirecting...</p>
           </div>
       );
+    }
+     if (user && user.teamId && (isAuthFlowPage || isOnboardingPage || (isPublicPage && pathname === "/"))) {
+        // User logged in with team, but on auth/onboarding/root landing
+        return (
+             <div className="flex h-screen items-center justify-center bg-background">
+                <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
+                <p className="ml-4 text-lg text-foreground">Redirecting to dashboard...</p>
+            </div>
+        );
     }
   }
 
@@ -113,7 +131,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <TooltipTrigger asChild>
               <Link
                 href={item.href}
-                onClick={() => isMobileContext && setIsMobileSheetOpen(false)} // Close sheet on mobile nav
+                onClick={() => isMobileContext && setIsMobileSheetOpen(false)} 
                 className={cn(
                   "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-11 md:w-11", 
                   pathname.startsWith(item.href) 
@@ -121,7 +139,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     : "text-sidebar-foreground"
                 )}
               >
-                <IconComponent className="h-[2.16rem] w-[2.16rem]" /> {/* Approx 20% bigger (1.8*1.2) */}
+                <IconComponent className="h-[2.16rem] w-[2.16rem] md:h-7 md:w-7" /> 
                 <span className="sr-only">{item.label}</span>
               </Link>
             </TooltipTrigger>
@@ -169,7 +187,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[144px_1fr] lg:grid-cols-[144px_1fr]"> {/* Approx 20% wider (120*1.2) */}
+    <div className="grid min-h-screen w-full md:grid-cols-[144px_1fr] lg:grid-cols-[144px_1fr]"> 
       <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg sticky top-0 h-screen">
         <div> 
            <div className="flex h-10 items-center justify-center mb-4 mt-2">
@@ -219,9 +237,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     <span className="sr-only">Toggle navigation menu</span>
                 </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="flex flex-col bg-sidebar p-2 text-sidebar-foreground w-[144px] shadow-xl"> {/* Approx 20% wider (120*1.2) */}
+                <SheetContent side="left" className="flex flex-col bg-sidebar p-2 text-sidebar-foreground w-[144px] shadow-xl"> 
                  <SheetHeader>
-                    <SheetTitle className="sr-only">Navigation Menu</SheetTitle> {/* Added for accessibility compliance */}
+                    <SheetTitle className="sr-only">Navigation Menu</SheetTitle> 
                  </SheetHeader>
                  <div className="flex h-10 items-center justify-center mb-4 mt-2">
                      <Link href="/dashboard" className="flex items-center justify-center" onClick={() => setIsMobileSheetOpen(false)}>
@@ -232,8 +250,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 
                 <div className="flex-1 overflow-auto">{sidebarNavigation(true)}</div>
 
-                 {/* User profile dropdown at the bottom of the mobile slide-out sidebar is removed */}
-                 {/* The profile button is still accessible from the top-right header on mobile */}
                 </SheetContent>
             </Sheet>
              <div className="flex-1"></div> 
