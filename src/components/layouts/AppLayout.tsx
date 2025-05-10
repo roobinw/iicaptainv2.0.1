@@ -45,7 +45,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!authIsLoading) { 
       const isMarketingPage = pathname === "/" || pathname.startsWith("/(marketing)");
-      const isAuthPage = pathname === "/login" || pathname === "/signup";
+      const isAuthPage = pathname.startsWith("/(auth)"); // Covers /login, /signup
       const isOnboardingPage = pathname.startsWith("/onboarding");
 
       if (!user) {
@@ -76,7 +76,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   if (!authIsLoading) {
     const isPublicPage = pathname === "/" || pathname.startsWith("/(marketing)");
-    const isAuthFlowPage = pathname === "/login" || pathname === "/signup";
+    const isAuthFlowPage = pathname.startsWith("/(auth)");
     const isOnboardingPage = pathname.startsWith("/onboarding");
 
     if (!user && !isPublicPage && !isAuthFlowPage && !isOnboardingPage) {
@@ -116,13 +116,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <Link
                 href={item.href}
                 className={cn(
-                  "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-11 md:w-11", // Original size for nav items
-                  pathname.startsWith(item.href) // Use startsWith for active state
+                  "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-11 md:w-11", 
+                  pathname.startsWith(item.href) 
                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
                     : "text-sidebar-foreground"
                 )}
               >
-                <IconComponent className="h-6 w-6" /> {/* Original icon size for nav items */}
+                <IconComponent className="h-6 w-6" /> 
                 <span className="sr-only">{item.label}</span>
               </Link>
             </TooltipTrigger>
@@ -148,7 +148,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             href={item.href}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-              pathname.startsWith(item.href) // Use startsWith for active state
+              pathname.startsWith(item.href) 
                 ? "bg-sidebar-primary text-sidebar-primary-foreground"
                 : "text-sidebar-foreground"
             )}
@@ -186,12 +186,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[100px_1fr] lg:grid-cols-[100px_1fr]"> {/* Adjusted sidebar width */}
+    <div className="grid min-h-screen w-full md:grid-cols-[100px_1fr] lg:grid-cols-[100px_1fr]"> 
       <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg sticky top-0 h-screen">
         <div> 
            <div className="flex h-10 items-center justify-center mb-4 mt-2">
-             <Link href="/dashboard" className="text-sidebar-foreground hidden md:block">
-              <Icons.TeamLogo className="mt-[10px] h-10 w-10" /> {/* Increased size */}
+             <Link 
+                href="/dashboard" 
+                className="text-sidebar-foreground hidden md:block md:flex md:justify-center"
+            >
+              <Icons.TeamLogo className="mt-[10px] h-10 w-10" /> 
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
@@ -260,14 +263,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     )}
                 <div className="flex h-10 items-center justify-center mt-2 mb-2">
                     <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
-                    <Icons.TeamLogo className="mt-[5px] h-8 w-8" /> {/* Increased size */}
+                    <Icons.TeamLogo className="mt-[5px] h-8 w-8" /> 
                     <span className="">{currentTeam?.name || "iiCaptain"}</span>
                     </Link>
                 </div>
                 <div className="flex-1 overflow-auto">{mobileSidebarContent}</div>
                 </SheetContent>
             </Sheet>
-             <div className="ml-auto text-lg font-semibold">{currentTeam?.name || "iiCaptain"}</div>
         </header>
           <div className="p-4 lg:p-6">
             {children}
