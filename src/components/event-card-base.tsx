@@ -78,9 +78,18 @@ export function EventCardBase({
     const initialAttendanceFromItem = item.attendance || {};
     const updatedAttendanceState: Record<string, AttendanceStatus> = {};
 
-    memberList.forEach(member => {
-        updatedAttendanceState[member.uid] = initialAttendanceFromItem[member.uid] || 'present';
-    });
+    // Ensure memberList is populated before trying to initialize attendance based on it
+    if (memberList.length > 0) {
+        memberList.forEach(member => {
+            updatedAttendanceState[member.uid] = initialAttendanceFromItem[member.uid] || 'present';
+        });
+    } else {
+        // If memberList is empty, just use whatever is in initialAttendanceFromItem
+        // This handles the case where members haven't loaded yet or there are no members
+        Object.keys(initialAttendanceFromItem).forEach(memberUid => {
+            updatedAttendanceState[memberUid] = initialAttendanceFromItem[memberUid] || 'present';
+        });
+    }
     setCurrentAttendance(updatedAttendanceState);
     
   }, [item.attendance, memberList]);
@@ -107,15 +116,7 @@ export function EventCardBase({
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="flex items-center gap-2">
-               {eventType === "match" ? (
-                <>
-                  {icon} {currentTeam?.name || "Your Team"} {titlePrefix} {eventName}
-                </>
-              ) : (
-                <>
-                  {icon} {eventName}
-                </>
-              )}
+               {icon} {currentTeam?.name || "Your Team"} {eventType === "match" ? titlePrefix : ""} {eventName}
             </CardTitle>
             <CardDescription className="mt-1">{renderDetails(item)}</CardDescription>
           </div>
@@ -151,7 +152,14 @@ export function EventCardBase({
               <Icons.Attendance className="mr-2 h-4 w-4" /> Manage Attendance
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] md:max-w-[600px]">
+          <DialogContent 
+            className="sm:max-w-[425px] md:max-w-[600px]"
+            onInteractOutside={(e) => {
+              // Prevent closing the dialog when clicking on attendance buttons
+              // which might be misinterpreted as an "outside" click during re-renders.
+              e.preventDefault();
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Manage Attendance</DialogTitle>
               <DialogDescription>
@@ -210,3 +218,4 @@ export function EventCardBase({
     </Card>
   );
 }
+
