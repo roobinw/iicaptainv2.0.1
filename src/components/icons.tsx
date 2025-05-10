@@ -25,7 +25,14 @@ import {
   MoreVertical, 
   KeyRound, 
   LifeBuoy, // Added for Support
+  type LucideProps,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+// Define a type for props that TeamLogo might accept, including className
+interface TeamLogoProps extends Omit<LucideProps, 'className'> {
+  className?: string;
+}
 
 export const Icons = {
   Dashboard: LayoutDashboard,
@@ -53,7 +60,7 @@ export const Icons = {
   MoreVertical: MoreVertical,
   KeyRound: KeyRound, 
   Support: LifeBuoy, // Added
-  TeamLogo: () => ( 
+  TeamLogo: ({ className, ...props }: TeamLogoProps) => ( 
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
@@ -62,7 +69,8 @@ export const Icons = {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="h-6 w-6"
+      className={cn("h-6 w-6", className)} // Merge passed className with defaults
+      {...props} // Spread other lucide props if any
     >
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
     </svg>
