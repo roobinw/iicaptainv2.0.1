@@ -8,98 +8,67 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%; /* White */
-    --foreground: 240 10% 3.9%; /* Dark Gray */
+    /* Dark mode background - A deep, dark blue */
+    --background: 231 30% 12%;
+    /* Foreground text - Light grey (#EEEEEE) */
+    --foreground: 0 0% 93%;
 
-    --card: 0 0% 100%; /* White */
-    --card-foreground: 240 10% 3.9%; /* Dark Gray */
+    /* Card styling - Slightly lighter dark blue for cards */
+    --card: 231 30% 15%;
+    --card-foreground: 0 0% 93%; /* Light Grey #EEEEEE for card text */
 
-    --popover: 0 0% 100%; /* White */
-    --popover-foreground: 240 10% 3.9%; /* Dark Gray */
+    /* Popover styling - Even darker blue for popovers */
+    --popover: 231 30% 10%;
+    --popover-foreground: 0 0% 93%;
 
-    --primary: 222.2 47.4% 11.2%; /* Dark Blue */
-    --primary-foreground: 210 40% 98%; /* Light Gray */
+    /* Primary color - Dark blue (#1A237E) */
+    --primary: 231 63% 29%;
+    /* Text on primary buttons/elements - Almost white for good contrast */
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 210 40% 96.1%; /* Lighter Gray */
-    --secondary-foreground: 222.2 47.4% 11.2%; /* Dark Blue */
+    /* Secondary elements - A muted, darker blue */
+    --secondary: 231 40% 20%;
+    --secondary-foreground: 0 0% 85%; /* Lighter grey for text on secondary */
 
-    --muted: 210 40% 96.1%; /* Lighter Gray */
-    --muted-foreground: 215.4 16.3% 46.9%; /* Muted Gray */
+    /* Muted elements and text */
+    --muted: 231 20% 18%; /* Very dark, slightly desaturated blue */
+    --muted-foreground: 0 0% 60%; /* Medium grey for muted text */
 
-    --accent: 210 40% 96.1%; /* Lighter Gray */
-    --accent-foreground: 222.2 47.4% 11.2%; /* Dark Blue */
+    /* Accent color - Teal (#00ACC1) */
+    --accent: 187 100% 38%;
+    /* Text on accent buttons/elements - white-ish for readability */
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 84.2% 60.2%; /* Red */
-    --destructive-foreground: 210 40% 98%; /* Light Gray */
+    /* Destructive actions */
+    --destructive: 0 70% 50%; /* A vibrant red */
+    --destructive-foreground: 0 0% 98%; /* White text on red */
 
-    --border: 214.3 31.8% 91.4%; /* Light Border Gray */
-    --input: 214.3 31.8% 91.4%; /* Light Border Gray */
-    --ring: 222.2 84% 4.9%; /* Dark Blue for focus rings */
+    /* Borders and Inputs */
+    --border: 231 30% 25%; /* A visible border color */
+    --input: 231 30% 18%;  /* Darker input background */
+    --ring: 187 100% 45%;   /* Teal for focus rings */
 
     --radius: 0.75rem;
 
-    /* Sidebar specific theme - Now aligned with main palette */
-    --sidebar-background: var(--card); /* Uses card background */
-    --sidebar-foreground: var(--card-foreground); /* Uses card foreground */
-    --sidebar-primary: var(--primary); /* Active items use main primary */
-    --sidebar-primary-foreground: var(--primary-foreground); /* Text on active items */
-    --sidebar-accent: var(--secondary); /* Hover/accent uses main secondary for subtlety */
-    --sidebar-accent-foreground: var(--secondary-foreground); /* Text on hover/accent */
-    --sidebar-border: var(--border); /* Uses main border color */
-    --sidebar-ring: var(--ring); /* Uses main ring color */
+    /* Sidebar specific theme */
+    --sidebar-background: 231 30% 10%; /* Darkest blue for sidebar */
+    --sidebar-foreground: 0 0% 80%; /* Light grey for sidebar text */
+    --sidebar-primary: var(--accent); /* Active items use main accent (Teal) */
+    --sidebar-primary-foreground: var(--accent-foreground); /* Text on active items */
+    --sidebar-accent: 231 30% 20%; /* Hover/accent for sidebar items - a muted dark blue */
+    --sidebar-accent-foreground: 0 0% 93%; /* Light grey text on hover */
+    --sidebar-border: 231 30% 15%; /* Border for sidebar elements */
+    --sidebar-ring: var(--ring);
 
-    --chart-1: 222.2 47.4% 11.2%; /* Primary Dark Blue */
-    --chart-2: 210 40% 96.1%;  /* Secondary Lighter Gray */
-    --chart-3: 0 84.2% 60.2%; /* Destructive Red */
-    --chart-4: 142.1 76.2% 36.3%; /* Green (example) */
-    --chart-5: 47.9 95.8% 53.1%;  /* Yellow (example) */
+    /* Charts */
+    --chart-1: var(--primary); 
+    --chart-2: var(--accent);  
+    --chart-3: var(--destructive); 
+    --chart-4: 120 60% 50%; /* A distinct green */
+    --chart-5: 45 100% 50%; /* A distinct yellow/orange */
   }
 
-  .dark {
-    --background: 240 10% 3.9%; /* Dark Gray */
-    --foreground: 210 40% 98%; /* Light Gray */
-
-    --card: 240 10% 3.9%; /* Dark Gray */
-    --card-foreground: 210 40% 98%; /* Light Gray */
-
-    --popover: 240 10% 3.9%; /* Dark Gray */
-    --popover-foreground: 210 40% 98%; /* Light Gray */
-
-    --primary: 210 40% 98%; /* Light Gray */
-    --primary-foreground: 222.2 47.4% 11.2%; /* Dark Blue */
-
-    --secondary: 217.2 32.6% 17.5%; /* Darker Gray */
-    --secondary-foreground: 210 40% 98%; /* Light Gray */
-
-    --muted: 217.2 32.6% 17.5%; /* Darker Gray */
-    --muted-foreground: 215 20.2% 65.1%; /* Muted Light Gray */
-
-    --accent: 217.2 32.6% 17.5%; /* Darker Gray */
-    --accent-foreground: 210 40% 98%; /* Light Gray */
-
-    --destructive: 0 62.8% 30.6%; /* Dark Red */
-    --destructive-foreground: 210 40% 98%; /* Light Gray */
-
-    --border: 217.2 32.6% 17.5%; /* Darker Border Gray */
-    --input: 217.2 32.6% 17.5%; /* Darker Border Gray */
-    --ring: 210 40% 98%; /* Light Gray for focus rings */
-
-    /* Dark Sidebar specific theme - Now aligned with main palette */
-    --sidebar-background: var(--card); /* Uses card background */
-    --sidebar-foreground: var(--card-foreground); /* Uses card foreground */
-    --sidebar-primary: var(--primary); /* Active items use main primary */
-    --sidebar-primary-foreground: var(--primary-foreground); /* Text on active items */
-    --sidebar-accent: var(--secondary); /* Hover/accent uses main secondary for subtlety */
-    --sidebar-accent-foreground: var(--secondary-foreground); /* Text on hover/accent */
-    --sidebar-border: var(--border); /* Uses main border color */
-    --sidebar-ring: var(--ring); /* Uses main ring color */
-    
-    --chart-1: 210 40% 98%; /* Primary Light Gray */
-    --chart-2: 217.2 32.6% 17.5%; /* Secondary Darker Gray */
-    --chart-3: 0 62.8% 30.6%; /* Destructive Dark Red */
-    --chart-4: 142.1 76.2% 36.3%; /* Green (example) */
-    --chart-5: 47.9 95.8% 53.1%;  /* Yellow (example) */
-  }
+  /* .dark class block is removed as :root now defines the dark theme directly */
 }
 
 @layer base {
