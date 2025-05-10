@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -54,7 +55,7 @@ export default function MatchesPage() {
       setMatches([]);
       setIsLoadingData(false);
     }
-  }, [authLoading, user, currentTeam, forceUpdateCounter, toast]);
+  }, [authLoading, user, currentTeam, forceUpdateCounter]);
 
 
   useEffect(() => {
@@ -135,7 +136,8 @@ export default function MatchesPage() {
       } catch (error) {
         console.error("Error updating match order:", error);
         toast({ title: "Error", description: "Could not save match order.", variant: "destructive" });
-        fetchMatches(user.teamId); 
+        // Re-fetch to revert local state if backend update fails
+        if (user?.teamId) fetchMatches(user.teamId); 
       }
     }
   }
@@ -227,7 +229,7 @@ export default function MatchesPage() {
             </CardContent>
         </Card>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} disabled={!isAdmin}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={matches.map(m => m.id)} strategy={verticalListSortingStrategy}>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {matches.map((match) => (
@@ -236,7 +238,6 @@ export default function MatchesPage() {
                     match={match} 
                     onEdit={isAdmin ? handleEditMatch : undefined} 
                     onDelete={isAdmin ? handleDeleteMatch : undefined}
-                    // setForceUpdateList={setForceUpdateCounter} // Prop removed
                   />
                 </SortableItem>
               ))}

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -46,8 +47,7 @@ export default function TrainingsPage() {
       } else if (error.code === 'permission-denied') {
         description = "Permission denied. Check Firestore security rules and console for details.";
       } else if (error.message) {
-        description = "An unexpected error occurred. Check console for details."; 
-        console.error("Detailed error message:", error.message); 
+        description = `An unexpected error occurred: ${error.message}. Check console for details.`; 
       }
       toast({ title: "Error Fetching Trainings", description, variant: "destructive" });
     } finally {
@@ -144,7 +144,8 @@ export default function TrainingsPage() {
       } catch (error) {
         console.error("Error updating training order:", error);
         toast({ title: "Error", description: "Could not save training order. Check console for details.", variant: "destructive" });
-        fetchTrainings(user.teamId); 
+        // Re-fetch to revert local state if backend update fails
+        if (user?.teamId) fetchTrainings(user.teamId); 
       }
     }
   }
@@ -234,7 +235,7 @@ export default function TrainingsPage() {
             </CardContent>
         </Card>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} disabled={!isAdmin}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={trainings.map(t => t.id)} strategy={verticalListSortingStrategy}>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {trainings.map((training) => (
@@ -243,7 +244,6 @@ export default function TrainingsPage() {
                     training={training} 
                     onEdit={isAdmin ? handleEditTraining : undefined} 
                     onDelete={isAdmin ? handleDeleteTraining : undefined}
-                    // setForceUpdateList={setForceUpdateCounter} // Prop removed
                   />
                 </SortableItem>
               ))}
