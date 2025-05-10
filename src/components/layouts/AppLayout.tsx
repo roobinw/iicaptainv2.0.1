@@ -191,7 +191,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <div> 
            <div className="flex h-10 items-center justify-center mb-4 mt-2">
              <Link href="/dashboard" className="text-sidebar-foreground hidden md:block">
-              <Icons.TeamLogo className="mt-[10px] h-8 w-8" /> {/* Increased size */}
+              <Icons.TeamLogo className="mt-[10px] h-10 w-10" /> {/* Increased size */}
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
