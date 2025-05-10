@@ -1,7 +1,8 @@
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/lib/auth";
+// AuthProvider is removed from here, will be in specific layouts
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -30,12 +31,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
-          <TooltipProvider>
-            {children}
-          </TooltipProvider>
-          <Toaster />
-        </AuthProvider>
+        {/* AuthProvider removed from here */}
+        <TooltipProvider>
+          {children}
+        </TooltipProvider>
+        <Toaster />
       </body>
     </html>
   );

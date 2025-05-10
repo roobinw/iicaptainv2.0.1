@@ -1,8 +1,13 @@
 
+import { AuthProvider } from "@/lib/auth";
 import type { ReactNode } from "react";
 
 // This layout ensures that children (like create-team page) are rendered.
-// AuthProvider is already at the root, so no need to wrap it here again.
+// AuthProvider is added here as it's removed from the root layout.
 export default function OnboardingLayout({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  return (
+    <AuthProvider>
+        {children}
+    </AuthProvider>
+    );
 }

@@ -1,7 +1,12 @@
 
 import { AppLayout } from "@/components/layouts/AppLayout";
+import { AuthProvider } from "@/lib/auth";
 import type { ReactNode } from "react";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  return <AppLayout>{children}</AppLayout>;
+  return (
+    <AuthProvider>
+      <AppLayout>{children}</AppLayout>
+    </AuthProvider>
+  );
 }
