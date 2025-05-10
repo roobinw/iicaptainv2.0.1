@@ -52,9 +52,9 @@ const processTimestamp = (timestamp: Timestamp | undefined): string | undefined 
 };
 
 const toFirestoreTraining = (trainingData: Omit<Training, 'id'>): any => {
-  const dateString = typeof trainingData.date === 'string' 
-    ? trainingData.date 
-    : format(trainingData.date instanceof Date ? trainingData.date : parseISO(trainingData.date as string), "yyyy-MM-dd");
+  // Assuming trainingData.date is already "yyyy-MM-dd" string as per Training type and form logic.
+  // The forms (AddTrainingForm) are responsible for this formatting.
+  const dateString = trainingData.date;
 
   return {
     ...trainingData,
@@ -72,13 +72,15 @@ const fromFirestoreTraining = (docSnap: any): Training => {
 };
 
 export const addTraining = async (teamId: string, trainingData: Omit<Training, 'id' | 'attendance'>): Promise<string> => {
-  const newTrainingData = {
+  // trainingData.date comes from AddTrainingForm, where it's already formatted "yyyy-MM-dd"
+  const firestorePayload = {
     ...trainingData,
     attendance: {}, // Initialize attendance as empty object
     order: (await getTrainings(teamId)).length, // Set initial order
   };
   const trainingsColRef = getTrainingsCollectionRef(teamId);
-  const docRef = await addDoc(trainingsColRef, toFirestoreTraining(newTrainingData));
+  // Pass firestorePayload directly as its date is already string
+  const docRef = await addDoc(trainingsColRef, firestorePayload);
   return docRef.id;
 };
 
@@ -102,10 +104,17 @@ export const updateTraining = async (teamId: string, trainingId: string, data: P
   const trainingDocRef = getTrainingDocRef(teamId, trainingId);
   
   const updateData = {...data};
+  // Ensure date is correctly formatted if present and it's a Date object
+  // If it's already a "yyyy-MM-dd" string (as expected from forms), it remains unchanged.
   if (data.date) {
-    updateData.date = typeof data.date === 'string' 
-      ? data.date 
-      : format(data.date instanceof Date ? data.date : parseISO(data.date as string), "yyyy-MM-dd");
+    if (typeof data.date === 'string') {
+        // Validate or re-format if necessary, but typically it's already "yyyy-MM-dd"
+        updateData.date = data.date;
+    } else if (data.date instanceof Date) {
+        updateData.date = format(data.date, "yyyy-MM-dd");
+    } else {
+        updateData.date = format(parseISO(data.date as string), "yyyy-MM-dd"); // Fallback
+    }
   }
   if ('id' in updateData) delete (updateData as any).id;
 
@@ -141,3 +150,4 @@ export const updateTrainingsOrder = async (teamId: string, orderedTrainings: Arr
   });
   await batch.commit();
 };
+
