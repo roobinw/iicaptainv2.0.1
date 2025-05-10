@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ReactNode } from "react";
@@ -44,17 +43,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!authIsLoading) { 
       if (!user) {
-        const publicPaths = ["/", "/login", "/signup"]; 
-        const isPublicPage = publicPaths.includes(pathname);
-        const isOnboardingPage = pathname.startsWith("/onboarding");
-
-        if (!isPublicPage && !isOnboardingPage && pathname !== "/") { 
-          router.replace("/"); 
+        // Allow access to landing page, login, signup, and onboarding without auth
+        const allowedUnauthenticatedPaths = ["/", "/login", "/signup"];
+        if (!allowedUnauthenticatedPaths.includes(pathname) && !pathname.startsWith("/onboarding") && !pathname.startsWith("/(marketing)")) {
+          router.replace("/"); // Redirect to landing page if not logged in and not on an allowed page
         }
       } else if (user && !user.teamId && !pathname.startsWith("/onboarding")) {
+        // User is logged in but has no team, redirect to create-team
         router.replace("/onboarding/create-team");
       }
       else if (user && user.teamId && (pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname.startsWith("/onboarding"))) {
+        // User is logged in, has a team, and is on a public/onboarding page, redirect to dashboard
         router.replace("/dashboard");
       }
     }
@@ -70,22 +69,32 @@ export function AppLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!authIsLoading && !user && !pathname.startsWith("/onboarding") && pathname !== "/" && pathname !== "/login" && pathname !== "/signup" ) {
-     return ( 
-         <div className="flex h-screen items-center justify-center bg-background">
-             <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
-             <p className="ml-4 text-lg text-foreground">Redirecting...</p>
-         </div>
-     );
-  }
-  
-  if (!authIsLoading && user && !user.teamId && !pathname.startsWith("/onboarding")) {
-    return (
-        <div className="flex h-screen items-center justify-center bg-background">
-            <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
-            <p className="ml-4 text-lg text-foreground">Finalizing setup or redirecting...</p>
-        </div>
-    );
+  // Further checks after loading is complete
+  if (!authIsLoading) {
+    const isPublicPage = pathname === "/" || pathname.startsWith("/(marketing)");
+    const isAuthFlowPage = pathname === "/login" || pathname === "/signup";
+    const isOnboardingPage = pathname.startsWith("/onboarding");
+
+    if (!user && !isPublicPage && !isAuthFlowPage && !isOnboardingPage) {
+       // Actively redirect if no user and not on a page that allows unauthenticated access.
+       // This can happen if useEffect runs, sets isLoading to false, but user is still null
+       // and the initial path was, for example, /dashboard.
+       return ( 
+           <div className="flex h-screen items-center justify-center bg-background">
+               <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
+               <p className="ml-4 text-lg text-foreground">Redirecting...</p>
+           </div>
+       );
+    }
+    if (user && !user.teamId && !isOnboardingPage) {
+      // User is authenticated but has no teamId and is not on an onboarding page.
+      return (
+          <div className="flex h-screen items-center justify-center bg-background">
+              <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
+              <p className="ml-4 text-lg text-foreground">Finalizing setup or redirecting...</p>
+          </div>
+      );
+    }
   }
 
 
@@ -179,7 +188,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     <div className="grid min-h-screen w-full md:grid-cols-[70px_1fr] lg:grid-cols-[70px_1fr]">
       {/* Desktop Sidebar */}
       <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg sticky top-0 h-screen">
-        <div>
+        <div> {/* Top part: logo and nav items */}
            <div className="flex h-10 items-center justify-center mb-4">
             <Link href="/dashboard" className="text-sidebar-foreground">
               <Icons.TeamLogo />
@@ -190,7 +199,26 @@ export function AppLayout({ children }: { children: ReactNode }) {
             {sidebarNavigation}
           </div>
         </div>
-        {/* User profile section for desktop sidebar, moved to header */}
+        
+        {/* User Profile Dropdown for Desktop Sidebar - AT THE BOTTOM */}
+        {user && (
+            <div className="mt-auto p-1 flex justify-center"> {/* Centering the icon button */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full w-10 h-10">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar desktop"/>
+                      <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                    </Avatar>
+                    <span className="sr-only">User Menu</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" align="center" className="w-56 mb-1 bg-card text-card-foreground border-border shadow-xl">
+                  {userProfileDropdownContent}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
       </aside>
       
       <div className="flex flex-col">
@@ -208,7 +236,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col bg-sidebar p-0 text-sidebar-foreground w-[250px] shadow-xl">
-               {user && (
+               {user && ( // User Profile Dropdown - at the top of mobile sidebar (remains unchanged)
                 <div className="border-b border-sidebar-border p-2">
                     <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -246,25 +274,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <h1 className="text-lg font-semibold text-foreground">{currentTeam?.name || "Team Dashboard"}</h1>
           </div>
 
-          {/* User Profile Dropdown - in Header */}
-          {user && (
-            <div className="ml-auto flex items-center">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar"/>
-                      <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                    </Avatar>
-                    <span className="sr-only">User Menu</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-card text-card-foreground border-border shadow-xl">
-                  {userProfileDropdownContent}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
+          {/* User Profile Dropdown - REMOVED FROM HEADER */}
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background overflow-auto">
           {children}
@@ -273,7 +283,3 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-
-    
-
-    
