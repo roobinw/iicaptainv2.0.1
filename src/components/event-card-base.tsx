@@ -1,10 +1,11 @@
+
 "use client";
 
 import type { ReactNode, Dispatch, SetStateAction } from "react";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"; 
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"; 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
@@ -38,15 +39,14 @@ export function EventCardBase({
   onDelete,
   setForceUpdateList
 }: EventCardBaseProps) {
-  const { user: currentUser } = useAuth(); 
+  const { user: currentUser, currentTeam } = useAuth(); 
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
   const [memberList, setMemberList] = useState<User[]>([]); 
-  const [isLoadingMembers, setIsLoadingMembers] = useState(true); // Start true
+  const [isLoadingMembers, setIsLoadingMembers] = useState(true); 
   const [currentAttendance, setCurrentAttendance] = useState<Record<string, AttendanceStatus>>(item.attendance || {});
 
 
   useEffect(() => {
-    // Fetch members and initialize attendance on mount or when item/user changes
     if (currentUser?.teamId) {
       setIsLoadingMembers(true);
       getAllUsersByTeam(currentUser.teamId)
@@ -63,10 +63,9 @@ export function EventCardBase({
         .catch(err => {
           console.error(`Failed to fetch team members for ${eventType} card:`, err);
           setMemberList([]);
-          // Fallback to item's attendance if fetch fails, ensuring currentAttendance is initialized.
           const initialAttendanceFromItem = item.attendance || {};
           const fallbackAttendance: Record<string, AttendanceStatus> = {};
-           memberList.forEach(member => { // Use existing memberList if available, or it remains empty
+           memberList.forEach(member => { 
             fallbackAttendance[member.uid] = initialAttendanceFromItem[member.uid] || 'present';
           });
           setCurrentAttendance(fallbackAttendance);
@@ -74,20 +73,17 @@ export function EventCardBase({
         .finally(() => setIsLoadingMembers(false));
     } else {
       setMemberList([]);
-      setCurrentAttendance(item.attendance || {}); // Initialize with item.attendance or empty if not logged in
+      setCurrentAttendance(item.attendance || {}); 
       setIsLoadingMembers(false);
     }
-  }, [currentUser?.teamId, item.id]); // Removed item.attendance dependency to avoid loop with optimistic updates
+  }, [currentUser?.teamId, item.id, eventType]); 
 
   useEffect(() => {
-     // This effect now specifically handles re-syncing attendance from the item prop
-     // when the dialog opens or item.attendance itself changes from parent (e.g. after a save/refresh)
     if (item.attendance) {
         const initialAttendanceFromItem = item.attendance || {};
-        const updatedAttendance: Record<string, AttendanceStatus> = { ...currentAttendance }; // Start with current optimistic state
+        const updatedAttendance: Record<string, AttendanceStatus> = { ...currentAttendance }; 
 
         memberList.forEach(member => {
-            // Prioritize item.attendance for re-sync, but keep 'present' default if not in item.attendance
             updatedAttendance[member.uid] = initialAttendanceFromItem[member.uid] || 'present';
         });
         setCurrentAttendance(updatedAttendance);
@@ -99,10 +95,6 @@ export function EventCardBase({
 
   const handleAttendanceChange = (memberId: string, status: AttendanceStatus) => {
     setCurrentAttendance(prev => ({ ...prev, [memberId]: status }));
-    // setForceUpdateList is now called by the AttendanceToggler itself, which is better for Firestore updates.
-    // If setForceUpdateList is truly for the *parent* list beyond just this card's attendance,
-    // it should be triggered after successful Firestore operation, not just optimistically.
-    // For now, assuming AttendanceToggler's setForceUpdate handles the needed re-render/re-fetch.
   };
   
   const getInitials = (name: string) => {
@@ -111,6 +103,8 @@ export function EventCardBase({
   }
 
   const presentCount = Object.values(currentAttendance).filter(status => status === 'present').length;
+  
+  const eventName = eventType === "match" ? (item as Match).opponent : (item as Training).location;
 
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
@@ -118,8 +112,15 @@ export function EventCardBase({
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="flex items-center gap-2">
-              {icon}
-              {titlePrefix} {eventType === "match" ? (item as Match).opponent : (item as Training).location}
+              {eventType === "match" ? (
+                <>
+                  {currentTeam?.name || "Your Team"} {titlePrefix} {eventName}
+                </>
+              ) : (
+                <>
+                  {icon} {eventName}
+                </>
+              )}
             </CardTitle>
             <CardDescription className="mt-1">{renderDetails(item)}</CardDescription>
           </div>
@@ -140,13 +141,13 @@ export function EventCardBase({
         </div>
       </CardHeader>
       <CardContent className="flex-grow">
-        <div className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
             Attendance: {isLoadingMembers && memberList.length === 0 ? ( 
                 <Skeleton className="h-4 w-20 inline-block" />
             ) : (
                 <span className="font-semibold text-primary">{presentCount} / {memberList.length}</span>
             )} members present.
-        </div>
+        </p>
       </CardContent>
       <CardFooter className="border-t pt-4">
         <Dialog open={isAttendanceDialogOpen} onOpenChange={setIsAttendanceDialogOpen}>
@@ -159,7 +160,7 @@ export function EventCardBase({
             <DialogHeader>
               <DialogTitle>Manage Attendance</DialogTitle>
               <DialogDescription>
-                Update attendance for {eventType === "match" ? (item as Match).opponent : (item as Training).location} on {format(parseISO(item.date), "MMM dd, yyyy")}.
+                Update attendance for {eventName} on {format(parseISO(item.date), "MMM dd, yyyy")}.
               </DialogDescription>
             </DialogHeader>
             <ScrollArea className="h-[300px] md:h-[400px] pr-4">
@@ -198,8 +199,8 @@ export function EventCardBase({
                            item={{...item, attendance: currentAttendance}} 
                            player={member} 
                            eventType={eventType} 
-                           onAttendanceChange={handleAttendanceChange} // Local state update
-                           setForceUpdate={setForceUpdateList} // Propagate to parent if needed for re-fetch
+                           onAttendanceChange={handleAttendanceChange} 
+                           setForceUpdate={setForceUpdateList} 
                        />
                     </div>
                   ))}
@@ -214,4 +215,3 @@ export function EventCardBase({
     </Card>
   );
 }
-
