@@ -21,7 +21,6 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
 import { AuthLayout } from "@/components/layouts/AuthLayout";
 import { Icons } from "@/components/icons";
-import { Separator } from "@/components/ui/separator";
 
 const signupSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -37,10 +36,9 @@ const signupSchema = z.object({
 type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
-  const { user, isLoading: authIsLoading, signup: authSignup, loginWithGoogle } = useAuth();
+  const { user, isLoading: authIsLoading, signup: authSignup } = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
 
 
   useEffect(() => {
@@ -71,19 +69,6 @@ export default function SignupPage() {
       // Error toast is handled by the signup function in AuthContext
     } finally {
       setIsSubmitting(false);
-    }
-  }
-
-  async function handleGoogleSignup() {
-    setIsGoogleSubmitting(true);
-    try {
-      await loginWithGoogle();
-      // onAuthStateChanged will handle user creation/update and redirect.
-      // If it's a new Google user, they'll be taken to /onboarding/create-team
-    } catch (error: any) {
-      // Error toast is handled by loginWithGoogle
-    } finally {
-      setIsGoogleSubmitting(false);
     }
   }
   
@@ -173,29 +158,13 @@ export default function SignupPage() {
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full" disabled={isSubmitting || authIsLoading || isGoogleSubmitting}>
+          <Button type="submit" className="w-full" disabled={isSubmitting || authIsLoading}>
             {isSubmitting ? <Icons.TeamLogo className="animate-spin" /> : "Create Account & Team"}
           </Button>
         </form>
       </Form>
 
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <Separator />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-card px-2 text-muted-foreground">
-            Or sign up with
-          </span>
-        </div>
-      </div>
-
-      <Button variant="outline" className="w-full" onClick={handleGoogleSignup} disabled={isGoogleSubmitting || authIsLoading || isSubmitting}>
-         {isGoogleSubmitting ? <Icons.TeamLogo className="animate-spin mr-2" /> : <Icons.Google className="mr-2 h-5 w-5" />}
-        Sign up with Google
-      </Button>
-
-      <p className="mt-6 px-8 text-center text-sm text-muted-foreground">
+      <p className="mt-8 px-8 text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link
           href="/login"

@@ -21,7 +21,6 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
 import { AuthLayout } from "@/components/layouts/AuthLayout";
 import { Icons } from "@/components/icons";
-import { Separator } from "@/components/ui/separator";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -31,15 +30,14 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const { user, login, loginWithGoogle, isLoading: authIsLoading } = useAuth();
+  const { user, login, isLoading: authIsLoading } = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!authIsLoading && user && user.teamId) { // Added user.teamId check
+    if (!authIsLoading && user && user.teamId) { 
       router.replace("/dashboard");
-    } else if (!authIsLoading && user && !user.teamId) { // User exists but no team
+    } else if (!authIsLoading && user && !user.teamId) { 
       router.replace("/onboarding/create-team");
     }
   }, [user, authIsLoading, router]);
@@ -64,22 +62,11 @@ export default function LoginPage() {
     }
   }
 
-  async function handleGoogleSignIn() {
-    setIsGoogleSubmitting(true);
-    try {
-      await loginWithGoogle();
-      // AuthProvider's onAuthStateChanged handles redirect
-    } catch (error: any) {
-      // Error toast is handled by the loginWithGoogle function in AuthContext
-    } finally {
-      setIsGoogleSubmitting(false);
-    }
-  }
 
   if (authIsLoading || (!authIsLoading && user && user.teamId)) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <Icons.Dashboard className="h-12 w-12 animate-spin text-primary" />
+        <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
         <p className="ml-4 text-lg text-foreground">Loading...</p>
       </div>
     );
@@ -92,7 +79,7 @@ export default function LoginPage() {
           Sign In to iiCaptain
         </h1>
         <p className="text-sm text-muted-foreground">
-          Enter your credentials or sign in with Google.
+          Enter your credentials to access your account.
         </p>
       </div>
       <Form {...form}>
@@ -123,29 +110,13 @@ export default function LoginPage() {
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full" disabled={isSubmitting || authIsLoading || isGoogleSubmitting}>
+          <Button type="submit" className="w-full" disabled={isSubmitting || authIsLoading}>
             {isSubmitting ? <Icons.Dashboard className="animate-spin" /> : "Sign In"}
           </Button>
         </form>
       </Form>
 
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <Separator />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-card px-2 text-muted-foreground">
-            Or continue with
-          </span>
-        </div>
-      </div>
-
-      <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isGoogleSubmitting || authIsLoading || isSubmitting}>
-        {isGoogleSubmitting ? <Icons.Dashboard className="animate-spin mr-2" /> : <Icons.Google className="mr-2 h-5 w-5" />}
-        Sign in with Google
-      </Button>
-
-      <p className="mt-6 px-8 text-center text-sm text-muted-foreground">
+      <p className="mt-8 px-8 text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
         <Link
           href="/signup"
