@@ -1,10 +1,9 @@
-
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import type { Match, Training, User as PlayerUser } from "@/types"; 
+import type { Match, Training, User as PlayerUser } from "@/types";
 import { updateMatchAttendance } from "@/services/matchService";
 import { updateTrainingAttendance } from "@/services/trainingService";
 import { useToast } from "@/hooks/use-toast";
@@ -15,18 +14,18 @@ import { useAuth } from "@/lib/auth";
 export type AttendanceStatus = "present" | "absent" | "excused" | "unknown";
 
 interface AttendanceTogglerProps {
-  item: Match | Training; 
-  player: PlayerUser; 
+  item: Match | Training;
+  player: PlayerUser;
   eventType: "match" | "training";
-  onAttendanceChange: (playerId: string, status: AttendanceStatus) => void; 
-  setForceUpdate?: Dispatch<SetStateAction<number>>; 
+  onAttendanceChange: (playerId: string, status: AttendanceStatus) => void;
+  setForceUpdate?: Dispatch<SetStateAction<number>>;
 }
 
 export function AttendanceToggler({ item, player, eventType, onAttendanceChange, setForceUpdate }: AttendanceTogglerProps) {
-  const { user: currentUser } = useAuth(); 
+  const { user: currentUser } = useAuth();
   const { toast } = useToast();
-  
-  const playerIdForAttendance = player.uid; 
+
+  const playerIdForAttendance = player.uid;
   const currentStatus: AttendanceStatus = item.attendance[playerIdForAttendance] || "present"; // Default to "present"
 
   const handleAttendance = async (newStatus: AttendanceStatus) => {
@@ -39,8 +38,10 @@ export function AttendanceToggler({ item, player, eventType, onAttendanceChange,
         return;
     }
 
-    onAttendanceChange(playerIdForAttendance, newStatus);
-    if(setForceUpdate) setForceUpdate(val => val + 1); 
+    onAttendanceChange(playerIdForAttendance, newStatus); // Optimistic update in parent (EventCardBase)
+    // The setForceUpdate here triggers a page-level re-fetch, which might be too disruptive.
+    // However, it's kept for now as it was part of the existing logic to refresh lists.
+    if(setForceUpdate) setForceUpdate(val => val + 1);
 
     try {
       if (eventType === "match") {
@@ -51,7 +52,8 @@ export function AttendanceToggler({ item, player, eventType, onAttendanceChange,
     } catch (error: any) {
       console.error("Error updating attendance in Firestore:", error);
       toast({title: "Update Failed", description: error.message || "Could not save attendance change.", variant: "destructive"});
-      onAttendanceChange(playerIdForAttendance, currentStatus); 
+      // Revert optimistic update if Firestore save fails
+      onAttendanceChange(playerIdForAttendance, currentStatus);
     }
   };
 
@@ -60,20 +62,26 @@ export function AttendanceToggler({ item, player, eventType, onAttendanceChange,
       <Button
         variant={currentStatus === "present" ? "default" : "outline"}
         size="sm"
-        onClick={() => handleAttendance("present")}
+        onClick={(e) => {
+            e.stopPropagation();
+            handleAttendance("present");
+        }}
         className={cn(
-          "p-1 h-7 w-7", 
+          "p-1 h-7 w-7",
           currentStatus === "present" && "bg-green-500 hover:bg-green-600 text-white border-green-600"
         )}
         aria-label="Mark as Present"
-        disabled={!currentUser || currentUser.role !== 'admin'} 
+        disabled={!currentUser || currentUser.role !== 'admin'}
       >
         <Icons.CheckCircle2 className="h-4 w-4" />
       </Button>
       <Button
         variant={currentStatus === "absent" ? "default" : "outline"}
         size="sm"
-        onClick={() => handleAttendance("absent")}
+        onClick={(e) => {
+            e.stopPropagation();
+            handleAttendance("absent");
+        }}
         className={cn(
           "p-1 h-7 w-7",
           currentStatus === "absent" && "bg-red-500 hover:bg-red-600 text-white border-red-600"
@@ -86,7 +94,10 @@ export function AttendanceToggler({ item, player, eventType, onAttendanceChange,
       <Button
         variant={currentStatus === "excused" ? "default" : "outline"}
         size="sm"
-        onClick={() => handleAttendance("excused")}
+        onClick={(e) => {
+            e.stopPropagation();
+            handleAttendance("excused");
+        }}
         className={cn(
           "p-1 h-7 w-7",
           currentStatus === "excused" && "bg-yellow-500 hover:bg-yellow-600 text-black border-yellow-600"
@@ -109,7 +120,7 @@ export const getAttendanceStatusColor = (status: AttendanceStatus): string => {
     case "excused":
       return "text-yellow-600 dark:text-yellow-400";
     default: // This includes "unknown" or any other case, will default to present if not specified
-      return "text-muted-foreground"; 
+      return "text-muted-foreground";
   }
 };
 
