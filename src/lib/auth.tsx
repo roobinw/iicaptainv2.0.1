@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { User, UserRole, Team } from "@/types";
@@ -8,14 +9,15 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signOut as firebaseSignOut,
-  GoogleAuthProvider,
-  signInWithPopup,
+  // GoogleAuthProvider, // Removed as per previous request
+  // signInWithPopup, // Removed as per previous request
   type User as FirebaseUser 
 } from "firebase/auth";
 import { doc, setDoc, getDoc, serverTimestamp, collection } from "firebase/firestore";
 import { auth, db } from "./firebase"; 
 import { useToast } from "@/hooks/use-toast";
 import { createTeam, getTeamById } from "@/services/teamService";
+import { getUserProfile } from "@/services/userService"; // Added
 
 interface AuthContextType {
   user: User | null;
@@ -23,10 +25,11 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   isLoading: boolean;
   login: (email: string, password?: string) => Promise<void>; 
-  loginWithGoogle: () => Promise<void>;
+  // loginWithGoogle: () => Promise<void>; // Removed
   logout: () => Promise<void>;
   signup: (email: string, name: string, teamName: string, password?: string) => Promise<void>; 
   refreshTeamData: () => Promise<void>;
+  refreshAuthUser: () => Promise<void>; // Added
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -48,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const teamData = await getTeamById(teamId);
       setCurrentTeam(teamData);
-      if (!teamData && pathname !== "/onboarding/create-team" && pathname !== "/login" && pathname !== "/signup" && pathname !== "/") {
+      if (!teamData && pathname !== "/onboarding/create-team" && pathname !== "/login" && pathname !== "/signup" && pathname !== "/" && !pathname.startsWith("/(marketing)")) {
         toast({ title: "Team Not Found", description: "Your assigned team could not be loaded.", variant: "destructive" });
         router.replace("/onboarding/create-team");
       }
@@ -57,12 +60,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("AuthContext: Error fetching team data in fetchAndSetCurrentTeam:", error);
       setCurrentTeam(null);
       toast({ title: "Error Loading Team", description: error.message || "Could not load your team's data.", variant: "destructive" });
-      if (pathname !== "/onboarding/create-team" && pathname !== "/login" && pathname !== "/signup" && pathname !== "/") {
+      if (pathname !== "/onboarding/create-team" && pathname !== "/login" && pathname !== "/signup" && pathname !== "/" && !pathname.startsWith("/(marketing)")) {
         router.replace("/onboarding/create-team");
       }
       return null;
     }
   }, [pathname, router, toast]);
+
+  const refreshAuthUser = useCallback(async () => {
+    if (firebaseUser) {
+      setIsLoading(true);
+      try {
+        const userProfile = await getUserProfile(firebaseUser.uid);
+        if (userProfile) {
+          setUser(userProfile);
+          if (userProfile.teamId) {
+            await fetchAndSetCurrentTeam(userProfile.teamId);
+          } else {
+            setCurrentTeam(null);
+          }
+        } else {
+          // This case should ideally not happen if a profile is created on signup/login
+          setUser(null);
+          setCurrentTeam(null);
+        }
+      } catch (error) {
+        console.error("Error refreshing user data:", error);
+        toast({ title: "Error Refreshing Data", description: "Could not refresh your profile information.", variant: "destructive"});
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  }, [firebaseUser, fetchAndSetCurrentTeam, toast]);
 
 
   useEffect(() => {
@@ -76,37 +105,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setFirebaseUser(fbUser);
 
         if (fbUser) {
-          const userDocRef = doc(db, "users", fbUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
+          const userProfile = await getUserProfile(fbUser.uid);
 
-          if (userDocSnap.exists()) {
-            const userData = { id: userDocSnap.id, ...userDocSnap.data() } as User;
-            setUser(userData);
-
-            if (userData.teamId) {
-              const fetchedTeam = await fetchAndSetCurrentTeam(userData.teamId);
+          if (userProfile) {
+            setUser(userProfile);
+            if (userProfile.teamId) {
+              const fetchedTeam = await fetchAndSetCurrentTeam(userProfile.teamId);
               if (fetchedTeam) {
-                if (pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname === "/onboarding/create-team") {
+                 if (pathname === "/" || pathname.startsWith("/(auth)") || pathname.startsWith("/onboarding")) {
                    router.replace("/dashboard");
                 }
-              } else { 
-                // Team not found or error, fetchAndSetCurrentTeam handles redirection if needed
               }
             } else {
-              // User profile exists but no teamId
               setCurrentTeam(null);
-              if (pathname !== "/onboarding/create-team" && pathname !== "/signup" && pathname !== "/") { 
+              if (pathname !== "/onboarding/create-team" && pathname !== "/signup" && pathname !== "/" && !pathname.startsWith("/(marketing)") ) { 
                    router.replace("/onboarding/create-team");
               }
             }
           } else {
             // Firebase Auth user exists (e.g. new Google sign-in), but no Firestore user profile. Create one.
+            // This case should be less common with email/password signups that create profiles immediately
+            const userDocRef = doc(db, "users", fbUser.uid);
             const newUserData: Omit<User, 'id' | 'createdAt'> & { createdAt: any } = {
               uid: fbUser.uid,
               email: fbUser.email!.toLowerCase(), 
               name: fbUser.displayName || "New User", 
-              role: "player", 
-              teamId: undefined, 
+              role: "player", // Default role, might need adjustment based on flow
+              teamId: undefined, // No team initially for a user profile created this way
               avatarUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.email!.toLowerCase()}/80/80`,
               createdAt: serverTimestamp(),
             };
@@ -119,7 +144,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             } as User;
             setUser(userForContext);
             setCurrentTeam(null);
-            if (pathname !== "/onboarding/create-team" && pathname !== "/signup" && pathname !== "/") { 
+            if (pathname !== "/onboarding/create-team" && pathname !== "/signup" && pathname !== "/" && !pathname.startsWith("/(marketing)")) { 
                  router.replace("/onboarding/create-team");
             }
           }
@@ -129,14 +154,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setFirebaseUser(null);
           setCurrentTeam(null);
           
-          const publicPaths = ["/", "/login", "/signup"]; 
-          // Add other marketing pages like "/privacy", "/terms" to publicPaths if they exist
+          const marketingPaths = ["/", "/privacy", "/terms"]; // Add other explicit marketing paths if any
+          const isMarketingPage = marketingPaths.includes(pathname) || pathname.startsWith("/(marketing)"); // Check actual folder for marketing
+          const isAuthPage = pathname.startsWith("/(auth)"); // Check actual folder for auth (login, signup)
+          const isOnboardingPage = pathname.startsWith("/onboarding");
           
-          const isPublicOrOnboarding = 
-            publicPaths.includes(pathname) || 
-            pathname.startsWith("/onboarding");
-
-          if (!isPublicOrOnboarding) {
+          if (!isMarketingPage && !isAuthPage && !isOnboardingPage) {
             router.replace("/"); 
           }
         }
@@ -158,12 +181,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           variant: "destructive",
         });
         
-        const publicPaths = ["/", "/login", "/signup"];
-        const isPublicOrOnboarding = 
-            publicPaths.includes(pathname) || 
-            pathname.startsWith("/onboarding");
+        const marketingPaths = ["/", "/privacy", "/terms"]; 
+        const isMarketingPage = marketingPaths.includes(pathname) || pathname.startsWith("/(marketing)");
+        const isAuthPage = pathname.startsWith("/(auth)");
+        const isOnboardingPage = pathname.startsWith("/onboarding");
         
-        if (!isPublicOrOnboarding) {
+        if (!isMarketingPage && !isAuthPage && !isOnboardingPage) {
            router.replace("/");
         }
       } finally {
@@ -186,6 +209,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      // onAuthStateChanged will handle fetching user profile and team
     } catch (error: any) {
       console.error("Firebase login error (AuthContext):", error);
       let errorMessage = "Failed to login. Please check your credentials.";
@@ -204,48 +228,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const loginWithGoogle = async () => {
-    if (!auth) {
-      toast({ title: "Google Sign-In Error", description: "Firebase authentication is not available.", variant: "destructive" });
-      throw new Error("Firebase auth not initialized");
-    }
-    setIsLoading(true);
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (error: any) {
-      console.error("Google Sign-In error (AuthContext):", error);
-      let errorMessage = "Failed to sign in with Google. Please try again.";
-      if (error.code === 'auth/account-exists-with-different-credential') {
-        errorMessage = "An account already exists with the same email address but different sign-in credentials. Sign in using a provider associated with this email address.";
-      } else if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = "Google Sign-In popup was closed. Please try again.";
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        errorMessage = "Multiple Google Sign-In popups were opened. Please try again.";
-      } else if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = "This domain is not authorized for Google Sign-In. Please add it to your Firebase project's Authentication settings (Sign-in method > Authorized domains).";
-        console.error("IMPORTANT: To fix 'auth/unauthorized-domain', add the current domain (e.g., localhost or your app's domain) to the Firebase console: Authentication -> Settings -> Authorized domains.");
-      }
-      toast({
-        title: "Google Sign-In Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      throw error;
-    }
-  };
-
+  // const loginWithGoogle = async () => { ... }; // Removed
 
   const logout = async () => {
     setIsLoading(true);
     try {
       await firebaseSignOut(auth);
+      // setUser(null); // Handled by onAuthStateChanged
+      // setFirebaseUser(null); // Handled by onAuthStateChanged
+      // setCurrentTeam(null); // Handled by onAuthStateChanged
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
+      // router.replace("/"); // Handled by onAuthStateChanged
     } catch (error: any) {
       console.error("Error signing out: ", error);
       toast({ title: "Logout Failed", description: error.message, variant: "destructive" });
     } 
+    // setIsLoading(false); // onAuthStateChanged will set loading to false
   };
   
   const signup = async (email: string, name: string, teamName: string, password?: string) => {
@@ -284,6 +282,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         createdAt: serverTimestamp(),
       });
       
+      // onAuthStateChanged will pick up the new user, fetch profile, and redirect.
       toast({
         title: "Account & Team Created!",
         description: "Welcome to iiCaptain! Redirecting...",
@@ -315,7 +314,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, fetchAndSetCurrentTeam]); 
 
   return (
-    <AuthContext.Provider value={{ user, currentTeam, firebaseUser, isLoading, login, loginWithGoogle, logout, signup, refreshTeamData }}>
+    <AuthContext.Provider value={{ user, currentTeam, firebaseUser, isLoading, login, /* loginWithGoogle, */ logout, signup, refreshTeamData, refreshAuthUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -328,4 +327,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

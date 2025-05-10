@@ -2,6 +2,7 @@
 import { initializeApp, getApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
+import { getStorage, type FirebaseStorage } from "firebase/storage"; // Added
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -16,6 +17,7 @@ const firebaseConfig = {
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
+let storage: FirebaseStorage; // Added
 
 // This block will run on both client and server.
 // The Firebase SDK handles ensuring that initializeApp is only effectively called once.
@@ -39,6 +41,7 @@ try {
   // Get Auth and Firestore instances
   auth = getAuth(app);
   db = getFirestore(app);
+  storage = getStorage(app); // Added
 
 } catch (e) {
   const error = e as Error; // Cast to Error type for better error message access
@@ -49,5 +52,4 @@ try {
   throw new Error(criticalErrorMessage);
 }
 
-export { app, auth, db };
-
+export { app, auth, db, storage }; // Added storage
