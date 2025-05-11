@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -192,7 +193,7 @@ export default function TrainingsPage() {
                     </div>
                 )}
             </div>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[1,2,3].map(i => <Skeleton key={i} className="h-60 w-full rounded-lg" />)}
             </div>
         </div>
@@ -291,7 +292,7 @@ export default function TrainingsPage() {
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={trainings.map(t => t.id)} strategy={verticalListSortingStrategy}>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {trainings.map((training) => (
                 <SortableItem key={training.id} id={training.id} disabled={!isAdmin}>
                   <TrainingCard 
@@ -308,3 +309,4 @@ export default function TrainingsPage() {
     </div>
   );
 }
+

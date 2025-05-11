@@ -151,7 +151,7 @@ export default function MatchesPage() {
             {isAdmin && <Skeleton className="h-10 w-32" />}
         </div>
         <Skeleton className="h-5 w-3/4" />
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1,2,3].map(i => <Skeleton key={i} className="h-60 w-full rounded-lg" />)}
         </div>
       </div>
@@ -230,16 +230,16 @@ export default function MatchesPage() {
             </CardContent>
         </Card>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} >
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={matches.map(m => m.id)} strategy={verticalListSortingStrategy}>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {matches.map((match) => (
                 <SortableItem key={match.id} id={match.id} disabled={!isAdmin}>
                   <MatchCard 
                     match={match} 
                     onEdit={isAdmin ? handleEditMatch : undefined} 
                     onDelete={isAdmin ? handleDeleteMatch : undefined}
-                    dndListeners={isAdmin ? sensors : undefined} // Pass sensors if admin for DnD handle
+                    dndListeners={isAdmin ? sensors : undefined} 
                   />
                 </SortableItem>
               ))}
@@ -250,3 +250,4 @@ export default function MatchesPage() {
     </div>
   );
 }
+

@@ -155,7 +155,7 @@ export default function RefereeingPage() {
             {isAdmin && <Skeleton className="h-10 w-44" />}
         </div>
         <Skeleton className="h-5 w-3/4" />
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1,2,3].map(i => <Skeleton key={i} className="h-60 w-full rounded-lg" />)}
         </div>
       </div>
@@ -191,7 +191,7 @@ export default function RefereeingPage() {
                     </CardContent>
                 </Card>
             ) : (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {assignments.map((assignment) => (
                     <RefereeingAssignmentCard 
                         key={assignment.id} 
@@ -272,7 +272,7 @@ export default function RefereeingPage() {
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} >
           <SortableContext items={assignments.map(a => a.id)} strategy={verticalListSortingStrategy}>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {assignments.map((assignment) => (
                 <SortableItem key={assignment.id} id={assignment.id} disabled={!isAdmin}>
                   <RefereeingAssignmentCard 
