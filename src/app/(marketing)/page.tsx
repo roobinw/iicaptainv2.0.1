@@ -75,15 +75,15 @@ export default function LandingPage() {
             </div>
              <div className="mt-20 max-w-5xl mx-auto">
                 <Image 
-                    // Ensure 'screenshotwebappiicaptain.png' is in the 'public' directory
+                    // Ensure 'screenshotwebappiicaptain.png' is in the 'public' directory at the root of your project.
+                    // The path '/screenshotwebappiicaptain.png' correctly references 'public/screenshotwebappiicaptain.png'.
                     src="/screenshotwebappiicaptain.png" 
                     alt="Screenshot of the iiCaptain web application showing team management features" 
                     width={1200} 
-                    height={600} // Adjust height as per image aspect ratio or desired display
+                    height={600} 
                     className="rounded-xl shadow-2xl border-2 border-border/50"
-                    priority // Load this image first as it's above the fold
-                    // Placeholder for if the local image fails to load or during development
-                    onError={(e) => (e.currentTarget.src = 'https://picsum.photos/1200/600?grayscale')}
+                    priority 
+                    onError={(e) => (e.currentTarget.src = 'https://picsum.photos/1200/600?grayscale&blur=2')}
                     data-ai-hint="app screenshot"
                 />
             </div>
@@ -184,5 +184,4 @@ export default function LandingPage() {
     </div>
   );
 }
-
     
