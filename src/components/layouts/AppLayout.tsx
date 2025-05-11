@@ -241,6 +241,24 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   </div>
                 
                 <div className="flex-1 overflow-auto">{sidebarNavigation(true)}</div>
+                 {user && (
+                  <div className="mt-auto p-1 flex justify-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="rounded-full w-12 h-12">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar mobile sidebar"/>
+                            <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                          </Avatar>
+                          <span className="sr-only">User Menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent side="top" align="center" className="w-56 mb-1 bg-card text-card-foreground border-border shadow-xl">
+                        {userProfileDropdownContent}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
                 </SheetContent>
             </Sheet>
              <div className="flex-1">
@@ -275,4 +293,3 @@ export function AppLayout({ children }: { children: ReactNode }) {
   );
 }
     
-
