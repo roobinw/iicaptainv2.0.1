@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from "react";
@@ -15,7 +16,7 @@ import { AttendanceToggler, getAttendanceStatusColor, getAttendanceStatusText, t
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
-import { AssignPlayersForm } from "./assign-players-form";
+import { AssignPlayersForm } from "@/components/assign-players-form";
 
 
 interface EventCardBaseProps {
@@ -121,33 +122,71 @@ export function EventCardBase({
   const totalMembersForAttendanceCount = memberList.length > 0 ? memberList.length : Object.keys(currentAttendance).length;
   
   let eventName: string;
+  let eventDateForDialog: string = "";
   if (eventType === "match") {
     eventName = (item as Match).opponent;
+    eventDateForDialog = (item as Match).date;
   } else if (eventType === "training") {
     eventName = (item as Training).location;
+     eventDateForDialog = (item as Training).date;
   } else { // refereeing
-    eventName = `Assignment ${format(parseISO((item as RefereeingAssignment).date), "MMM dd")}`;
+    eventName = `Assignment`; // Simplified for refereeing
+     eventDateForDialog = (item as RefereeingAssignment).date;
   }
+  
+  const cardTitle = eventType === "refereeing" ? 
+    `${titlePrefix || ""} ${eventName} - ${format(parseISO(eventDateForDialog), "MMM dd")}` :
+    `${titlePrefix || ""} ${eventName}`;
+
 
   return (
-    <Card className="shadow-lg hover:shadow-primary/10 transition-shadow duration-300 flex flex-col h-full">
-      <CardHeader className="pb-3"> {/* Reduced padding bottom for header */}
-        <div className="flex justify-between items-start">
+    <Card className="shadow-lg hover:shadow-primary/10 transition-shadow duration-300 flex flex-col h-full w-full">
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start gap-2">
           <div className="flex-1 min-w-0"> 
-             <CardTitle className="flex items-center gap-2 text-lg sm:text-xl"> {/* Removed truncate from CardTitle */}
+             <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
               {icon}
-              {/* Wrapped text content in a span with truncate and min-w-0 */}
               <span className="truncate min-w-0">
-                {titlePrefix} {eventName}
+                 {cardTitle}
               </span>
             </CardTitle>
-            <CardDescription className="mt-1 text-xs sm:text-sm overflow-hidden">
+            <CardDescription className="mt-1 text-xs sm:text-sm">
                 {renderDetails(item)}
             </CardDescription>
           </div>
+          {/* Actions Menu (Edit, Delete, Drag) */}
+          {isAdmin && (onEdit || onDelete || dndListeners) && (
+            <div className="flex-shrink-0">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-sidebar-accent">
+                            <Icons.MoreVertical className="h-4 w-4" />
+                            <span className="sr-only">Actions</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-card text-card-foreground border-border shadow-xl">
+                        {dndListeners && (
+                            <DropdownMenuItem {...dndListeners} className="cursor-grab hover:bg-accent/50">
+                                <Icons.GripVertical className="mr-2 h-4 w-4" /> Reorder
+                            </DropdownMenuItem>
+                        )}
+                        {onEdit && (
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(item);}} className="hover:bg-accent/50 cursor-pointer">
+                                <Icons.Edit className="mr-2 h-4 w-4" /> Edit {eventType}
+                            </DropdownMenuItem>
+                        )}
+                        {onDelete && (
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(item.id);}} className="text-destructive hover:bg-destructive/10 focus:bg-destructive/10 focus:text-destructive cursor-pointer">
+                                <Icons.Delete className="mr-2 h-4 w-4" /> Delete {eventType}
+                            </DropdownMenuItem>
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+        )}
         </div>
       </CardHeader>
-      <CardContent className="flex-grow pt-2 pb-3"> {/* Adjusted padding for content */}
+      <CardContent className="flex-grow pt-2 pb-3">
          {(eventType === "match" || eventType === "training") && (
             <div className="text-sm text-muted-foreground">
                 Attendance: {isLoadingMembers && memberList.length === 0 && totalMembersForAttendanceCount === 0 ? ( 
@@ -158,8 +197,8 @@ export function EventCardBase({
             </div>
          )}
       </CardContent>
-      <CardFooter className="border-t pt-3 flex flex-wrap justify-between items-center gap-2"> {/* Added flex-wrap and gap */}
-        <div className="flex-shrink-0"> {/* Ensure this button doesn't cause overflow */}
+      <CardFooter className="border-t pt-3 flex flex-wrap justify-between items-center gap-2">
+        <div className="flex-shrink-0">
           {(eventType === "match" || eventType === "training") && (
               <Dialog open={isAttendanceDialogOpen} onOpenChange={setIsAttendanceDialogOpen}>
               <DialogTrigger asChild>
@@ -179,7 +218,7 @@ export function EventCardBase({
                   <DialogHeader>
                   <DialogTitle>Manage Attendance</DialogTitle>
                   <DialogDescription>
-                      Update attendance for {eventName} on {format(parseISO((item as Match | Training).date), "MMM dd, yyyy")}.
+                      Update attendance for {eventName} on {format(parseISO(eventDateForDialog), "MMM dd, yyyy")}.
                   </DialogDescription>
                   </DialogHeader>
                   <ScrollArea className="h-[300px] md:h-[400px] pr-4">
@@ -241,7 +280,7 @@ export function EventCardBase({
                 <DialogHeader>
                   <DialogTitle>Assign Members</DialogTitle>
                   <DialogDescription>
-                    Assign members to refereeing duty for {eventName} on {format(parseISO((item as RefereeingAssignment).date), "MMM dd, yyyy")}.
+                    Assign members to refereeing duty for {eventName} on {format(parseISO(eventDateForDialog), "MMM dd, yyyy")}.
                   </DialogDescription>
                 </DialogHeader>
                 <AssignPlayersForm
@@ -258,27 +297,16 @@ export function EventCardBase({
             </Dialog>
           )}
         </div>
-
-        {isAdmin && (onEdit || onDelete || dndListeners) && (
-            <div className="flex items-center gap-0.5 flex-shrink-0"> {/* Ensure this group also shrinks */}
-                {dndListeners && ( 
-                <Button variant="ghost" size="icon" {...dndListeners} aria-label="Reorder" className="h-8 w-8 cursor-grab active:cursor-grabbing hover:bg-sidebar-accent">
-                    <Icons.GripVertical className="h-4 w-4" />
-                </Button>
-                )}
-                {onEdit && (
-                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onEdit(item);}} aria-label={`Edit ${eventType}`} className="h-8 w-8 hover:bg-sidebar-accent">
-                    <Icons.Edit className="h-4 w-4" />
-                </Button>
-                )}
-                {onDelete && (
-                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(item.id);}} aria-label={`Delete ${eventType}`} className="h-8 w-8 hover:bg-sidebar-accent">
-                    <Icons.Delete className="h-4 w-4 text-destructive" />
-                </Button>
-                )}
-            </div>
-        )}
       </CardFooter>
     </Card>
   );
 }
+
+// Add DropdownMenu related imports
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+  } from "@/components/ui/dropdown-menu"
+
