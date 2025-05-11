@@ -14,6 +14,7 @@ import { getTrainings } from "@/services/trainingService";
 import { getRefereeingAssignments } from "@/services/refereeingService";
 import { getAllUsersByTeam } from "@/services/userService";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function DashboardPage() {
   const { user, currentTeam, isLoading: authIsLoading } = useAuth();
@@ -53,8 +54,8 @@ export default function DashboardPage() {
             return isAfter(matchDate, today) || isEqual(matchDate, today);
           });
         setTotalUpcomingMatchesCount(allFutureMatches.length);
-        // Display only the next 2 matches on the dashboard card
-        setUpcomingMatches(allFutureMatches.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime()).slice(0, 2));
+        // Display only the next match on the dashboard card
+        setUpcomingMatches(allFutureMatches.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime()).slice(0, 1));
 
         const allTrainings = await getTrainings(teamId);
         const allFutureTrainings = allTrainings
@@ -63,7 +64,7 @@ export default function DashboardPage() {
             return isAfter(trainingDate, today) || isEqual(trainingDate, today);
           });
         setTotalUpcomingTrainingsCount(allFutureTrainings.length);
-        // Display ALL upcoming trainings on the dashboard card
+        // Display ALL upcoming trainings on the dashboard card (up to a reasonable limit for UI, e.g. 5, then scroll)
         setUpcomingTrainings(allFutureTrainings.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime()));
 
         const allRefereeingAssignments = await getRefereeingAssignments(teamId);
@@ -181,62 +182,68 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
-        <Card className="shadow-md">
+        <Card className="shadow-md flex flex-col">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Icons.Matches className="h-5 w-5 text-primary" /> Next Matches</CardTitle>
-            <CardDescription>Quick view of your team&apos;s next couple of games.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><Icons.Matches className="h-5 w-5 text-primary" /> Next Match</CardTitle>
+            <CardDescription>Quick view of your team&apos;s next game.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 flex-grow">
             {upcomingMatches.length > 0 ? (
-              upcomingMatches.map((match) => (
-                <div key={match.id} className="p-3 bg-secondary/50 rounded-lg">
-                  <h3 className="font-semibold">vs {match.opponent}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {format(parseISO(match.date), "EEEE, MMMM dd, yyyy")} at {match.time}
-                  </p>
-                  {match.location && <p className="text-sm text-muted-foreground">Location: {match.location}</p>}
-                </div>
-              ))
+              <div className="p-3 bg-secondary/50 rounded-lg">
+                <h3 className="font-semibold">vs {upcomingMatches[0].opponent}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {format(parseISO(upcomingMatches[0].date), "EEEE, MMMM dd, yyyy")} at {upcomingMatches[0].time}
+                </p>
+                {upcomingMatches[0].location && <p className="text-sm text-muted-foreground">Location: {upcomingMatches[0].location}</p>}
+              </div>
             ) : (
               <p className="text-muted-foreground">No upcoming matches scheduled.</p>
             )}
-            <Link href="/matches">
-              <Button variant="outline" className="w-full mt-2">View All Matches</Button>
-            </Link>
           </CardContent>
+          <CardFooter className="mt-auto border-t pt-4">
+            <Link href="/matches" className="w-full">
+              <Button variant="outline" className="w-full">View All Matches</Button>
+            </Link>
+          </CardFooter>
         </Card>
 
-        <Card className="shadow-md">
+        <Card className="shadow-md flex flex-col">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Icons.Trainings className="h-5 w-5 text-primary" /> Next Trainings</CardTitle>
             <CardDescription>Upcoming training sessions for the team.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {upcomingTrainings.length > 0 ? (
-              upcomingTrainings.map((training) => (
-                <div key={training.id} className="p-3 bg-secondary/50 rounded-lg">
-                  <h3 className="font-semibold">{training.location}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {format(parseISO(training.date), "EEEE, MMMM dd, yyyy")} at {training.time}
-                  </p>
-                  {training.description && <p className="text-xs text-muted-foreground mt-1">{training.description}</p>}
-                </div>
-              ))
-            ) : (
-              <p className="text-muted-foreground">No upcoming trainings scheduled.</p>
-            )}
-            <Link href="/trainings">
-              <Button variant="outline" className="w-full mt-2">View All Trainings</Button>
-            </Link>
+          <CardContent className="flex-grow">
+            <ScrollArea className="h-[200px] pr-3"> {/* Adjust height as needed */}
+              <div className="space-y-4">
+                {upcomingTrainings.length > 0 ? (
+                  upcomingTrainings.map((training) => (
+                    <div key={training.id} className="p-3 bg-secondary/50 rounded-lg">
+                      <h3 className="font-semibold">{training.location}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {format(parseISO(training.date), "EEEE, MMMM dd, yyyy")} at {training.time}
+                      </p>
+                      {training.description && <p className="text-xs text-muted-foreground mt-1">{training.description}</p>}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground">No upcoming trainings scheduled.</p>
+                )}
+              </div>
+            </ScrollArea>
           </CardContent>
+           <CardFooter className="mt-auto border-t pt-4">
+            <Link href="/trainings" className="w-full">
+              <Button variant="outline" className="w-full">View All Trainings</Button>
+            </Link>
+          </CardFooter>
         </Card>
 
-        <Card className="shadow-md">
+        <Card className="shadow-md flex flex-col">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Icons.Refereeing className="h-5 w-5 text-primary" /> Next Refereeing</CardTitle>
             <CardDescription>Upcoming refereeing duties for the team.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 flex-grow">
             {upcomingRefereeingAssignments.length > 0 ? (
               upcomingRefereeingAssignments.map((assignment) => (
                 <div key={assignment.id} className="p-3 bg-secondary/50 rounded-lg">
@@ -250,10 +257,12 @@ export default function DashboardPage() {
             ) : (
               <p className="text-muted-foreground">No upcoming refereeing assignments.</p>
             )}
-            <Link href="/refereeing">
-              <Button variant="outline" className="w-full mt-2">View All Assignments</Button>
-            </Link>
           </CardContent>
+          <CardFooter className="mt-auto border-t pt-4">
+            <Link href="/refereeing" className="w-full">
+              <Button variant="outline" className="w-full">View All Assignments</Button>
+            </Link>
+          </CardFooter>
         </Card>
       </div>
     </div>
