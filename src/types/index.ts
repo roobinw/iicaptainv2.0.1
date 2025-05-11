@@ -21,7 +21,6 @@ export interface Team {
 
 export interface Match {
   id: string;
-  // teamId: string; // Removed as it's implicit from the subcollection path /teams/{teamId}/matches
   date: string; // ISO string "yyyy-MM-dd"
   time: string; // e.g., "14:00"
   opponent: string;
@@ -32,7 +31,6 @@ export interface Match {
 
 export interface Training {
   id: string;
-  // teamId: string; // Removed as it's implicit from the subcollection path /teams/{teamId}/trainings
   date: string; // ISO string "yyyy-MM-dd"
   time: string; // e.g., "19:00"
   location: string;
@@ -52,4 +50,16 @@ export interface Ticket {
   status: "open" | "in-progress" | "resolved" | "closed";
   createdAt: string; // ISO string
   updatedAt?: string; // ISO string
+}
+
+export interface RefereeingAssignment {
+  id: string;
+  date: string; // "yyyy-MM-dd"
+  time: string; // "HH:mm"
+  homeTeam: string;
+  awayTeam: string;
+  location: string;
+  assignedPlayerUids: string[]; // Array of User UIDs
+  notes?: string;
+  order?: number; // For DND ordering
 }

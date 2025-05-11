@@ -24,7 +24,8 @@ import {
   Dumbbell, 
   MoreVertical, 
   KeyRound, 
-  LifeBuoy, // Added for Support
+  LifeBuoy,
+  Whistle, // Added for Refereeing
   type LucideProps,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -59,7 +60,8 @@ export const Icons = {
   GripVertical: GripVertical,
   MoreVertical: MoreVertical,
   KeyRound: KeyRound, 
-  Support: LifeBuoy, // Added
+  Support: LifeBuoy,
+  Refereeing: Whistle, // Added
   TeamLogo: ({ className, ...props }: TeamLogoProps) => ( 
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -77,4 +79,3 @@ export const Icons = {
   ),
   CalendarDays: CalendarDays,
 };
-

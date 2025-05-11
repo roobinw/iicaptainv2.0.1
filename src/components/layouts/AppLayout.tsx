@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from "react";
@@ -33,6 +34,7 @@ const navItems: NavItem[] = [
   { href: "/matches", label: "Matches", icon: "Matches" },
   { href: "/trainings", label: "Trainings", icon: "Trainings" },
   { href: "/players", label: "Players", icon: "Players" },
+  { href: "/refereeing", label: "Refereeing", icon: "Refereeing", adminOnly: true },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -123,13 +125,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 href={item.href}
                 onClick={() => isMobileContext && setIsMobileSheetOpen(false)} 
                 className={cn(
-                  "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-10 md:w-10",  // Adjusted desktop icon container size
+                  "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-10 md:w-10",
                   pathname.startsWith(item.href) 
                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
                     : "text-sidebar-foreground"
                 )}
               >
-                <IconComponent className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5" /> {/* Adjusted desktop icon size */}
+                <IconComponent className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5" />
                 <span className="sr-only">{item.label}</span>
               </Link>
             </TooltipTrigger>
@@ -177,7 +179,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[115px_1fr] lg:grid-cols-[115px_1fr]"> {/* Adjusted desktop sidebar width */}
+    <div className="grid min-h-screen w-full md:grid-cols-[115px_1fr] lg:grid-cols-[115px_1fr]">
       <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg sticky top-0 h-screen">
         <div> 
            <div className="flex h-10 items-center justify-center mb-4 mt-2">
@@ -239,7 +241,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   </div>
                 
                 <div className="flex-1 overflow-auto">{sidebarNavigation(true)}</div>
-                 {/* User profile button removed from mobile sidebar as per request */}
                 </SheetContent>
             </Sheet>
              <div className="flex-1">
@@ -274,4 +275,3 @@ export function AppLayout({ children }: { children: ReactNode }) {
   );
 }
     
-
