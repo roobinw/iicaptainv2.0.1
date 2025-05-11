@@ -14,6 +14,7 @@ import {
   writeBatch,
   type Timestamp
 } from 'firebase/firestore';
+import { format, parseISO } from "date-fns"; // Added for toast message formatting
 
 const getRefereeingAssignmentsCollectionRef = (teamId: string) => {
   if (!db) {
@@ -47,15 +48,21 @@ const fromFirestoreRefereeingAssignment = (docSnap: any): RefereeingAssignment =
   const data = docSnap.data();
   return {
     id: docSnap.id,
-    ...data,
+    date: data.date,
+    time: data.time,
     assignedPlayerUids: data.assignedPlayerUids || [],
+    notes: data.notes,
+    order: data.order,
+    // homeTeam, awayTeam, location are removed
   } as RefereeingAssignment;
 };
 
 export const addRefereeingAssignment = async (teamId: string, assignmentData: Omit<RefereeingAssignment, 'id' | 'order'>): Promise<string> => {
   const firestorePayload = {
-    ...assignmentData,
+    date: assignmentData.date, // Already string "yyyy-MM-dd"
+    time: assignmentData.time,
     assignedPlayerUids: assignmentData.assignedPlayerUids || [],
+    notes: assignmentData.notes,
     order: (await getRefereeingAssignments(teamId)).length,
   };
   const assignmentsColRef = getRefereeingAssignmentsCollectionRef(teamId);
@@ -80,16 +87,13 @@ export const getRefereeingAssignmentById = async (teamId: string, assignmentId: 
 
 export const updateRefereeingAssignment = async (teamId: string, assignmentId: string, data: Partial<Omit<RefereeingAssignment, 'id'>>): Promise<void> => {
   const assignmentDocRef = getRefereeingAssignmentDocRef(teamId, assignmentId);
-  // Ensure assignedPlayerUids is always an array, even if input is undefined for partial update
-  const updateData = { ...data };
+  // data will not contain homeTeam, awayTeam, location. date is string "yyyy-MM-dd"
+  const updateData: Partial<RefereeingAssignment> = { ...data };
   if (data.assignedPlayerUids === undefined && !(data.hasOwnProperty('assignedPlayerUids'))) {
     // If assignedPlayerUids is not in the partial update, don't modify it.
-    // If it's explicitly set to null/undefined in `data` and you want to clear it, then an empty array is appropriate.
   } else if (data.assignedPlayerUids === null || data.assignedPlayerUids === undefined) {
      updateData.assignedPlayerUids = [];
   }
-
-
   await updateDoc(assignmentDocRef, updateData);
 };
 

@@ -79,7 +79,7 @@ export default function RefereeingPage() {
     }
     try {
       await addRefereeingAssignment(user.teamId, data);
-      toast({ title: "Assignment Added", description: `Refereeing assignment for ${data.homeTeam} vs ${data.awayTeam} scheduled.` });
+      toast({ title: "Assignment Added", description: `Refereeing assignment on ${format(parseISO(data.date), "MMM dd, yyyy")} scheduled.` });
       setForceUpdateCounter(prev => prev + 1); 
       setIsAddAssignmentDialogOpen(false);
     } catch (error: any) {
@@ -99,7 +99,7 @@ export default function RefereeingPage() {
     }
     try {
       await updateRefereeingAssignment(user.teamId, editingAssignment.id, data as Partial<Omit<RefereeingAssignment, 'id'>>);
-      toast({ title: "Assignment Updated", description: `Assignment for ${data.homeTeam} vs ${data.awayTeam} updated.` });
+      toast({ title: "Assignment Updated", description: `Assignment on ${format(parseISO(data.date), "MMM dd, yyyy")} has been updated.` });
       setForceUpdateCounter(prev => prev + 1);
       setIsAddAssignmentDialogOpen(false);
       setEditingAssignment(null);
@@ -228,7 +228,7 @@ export default function RefereeingPage() {
               <DialogTitle>{editingAssignment ? "Edit Assignment" : "Add New Assignment"}</DialogTitle>
               <DialogDescription>
                 {editingAssignment 
-                  ? `Update details for assignment: ${editingAssignment.homeTeam} vs ${editingAssignment.awayTeam} on ${format(parseISO(editingAssignment.date), "MMM dd, yyyy")}.`
+                  ? `Update details for assignment on ${format(parseISO(editingAssignment.date), "MMM dd, yyyy")}.`
                   : "Fill in the details for the new refereeing assignment."
                 }
               </DialogDescription>

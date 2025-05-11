@@ -64,9 +64,6 @@ This is a top-level collection where each document represents a unique team.
     *   **Fields:**
         *   `date`: (String) Assignment date in "yyyy-MM-dd" format.
         *   `time`: (String) Assignment time in "HH:mm" format (24-hour).
-        *   `homeTeam`: (String) Name of the home team for the match being refereed.
-        *   `awayTeam`: (String) Name of the away team for the match being refereed.
-        *   `location`: (String) Venue of the match being refereed.
         *   `assignedPlayerUids`: (Array of Strings) Firebase Auth UIDs of the players assigned to referee.
         *   `notes`: (String, optional) Additional details or instructions for the assignment.
         *   `order`: (Number, optional) For drag-and-drop reordering of assignments. Initialized to current list length.
@@ -133,9 +130,6 @@ This is a top-level collection where each document represents a support ticket.
 {
   "date": "2023-11-12",
   "time": "10:00",
-  "homeTeam": "Youth Team Alpha",
-  "awayTeam": "Youth Team Beta",
-  "location": "Club Pitch 2",
   "assignedPlayerUids": ["playerFirebaseUidMno", "playerFirebaseUidJkl"],
   "notes": "Remember to bring whistles and cards. Arrive 30 mins early.",
   "order": 0

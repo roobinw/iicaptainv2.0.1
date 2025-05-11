@@ -56,10 +56,11 @@ export interface RefereeingAssignment {
   id: string;
   date: string; // "yyyy-MM-dd"
   time: string; // "HH:mm"
-  homeTeam: string;
-  awayTeam: string;
-  location: string;
+  // homeTeam: string; // Removed
+  // awayTeam: string; // Removed
+  // location: string; // Removed
   assignedPlayerUids: string[]; // Array of User UIDs
   notes?: string;
   order?: number; // For DND ordering
 }
+

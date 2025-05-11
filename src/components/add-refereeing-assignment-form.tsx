@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,9 +31,6 @@ import { Skeleton } from "./ui/skeleton";
 const refereeingAssignmentSchema = z.object({
   date: z.date({ required_error: "Assignment date is required." }),
   time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: "Invalid time format (HH:MM)." }),
-  homeTeam: z.string().min(1, { message: "Home team name is required." }),
-  awayTeam: z.string().min(1, { message: "Away team name is required." }),
-  location: z.string().min(1, { message: "Location is required." }),
   assignedPlayerUids: z.array(z.string()).min(1, { message: "At least one team member must be assigned." }),
   notes: z.string().optional(),
 });
@@ -47,20 +45,18 @@ interface AddRefereeingAssignmentFormProps {
 
 export function AddRefereeingAssignmentForm({ onSubmit, initialData, onClose }: AddRefereeingAssignmentFormProps) {
   const { user: currentUser, currentTeam } = useAuth();
-  const [teamMembers, setTeamMembers] = useState<User[]>([]); // Renamed to teamMembers for clarity
-  const [isLoadingMembers, setIsLoadingMembers] = useState(true); // Renamed for clarity
+  const [teamMembers, setTeamMembers] = useState<User[]>([]);
+  const [isLoadingMembers, setIsLoadingMembers] = useState(true);
 
   const form = useForm<RefereeingAssignmentFormValues>({
     resolver: zodResolver(refereeingAssignmentSchema),
     defaultValues: initialData ? {
-      ...initialData,
-      date: parseISO(initialData.date), // Convert date string back to Date object
+      date: parseISO(initialData.date),
+      time: initialData.time,
       assignedPlayerUids: initialData.assignedPlayerUids || [],
+      notes: initialData.notes || "",
     } : {
-      homeTeam: "",
-      awayTeam: "",
       time: "10:00", 
-      location: "",
       assignedPlayerUids: [],
       notes: "",
     },
@@ -69,9 +65,9 @@ export function AddRefereeingAssignmentForm({ onSubmit, initialData, onClose }: 
   useEffect(() => {
     if (currentUser?.teamId) {
       setIsLoadingMembers(true);
-      getAllUsersByTeam(currentUser.teamId) // This service function fetches all users (players and admins)
+      getAllUsersByTeam(currentUser.teamId)
         .then(members => {
-          setTeamMembers(members); // Set all fetched members (players and admins)
+          setTeamMembers(members);
         })
         .catch(console.error)
         .finally(() => setIsLoadingMembers(false));
@@ -138,45 +134,6 @@ export function AddRefereeingAssignmentForm({ onSubmit, initialData, onClose }: 
         />
         <FormField
           control={form.control}
-          name="homeTeam"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Home Team</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Club Youth A" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="awayTeam"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Away Team</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Opponent Youth B" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="location"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Location</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Club Pitch 3" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
           name="assignedPlayerUids"
           render={() => (
             <FormItem>
@@ -188,7 +145,7 @@ export function AddRefereeingAssignmentForm({ onSubmit, initialData, onClose }: 
                 </div>
               ) : teamMembers.length > 0 ? (
                 <ScrollArea className="h-32 w-full rounded-md border p-2">
-                  {teamMembers.map((member) => ( // Changed from teamPlayers to teamMembers
+                  {teamMembers.map((member) => (
                     <FormField
                       key={member.uid}
                       control={form.control}
@@ -250,4 +207,3 @@ export function AddRefereeingAssignmentForm({ onSubmit, initialData, onClose }: 
     </Form>
   );
 }
-

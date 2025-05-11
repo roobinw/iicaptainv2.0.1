@@ -54,12 +54,10 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, dndList
           <div className="flex-1 min-w-0">
             <CardTitle className="flex items-center gap-2 text-lg sm:text-xl truncate">
               <Icons.Refereeing className="h-5 w-5 text-primary" />
-              {assignment.homeTeam} vs {assignment.awayTeam}
+              Refereeing Duty
             </CardTitle>
             <CardDescription className="mt-1">
               {format(parseISO(assignment.date), "EEEE, MMMM dd, yyyy")} at {assignment.time}
-              <br />
-              Location: {assignment.location}
             </CardDescription>
           </div>
           {isAdmin && (onEdit || onDelete || dndListeners) && (
