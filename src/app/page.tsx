@@ -1,10 +1,14 @@
 
+"use client"; // Added to make this a Client Component
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+// This page content is now the primary landing page.
+// The (marketing) group and its layout can be simplified or removed if not needed for other marketing pages.
 export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
@@ -52,11 +56,14 @@ export default function LandingPage() {
             <div className="mt-16 sm:mt-24 max-w-4xl mx-auto">
               <Image
                 src="/screenshotwebappiicaptain.png" 
-                alt="Screenshot of iiCaptain web application"
+                alt="Screenshot of iiCaptain web application dashboard"
                 width={1200}
                 height={600}
                 className="rounded-xl shadow-2xl border-2 border-border/20"
                 priority
+                // Placeholder for if the local image fails to load or during development
+                onError={(e) => (e.currentTarget.src = 'https://picsum.photos/1200/600?grayscale&blur=2')}
+                data-ai-hint="app dashboard"
               />
             </div>
           </div>
@@ -160,3 +167,4 @@ export default function LandingPage() {
   );
 }
 
+    

@@ -8,15 +8,6 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons"; 
 import Image from "next/image";
-// Assuming the image is named 'landing-image.png' and placed in the src/app/(marketing) directory.
-// If the name is different, please update the import path.
-// For Next.js to correctly serve local images via the <Image> component,
-// they are typically placed in the `public` directory and referenced like `/landing-image.png`.
-// If the image MUST stay in `src/app/(marketing)`, it needs to be imported.
-// Let's assume you've moved it to public/ for best practice or we'll import it.
-// For this example, I will assume it's in public/landing-image.png
-// If it's truly in src/app/(marketing), you would do:
-// import landingImage from './landing-image.png'; // Update 'landing-image.png' to your actual image file name
 
 export default function LandingPage() {
   const { user, isLoading } = useAuth();
@@ -83,20 +74,17 @@ export default function LandingPage() {
               </Link>
             </div>
              <div className="mt-20 max-w-5xl mx-auto">
-                {/* 
-                  Assuming your image is named 'landing-hero.png' and you've placed it in the `public` directory.
-                  Update '/landing-hero.png' if your image has a different name or path within `public`.
-                  If your image is in `src/app/(marketing)/your-image.png`, you'd import it:
-                  import localLandingImage from './your-image.png'; 
-                  and use src={localLandingImage}
-                */}
                 <Image 
-                    src="/landing-image.png" // IMPORTANT: Update this to your actual image file name in the public folder
-                    alt="Team management illustration or sports team photo" 
+                    // Ensure 'screenshotwebappiicaptain.png' is in the 'public' directory
+                    src="/screenshotwebappiicaptain.png" 
+                    alt="Screenshot of the iiCaptain web application showing team management features" 
                     width={1200} 
-                    height={600}
+                    height={600} // Adjust height as per image aspect ratio or desired display
                     className="rounded-xl shadow-2xl border-2 border-border/50"
-                    priority
+                    priority // Load this image first as it's above the fold
+                    // Placeholder for if the local image fails to load or during development
+                    onError={(e) => (e.currentTarget.src = 'https://picsum.photos/1200/600?grayscale')}
+                    data-ai-hint="app screenshot"
                 />
             </div>
           </div>
@@ -196,6 +184,5 @@ export default function LandingPage() {
     </div>
   );
 }
-
 
     
