@@ -33,8 +33,8 @@ const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "Dashboard" },
   { href: "/matches", label: "Matches", icon: "Matches" },
   { href: "/trainings", label: "Trainings", icon: "Trainings" },
-  { href: "/players", label: "Players", icon: "Players" },
   { href: "/refereeing", label: "Refereeing", icon: "Refereeing", adminOnly: true },
+  { href: "/players", label: "Players", icon: "Players" },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -197,7 +197,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
         
         {user && (
-            <div className="mt-auto p-1 flex justify-center"> 
+            <div className="mt-auto p-1 flex justify-center md:block"> 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full w-12 h-12">
@@ -219,7 +219,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <main className="flex flex-1 flex-col bg-background overflow-auto">
         <header className="sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b bg-background px-4 md:hidden">
             <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
-                <SheetTrigger asChild>
+                 <SheetTrigger asChild>
                 <Button
                     variant="outline"
                     size="icon"
@@ -275,3 +275,4 @@ export function AppLayout({ children }: { children: ReactNode }) {
   );
 }
     
+
