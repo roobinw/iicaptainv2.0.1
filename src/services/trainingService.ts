@@ -1,3 +1,4 @@
+
 // 'use server'; // Removed to run client-side
 
 import { db } from '@/lib/firebase';
@@ -116,14 +117,10 @@ export const getTrainingById = async (teamId: string, trainingId: string): Promi
 
 export const updateTraining = async (teamId: string, trainingId: string, data: Partial<Omit<Training, 'id'>>): Promise<void> => {
   const trainingDocRef = getTrainingDocRef(teamId, trainingId);
-  const updateData: Partial<Training> = { ...data };
-  if (data.date && typeof data.date === 'string') { 
-     updateData.date = data.date;
-  } else if (data.date && data.date instanceof Date) { 
-     console.warn("updateTraining received Date object for date, expected string. Formatting anyway.");
-     updateData.date = format(data.date, "yyyy-MM-dd");
-  }
-  await updateDoc(trainingDocRef, updateData);
+  // `data` is expected to have `date` as a "yyyy-MM-dd" string if provided,
+  // as it's formatted by the AddTrainingForm before this function is called.
+  // The incorrect `instanceof Date` check has been removed.
+  await updateDoc(trainingDocRef, data);
 };
 
 export const deleteTraining = async (teamId: string, trainingId: string): Promise<void> => {
