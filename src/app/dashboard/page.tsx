@@ -86,7 +86,7 @@ export default function DashboardPage() {
           </div>
           {/* Skeleton for admin buttons if role check is needed during loading */}
           <div className="flex gap-2">
-              <Skeleton className="h-10 w-32" />
+              {/* <Skeleton className="h-10 w-32" /> */}
               <Skeleton className="h-10 w-36" />
           </div>
         </div>
@@ -133,11 +133,13 @@ export default function DashboardPage() {
         </div>
         { user.role === 'admin' && (
             <div className="flex gap-2">
+                {/* Removed Add Match Button
                 <Link href="/matches#add">
                     <Button variant="default">
                         <Icons.Add className="mr-2 h-4 w-4" /> Add Match
                     </Button>
                 </Link>
+                */}
                 <Link href="/trainings#add">
                     <Button variant="default">
                         <Icons.Add className="mr-2 h-4 w-4" /> Add Training
@@ -240,3 +242,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
