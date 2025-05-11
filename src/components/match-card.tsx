@@ -3,7 +3,7 @@
 
 import { format, parseISO } from "date-fns";
 import { Icons } from "@/components/icons";
-import type { Match, Training } from "@/types"; 
+import type { Match } from "@/types"; 
 import { EventCardBase } from "./event-card-base";
 import { useAuth } from "@/lib/auth";
 
@@ -12,23 +12,23 @@ interface MatchCardProps {
   match: Match;
   onEdit?: (match: Match) => void;
   onDelete?: (matchId: string) => void;
-  dndListeners?: any; 
+  // dndListeners?: any; // Removed
 }
 
-export function MatchCard({ match, onEdit, onDelete, dndListeners }: MatchCardProps) {
+export function MatchCard({ match, onEdit, onDelete }: MatchCardProps) { // dndListeners removed from props
   const { currentTeam } = useAuth();
   return (
     <EventCardBase
       item={match}
-      eventType="match" // Explicitly set eventType
+      eventType="match" 
       icon={<Icons.Matches className="h-5 w-5 text-primary" />}
       titlePrefix={currentTeam?.name ? `${currentTeam.name} vs` : "vs"}
       renderDetails={(itemDetails) => { 
         const currentMatch = itemDetails as Match;
         return (
           <div className="text-xs sm:text-sm space-y-0.5 mt-1"> 
-            <div> 
-              {format(parseISO(currentMatch.date), "EEE, MMM dd, yyyy")}
+            <div className="truncate"> 
+              {format(parseISO(currentMatch.date), "EEEE, MMM dd, yyyy")}
               {' at '}
               {currentMatch.time}
             </div>
@@ -42,7 +42,7 @@ export function MatchCard({ match, onEdit, onDelete, dndListeners }: MatchCardPr
       }}
       onEdit={onEdit ? (item) => onEdit(item as Match) : undefined}
       onDelete={onDelete}
-      dndListeners={dndListeners}
+      // dndListeners={dndListeners} // Removed
     />
   );
 }

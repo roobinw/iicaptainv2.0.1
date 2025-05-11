@@ -14,7 +14,7 @@ import {
   writeBatch,
   type Timestamp
 } from 'firebase/firestore';
-import { format, parseISO } from "date-fns"; // Added for toast message formatting
+import { format, parseISO } from "date-fns"; 
 
 const getRefereeingAssignmentsCollectionRef = (teamId: string) => {
   if (!db) {
@@ -52,18 +52,17 @@ const fromFirestoreRefereeingAssignment = (docSnap: any): RefereeingAssignment =
     time: data.time,
     assignedPlayerUids: data.assignedPlayerUids || [],
     notes: data.notes,
-    order: data.order,
-    // homeTeam, awayTeam, location are removed
+    // order: data.order, // Order field removed
   } as RefereeingAssignment;
 };
 
-export const addRefereeingAssignment = async (teamId: string, assignmentData: Omit<RefereeingAssignment, 'id' | 'order'>): Promise<string> => {
+export const addRefereeingAssignment = async (teamId: string, assignmentData: Omit<RefereeingAssignment, 'id'>): Promise<string> => {
   const firestorePayload = {
-    date: assignmentData.date, // Already string "yyyy-MM-dd"
+    date: assignmentData.date, 
     time: assignmentData.time,
     assignedPlayerUids: assignmentData.assignedPlayerUids || [],
     notes: assignmentData.notes,
-    order: (await getRefereeingAssignments(teamId)).length,
+    // order: (await getRefereeingAssignments(teamId)).length, // Order field removed
   };
   const assignmentsColRef = getRefereeingAssignmentsCollectionRef(teamId);
   const docRef = await addDoc(assignmentsColRef, firestorePayload);
@@ -73,7 +72,8 @@ export const addRefereeingAssignment = async (teamId: string, assignmentData: Om
 export const getRefereeingAssignments = async (teamId: string): Promise<RefereeingAssignment[]> => {
   if (!teamId) return [];
   const assignmentsColRef = getRefereeingAssignmentsCollectionRef(teamId);
-  const q = query(assignmentsColRef, orderBy('order', 'asc'), orderBy('date', 'desc'), orderBy('time', 'desc'));
+  // Sort by date ascending (soonest first), then by time ascending
+  const q = query(assignmentsColRef, orderBy('date', 'asc'), orderBy('time', 'asc'));
   const assignmentSnapshot = await getDocs(q);
   return assignmentSnapshot.docs.map(fromFirestoreRefereeingAssignment);
 };
@@ -87,8 +87,21 @@ export const getRefereeingAssignmentById = async (teamId: string, assignmentId: 
 
 export const updateRefereeingAssignment = async (teamId: string, assignmentId: string, data: Partial<Omit<RefereeingAssignment, 'id'>>): Promise<void> => {
   const assignmentDocRef = getRefereeingAssignmentDocRef(teamId, assignmentId);
-  // data will not contain homeTeam, awayTeam, location. date is string "yyyy-MM-dd"
   const updateData: Partial<RefereeingAssignment> = { ...data };
+  
+  if (data.date && typeof data.date !== 'string') {
+     console.warn("updateRefereeingAssignment received non-string date, formatting to yyyy-MM-dd", data.date);
+     updateData.date = format(parseISO(data.date as unknown as string), "yyyy-MM-dd"); // Assuming it might be Date
+  } else if (data.date && typeof data.date === 'string') {
+    try {
+        updateData.date = format(parseISO(data.date), "yyyy-MM-dd");
+    } catch (e) {
+        console.warn(`Date string "${data.date}" in updateRefereeingAssignment was not in a standard ISO format. Using as is. Error: ${e}`);
+        updateData.date = data.date;
+    }
+  }
+
+
   if (data.assignedPlayerUids === undefined && !(data.hasOwnProperty('assignedPlayerUids'))) {
     // If assignedPlayerUids is not in the partial update, don't modify it.
   } else if (data.assignedPlayerUids === null || data.assignedPlayerUids === undefined) {
@@ -102,14 +115,6 @@ export const deleteRefereeingAssignment = async (teamId: string, assignmentId: s
   await deleteDoc(assignmentDocRef);
 };
 
-export const updateRefereeingAssignmentsOrder = async (teamId: string, orderedAssignments: Array<{ id: string; order: number }>): Promise<void> => {
-  if (!db) throw new Error("Firestore not initialized");
-  if (!teamId) throw new Error("Team ID is required for updating assignments order.");
-  const batch = writeBatch(db);
-  
-  orderedAssignments.forEach(assignment => {
-    const assignmentRef = getRefereeingAssignmentDocRef(teamId, assignment.id); 
-    batch.update(assignmentRef, { order: assignment.order });
-  });
-  await batch.commit();
-};
+// updateRefereeingAssignmentsOrder function removed as DND is removed
+// export const updateRefereeingAssignmentsOrder = async (teamId: string, orderedAssignments: Array<{ id: string; order: number }>): Promise<void> => { ... };
+

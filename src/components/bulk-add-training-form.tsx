@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,7 +22,6 @@ import { format, addWeeks } from "date-fns";
 import { Icons } from "./icons";
 import type { Training } from "@/types";
 
-// Schema for a single base training session and the number of weeks it should repeat
 const weeklyRepeatTrainingSchema = z.object({
   baseTraining: z.object({
     location: z.string().min(1, { message: "Location is required." }),
@@ -29,18 +29,16 @@ const weeklyRepeatTrainingSchema = z.object({
     time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: "Invalid time format (HH:MM)." }),
     description: z.string().optional(),
   }),
-  numberOfWeeks: z.coerce // Coerce to number, e.g. from string input
+  numberOfWeeks: z.coerce 
     .number({invalid_type_error: "Please enter a valid number."})
     .int({ message: "Number of weeks must be a whole number." })
     .min(0, "Number of additional weeks must be 0 or more.")
     .max(52, "Cannot add more than 52 additional weeks at once (1 year)."), 
 });
 
-// Type for the form values based on the new schema
 type WeeklyRepeatTrainingFormValues = z.infer<typeof weeklyRepeatTrainingSchema>;
 
-// This type defines the structure of a single training session expected by the onSubmit prop (and ultimately the service)
-export type SingleTrainingFormInput = Omit<Training, "id" | "attendance" | "order">;
+export type SingleTrainingFormInput = Omit<Training, "id" | "attendance">; // Exclude order
 
 interface BulkAddTrainingFormProps {
   onSubmit: (data: SingleTrainingFormInput[]) => void;
@@ -53,11 +51,10 @@ export function BulkAddTrainingForm({ onSubmit, onClose }: BulkAddTrainingFormPr
     defaultValues: {
       baseTraining: { 
         location: "Training Pitch A", 
-        // date: new Date(), // Let user pick
         time: "19:00", 
         description: "" 
       },
-      numberOfWeeks: 4, // Default to creating 4 additional weekly trainings (5 total sessions)
+      numberOfWeeks: 4, 
     },
   });
 
@@ -65,13 +62,11 @@ export function BulkAddTrainingForm({ onSubmit, onClose }: BulkAddTrainingFormPr
     const { baseTraining, numberOfWeeks } = data;
     const trainingsToCreate: SingleTrainingFormInput[] = [];
 
-    // Add the initial training session
     trainingsToCreate.push({
       ...baseTraining,
       date: format(baseTraining.date, "yyyy-MM-dd"),
     });
 
-    // Add subsequent weekly training sessions
     let currentDate = baseTraining.date;
     for (let i = 0; i < numberOfWeeks; i++) {
       currentDate = addWeeks(currentDate, 1);

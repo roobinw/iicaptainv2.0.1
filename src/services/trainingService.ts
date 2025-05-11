@@ -12,7 +12,7 @@ import {
   deleteDoc,
   query,
   orderBy,
-  Timestamp, // Changed from 'type Timestamp'
+  Timestamp, 
   getDoc,
   writeBatch
 } from 'firebase/firestore';
@@ -48,29 +48,23 @@ const getTrainingDocRef = (teamId: string, trainingId: string) => {
   return doc(db, 'teams', teamId, 'trainings', trainingId);
 };
 
-// Helper to convert Firestore Timestamp to ISO string or return undefined
-const processFirestoreTimestamp = (timestamp: Timestamp | undefined): string | undefined => {
-  return timestamp ? timestamp.toDate().toISOString() : undefined;
-};
-
 const fromFirestoreTraining = (docSnap: any): Training => {
   const data = docSnap.data();
   return {
     id: docSnap.id,
     ...data,
-    // Ensure date is a string; if it's a Timestamp, convert it.
     date: data.date instanceof Timestamp ? format(data.date.toDate(), "yyyy-MM-dd") : data.date,
     attendance: data.attendance || {}, 
   } as Training;
 };
 
-export const addTraining = async (teamId: string, trainingData: Omit<Training, 'id' | 'attendance' | 'order'>): Promise<string> => {
-  const currentTrainings = await getTrainings(teamId);
+export const addTraining = async (teamId: string, trainingData: Omit<Training, 'id' | 'attendance'>): Promise<string> => {
+  // const currentTrainings = await getTrainings(teamId); // Not needed for order anymore
   const firestorePayload = {
     ...trainingData,
-    date: trainingData.date, // Already "yyyy-MM-dd" string
+    date: trainingData.date, 
     attendance: {}, 
-    order: currentTrainings.length, 
+    // order: currentTrainings.length, // Order field removed
   };
   const trainingsColRef = getTrainingsCollectionRef(teamId);
   const docRef = await addDoc(trainingsColRef, firestorePayload);
@@ -84,14 +78,14 @@ export const bulkAddTrainings = async (teamId: string, trainingsData: SingleTrai
 
   const trainingsColRef = getTrainingsCollectionRef(teamId);
   const batch = writeBatch(db);
-  const currentTrainingsCount = (await getDocs(query(trainingsColRef))).size;
+  // const currentTrainingsCount = (await getDocs(query(trainingsColRef))).size; // Not needed for order
 
   trainingsData.forEach((training, index) => {
-    const newDocRef = doc(trainingsColRef); // Auto-generate ID
+    const newDocRef = doc(trainingsColRef); 
     const firestorePayload = {
-      ...training, // date is already "yyyy-MM-dd" string from BulkAddTrainingForm
+      ...training, 
       attendance: {},
-      order: currentTrainingsCount + index,
+      // order: currentTrainingsCount + index, // Order field removed
     };
     batch.set(newDocRef, firestorePayload);
   });
@@ -103,7 +97,8 @@ export const bulkAddTrainings = async (teamId: string, trainingsData: SingleTrai
 export const getTrainings = async (teamId: string): Promise<Training[]> => {
   if (!teamId) return [];
   const trainingsColRef = getTrainingsCollectionRef(teamId);
-  const q = query(trainingsColRef, orderBy('order', 'asc'), orderBy('date', 'desc'), orderBy('time', 'desc'));
+  // Sort by date ascending (soonest first), then by time ascending
+  const q = query(trainingsColRef, orderBy('date', 'asc'), orderBy('time', 'asc'));
   const trainingSnapshot = await getDocs(q);
   return trainingSnapshot.docs.map(fromFirestoreTraining);
 };
@@ -117,10 +112,21 @@ export const getTrainingById = async (teamId: string, trainingId: string): Promi
 
 export const updateTraining = async (teamId: string, trainingId: string, data: Partial<Omit<Training, 'id'>>): Promise<void> => {
   const trainingDocRef = getTrainingDocRef(teamId, trainingId);
-  // `data` is expected to have `date` as a "yyyy-MM-dd" string if provided,
-  // as it's formatted by the AddTrainingForm before this function is called.
-  // The incorrect `instanceof Date` check has been removed.
-  await updateDoc(trainingDocRef, data);
+  const updateData: any = { ...data };
+
+  if (data.date && typeof data.date !== 'string') {
+    console.warn("updateTraining received non-string date, formatting to yyyy-MM-dd", data.date);
+    updateData.date = format(parseISO(data.date), "yyyy-MM-dd");
+  } else if (data.date && typeof data.date === 'string') {
+     try {
+        updateData.date = format(parseISO(data.date), "yyyy-MM-dd");
+    } catch (e) {
+        console.warn(`Date string "${data.date}" in updateTraining was not in a standard ISO format. Using as is. Error: ${e}`);
+        updateData.date = data.date;
+    }
+  }
+  
+  await updateDoc(trainingDocRef, updateData);
 };
 
 export const deleteTraining = async (teamId: string, trainingId: string): Promise<void> => {
@@ -141,15 +147,6 @@ export const updateTrainingAttendance = async (
   });
 };
 
-export const updateTrainingsOrder = async (teamId: string, orderedTrainings: Array<{ id: string; order: number }>): Promise<void> => {
-  if (!db) throw new Error("Firestore not initialized");
-  if (!teamId) throw new Error("Team ID is required for updating trainings order.");
-  const batch = writeBatch(db);
-  
-  orderedTrainings.forEach(training => {
-    const trainingRef = getTrainingDocRef(teamId, training.id);
-    batch.update(trainingRef, { order: training.order });
-  });
-  await batch.commit();
-};
+// updateTrainingsOrder function removed as DND is removed
+// export const updateTrainingsOrder = async (teamId: string, orderedTrainings: Array<{ id: string; order: number }>): Promise<void> => { ... };
 

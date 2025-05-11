@@ -45,7 +45,7 @@ This is a top-level collection where each document represents a unique team.
             *   Keys: Player Firebase Auth UIDs (String).
             *   Values: (String) "present", "absent", "excused", or "unknown".
             *   Example: `{"firebaseUserUid1": "present", "firebaseUserUid2": "absent"}`
-        *   `order`: (Number, optional) For drag-and-drop reordering of matches. Initialized to current list length.
+        *   `order`: (Number, optional) REMOVED - Sorting is now done by date and time.
 
 *   **Subcollection of `teams/{teamId}`: `trainings`**
     *   Stores all training sessions for a specific team.
@@ -56,7 +56,7 @@ This is a top-level collection where each document represents a unique team.
         *   `location`: (String) Location of the training session.
         *   `description`: (String, optional) Additional details about the training.
         *   `attendance`: (Map) Stores player attendance (same structure as in `matches`).
-        *   `order`: (Number, optional) For drag-and-drop reordering of training sessions. Initialized to current list length.
+        *   `order`: (Number, optional) REMOVED - Sorting is now done by date and time.
 
 *   **Subcollection of `teams/{teamId}`: `refereeingAssignments`**
     *   Stores all refereeing assignments for a specific team.
@@ -66,7 +66,7 @@ This is a top-level collection where each document represents a unique team.
         *   `time`: (String) Assignment time in "HH:mm" format (24-hour).
         *   `assignedPlayerUids`: (Array of Strings) Firebase Auth UIDs of the players assigned to referee.
         *   `notes`: (String, optional) Additional details or instructions for the assignment.
-        *   `order`: (Number, optional) For drag-and-drop reordering of assignments. Initialized to current list length.
+        *   `order`: (Number, optional) REMOVED - Sorting is now done by date and time.
 
 ### Collection: `users`
 
@@ -120,8 +120,7 @@ This is a top-level collection where each document represents a support ticket.
   "attendance": {
     "playerFirebaseUidXyz": "present",
     "playerFirebaseUidPqr": "excused"
-  },
-  "order": 0
+  }
 }
 ```
 
@@ -131,8 +130,7 @@ This is a top-level collection where each document represents a support ticket.
   "date": "2023-11-12",
   "time": "10:00",
   "assignedPlayerUids": ["playerFirebaseUidMno", "playerFirebaseUidJkl"],
-  "notes": "Remember to bring whistles and cards. Arrive 30 mins early.",
-  "order": 0
+  "notes": "Remember to bring whistles and cards. Arrive 30 mins early."
 }
 ```
 
@@ -379,23 +377,20 @@ You can create these indexes in the Firebase console:
 
 *   **Collection Group:** `matches`
     *   **Fields:**
-        1.  `order` (Ascending)
-        2.  `date` (Descending)
-        3.  `time` (Descending)
+        1.  `date` (Ascending)
+        2.  `time` (Ascending)
     *   **Query scope:** Collection group
 
 *   **Collection Group:** `trainings`
     *   **Fields:**
-        1.  `order` (Ascending)
-        2.  `date` (Descending)
-        3.  `time` (Descending)
+        1.  `date` (Ascending)
+        2.  `time` (Ascending)
     *   **Query scope:** Collection group
 
 *   **Collection Group:** `refereeingAssignments`
     *   **Fields:**
-        1.  `order` (Ascending)
-        2.  `date` (Descending)
-        3.  `time` (Descending)
+        1.  `date` (Ascending)
+        2.  `time` (Ascending)
     *   **Query scope:** Collection group
 
 *   **Collection:** `users`

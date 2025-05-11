@@ -12,10 +12,11 @@ import type { Training } from "@/types";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { SortableItem } from '@/components/sortable-item';
-import { addTraining, getTrainings, updateTraining, deleteTraining, updateTrainingsOrder, bulkAddTrainings } from "@/services/trainingService";
+// DND related imports removed
+// import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+// import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+// import { SortableItem } from '@/components/sortable-item';
+import { addTraining, getTrainings, updateTraining, deleteTraining, bulkAddTrainings } from "@/services/trainingService"; // updateTrainingsOrder removed
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 
@@ -29,17 +30,13 @@ export default function TrainingsPage() {
   const [editingTraining, setEditingTraining] = useState<Training | null>(null);
   const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  // DND sensors removed
+  // const sensors = useSensors(...);
 
   const fetchTrainings = async (teamId: string) => {
     setIsLoadingData(true);
     try {
-      const fetchedTrainings = await getTrainings(teamId);
+      const fetchedTrainings = await getTrainings(teamId); // Will be sorted by date/time from service
       setTrainings(fetchedTrainings);
     } catch (error: any) {
       console.error("Error fetching trainings:", error);
@@ -79,7 +76,7 @@ export default function TrainingsPage() {
     }
   }, [user?.role]);
 
-  const handleAddTraining = async (data: Omit<Training, "id" | "attendance" | "order">) => {
+  const handleAddTraining = async (data: Omit<Training, "id" | "attendance">) => {
      if (!user?.teamId) {
         toast({ title: "Error", description: "Team information is missing.", variant: "destructive"});
         return;
@@ -121,7 +118,7 @@ export default function TrainingsPage() {
     setIsAddTrainingDialogOpen(true);
   };
 
-  const handleUpdateTraining = async (data: Omit<Training, "id" | "attendance" | "order">) => {
+  const handleUpdateTraining = async (data: Omit<Training, "id" | "attendance">) => {
     if (!editingTraining || !editingTraining.id || !user?.teamId) {
       toast({ title: "Error", description: "Cannot update training. Missing information.", variant: "destructive"});
       return;
@@ -154,27 +151,8 @@ export default function TrainingsPage() {
     }
   };
 
-  async function handleDragEnd(event: DragEndEvent) {
-    const {active, over} = event;
-    if (over && active.id !== over.id && user?.teamId) {
-      const oldIndex = trainings.findIndex(item => item.id === active.id);
-      const newIndex = trainings.findIndex(item => item.id === over.id);
-      if (oldIndex === -1 || newIndex === -1) return;
-
-      const newOrderedTrainings = arrayMove(trainings, oldIndex, newIndex);
-      setTrainings(newOrderedTrainings);
-
-      try {
-        const orderUpdates = newOrderedTrainings.map((training, index) => ({ id: training.id, order: index }));
-        await updateTrainingsOrder(user.teamId, orderUpdates);
-        toast({ title: "Order Updated", description: "Training order saved." });
-      } catch (error) {
-        console.error("Error updating training order:", error);
-        toast({ title: "Error", description: "Could not save training order. Check console for details.", variant: "destructive" });
-        if (user?.teamId) fetchTrainings(user.teamId); 
-      }
-    }
-  }
+  // handleDragEnd function removed
+  // async function handleDragEnd(event: DragEndEvent) { ... }
 
   const isAdmin = user?.role === "admin";
   
@@ -209,7 +187,7 @@ export default function TrainingsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Training Schedule</h1>
           <p className="text-muted-foreground">
-            Plan and view trainings for {currentTeam.name}. {isAdmin && "Drag to reorder."}
+            Plan and view trainings for {currentTeam.name}. Trainings are sorted by date and time.
           </p>
         </div>
         {isAdmin && (
@@ -290,23 +268,20 @@ export default function TrainingsPage() {
             </CardContent>
         </Card>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={trainings.map(t => t.id)} strategy={verticalListSortingStrategy}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {trainings.map((training) => (
-                <SortableItem key={training.id} id={training.id} disabled={!isAdmin}>
-                  <TrainingCard 
-                    training={training} 
-                    onEdit={isAdmin ? handleEditTraining : undefined} 
-                    onDelete={isAdmin ? handleDeleteTraining : undefined}
-                  />
-                </SortableItem>
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+        // DndContext and SortableContext removed
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {trainings.map((training) => (
+            // SortableItem removed, directly rendering TrainingCard
+            <TrainingCard 
+              key={training.id}
+              training={training} 
+              onEdit={isAdmin ? handleEditTraining : undefined} 
+              onDelete={isAdmin ? handleDeleteTraining : undefined}
+              // dndListeners removed
+            />
+          ))}
+        </div>
       )}
     </div>
   );
 }
-

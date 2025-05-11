@@ -32,7 +32,7 @@ const trainingSchema = z.object({
 type TrainingFormValues = z.infer<typeof trainingSchema>;
 
 interface AddTrainingFormProps {
-  onSubmit: (data: Omit<Training, "id" | "attendance" | "order">) => void; // Exclude order
+  onSubmit: (data: Omit<Training, "id" | "attendance">) => void; // Exclude order
   initialData?: Training | null;
   onClose: () => void;
 }
@@ -42,20 +42,18 @@ export function AddTrainingForm({ onSubmit, initialData, onClose }: AddTrainingF
     resolver: zodResolver(trainingSchema),
     defaultValues: initialData ? {
       ...initialData,
-      date: new Date(initialData.date), // Convert date string back to Date object for calendar
+      date: new Date(initialData.date), 
     } : {
       location: "Training Pitch A",
-      // date: new Date(),
       time: "19:00",
       description: "",
     },
   });
 
   const handleSubmit = (data: TrainingFormValues) => {
-    // `order` handled by service. `attendance` initialized by service.
     onSubmit({
       ...data,
-      date: format(data.date, "yyyy-MM-dd"), // Format date to string for Firestore
+      date: format(data.date, "yyyy-MM-dd"), 
     });
   };
 
@@ -148,4 +146,3 @@ export function AddTrainingForm({ onSubmit, initialData, onClose }: AddTrainingF
     </Form>
   );
 }
-

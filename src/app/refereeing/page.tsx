@@ -11,15 +11,16 @@ import { AddRefereeingAssignmentForm } from "@/components/add-refereeing-assignm
 import type { RefereeingAssignment } from "@/types";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { SortableItem } from '@/components/sortable-item';
+// DND related imports removed
+// import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+// import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+// import { SortableItem } from '@/components/sortable-item';
 import { 
   addRefereeingAssignment, 
   getRefereeingAssignments, 
   updateRefereeingAssignment, 
   deleteRefereeingAssignment, 
-  updateRefereeingAssignmentsOrder 
+  // updateRefereeingAssignmentsOrder // Removed
 } from "@/services/refereeingService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
@@ -33,17 +34,13 @@ export default function RefereeingPage() {
   const [editingAssignment, setEditingAssignment] = useState<RefereeingAssignment | null>(null);
   const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  // DND sensors removed
+  // const sensors = useSensors(...);
 
   const fetchAssignments = async (teamId: string) => {
     setIsLoadingData(true);
     try {
-      const fetchedAssignments = await getRefereeingAssignments(teamId);
+      const fetchedAssignments = await getRefereeingAssignments(teamId); // Will be sorted by date/time from service
       setAssignments(fetchedAssignments);
     } catch (error) {
       console.error("Error fetching refereeing assignments:", error);
@@ -72,7 +69,7 @@ export default function RefereeingPage() {
   }, [user?.role]);
 
 
-  const handleAddAssignment = async (data: Omit<RefereeingAssignment, "id" | "order">) => {
+  const handleAddAssignment = async (data: Omit<RefereeingAssignment, "id">) => {
     if (!user?.teamId) {
         toast({ title: "Error", description: "Team information is missing.", variant: "destructive"});
         return;
@@ -92,7 +89,7 @@ export default function RefereeingPage() {
     setIsAddAssignmentDialogOpen(true);
   };
 
-  const handleUpdateAssignment = async (data: Omit<RefereeingAssignment, "id" | "order">) => {
+  const handleUpdateAssignment = async (data: Omit<RefereeingAssignment, "id">) => {
     if (!editingAssignment || !editingAssignment.id || !user?.teamId) {
         toast({ title: "Error", description: "Cannot update assignment. Missing information.", variant: "destructive"});
         return;
@@ -123,27 +120,8 @@ export default function RefereeingPage() {
     }
   };
 
-  async function handleDragEnd(event: DragEndEvent) {
-    const {active, over} = event;
-    if (over && active.id !== over.id && user?.teamId) {
-      const oldIndex = assignments.findIndex(item => item.id === active.id);
-      const newIndex = assignments.findIndex(item => item.id === over.id);
-      if (oldIndex === -1 || newIndex === -1) return;
-
-      const newOrderedAssignments = arrayMove(assignments, oldIndex, newIndex);
-      setAssignments(newOrderedAssignments); 
-
-      try {
-        const orderUpdates = newOrderedAssignments.map((assignment, index) => ({ id: assignment.id, order: index }));
-        await updateRefereeingAssignmentsOrder(user.teamId, orderUpdates);
-        toast({ title: "Order Updated", description: "Assignment order saved." });
-      } catch (error) {
-        console.error("Error updating assignment order:", error);
-        toast({ title: "Error", description: "Could not save assignment order.", variant: "destructive" });
-        if (user?.teamId) fetchAssignments(user.teamId); 
-      }
-    }
-  }
+  // handleDragEnd function removed
+  // async function handleDragEnd(event: DragEndEvent) { ... }
   
   const isAdmin = user?.role === "admin";
 
@@ -166,6 +144,7 @@ export default function RefereeingPage() {
     return <div className="flex h-full items-center justify-center"><p>Loading team data or redirecting...</p></div>;
   }
   
+  // Simplified view for non-admins as DND/editing is admin-only anyway
   if (!isAdmin) {
     return (
         <div className="space-y-6">
@@ -173,7 +152,7 @@ export default function RefereeingPage() {
                 <div>
                 <h1 className="text-3xl font-bold tracking-tight">Refereeing Assignments</h1>
                 <p className="text-muted-foreground">
-                    View refereeing assignments for {currentTeam.name}.
+                    View refereeing assignments for {currentTeam.name}. Assignments are sorted by date and time.
                 </p>
                 </div>
             </div>
@@ -191,7 +170,7 @@ export default function RefereeingPage() {
                     </CardContent>
                 </Card>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {assignments.map((assignment) => (
                     <RefereeingAssignmentCard 
                         key={assignment.id} 
@@ -211,7 +190,7 @@ export default function RefereeingPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Refereeing Assignments</h1>
           <p className="text-muted-foreground">
-            Manage refereeing assignments for {currentTeam.name}. {isAdmin && "Drag to reorder."}
+            Manage refereeing assignments for {currentTeam.name}. Assignments are sorted by date and time.
           </p>
         </div>
         {isAdmin && (
@@ -270,23 +249,20 @@ export default function RefereeingPage() {
             </CardContent>
         </Card>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} >
-          <SortableContext items={assignments.map(a => a.id)} strategy={verticalListSortingStrategy}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {assignments.map((assignment) => (
-                <SortableItem key={assignment.id} id={assignment.id} disabled={!isAdmin}>
-                  <RefereeingAssignmentCard 
-                    assignment={assignment} 
-                    onEdit={isAdmin ? handleEditAssignment : undefined} 
-                    onDelete={isAdmin ? handleDeleteAssignment : undefined}
-                  />
-                </SortableItem>
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+        // DndContext and SortableContext removed
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {assignments.map((assignment) => (
+            // SortableItem removed, directly rendering RefereeingAssignmentCard
+            <RefereeingAssignmentCard 
+              key={assignment.id}
+              assignment={assignment} 
+              onEdit={isAdmin ? handleEditAssignment : undefined} 
+              onDelete={isAdmin ? handleDeleteAssignment : undefined}
+              // dndListeners removed
+            />
+          ))}
+        </div>
       )}
     </div>
   );
 }
-

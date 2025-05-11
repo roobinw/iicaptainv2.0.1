@@ -11,10 +11,11 @@ import { AddMatchForm } from "@/components/add-match-form";
 import type { Match } from "@/types";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { SortableItem } from '@/components/sortable-item';
-import { addMatch, getMatches, updateMatch, deleteMatch, updateMatchesOrder } from "@/services/matchService";
+// DND related imports removed
+// import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+// import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+// import { SortableItem } from '@/components/sortable-item';
+import { addMatch, getMatches, updateMatch, deleteMatch } from "@/services/matchService"; // updateMatchesOrder removed
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 
@@ -27,18 +28,13 @@ export default function MatchesPage() {
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
 
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  // DND sensors removed
+  // const sensors = useSensors(...);
 
   const fetchMatches = async (teamId: string) => {
     setIsLoadingData(true);
     try {
-      const fetchedMatches = await getMatches(teamId);
+      const fetchedMatches = await getMatches(teamId); // Will be sorted by date/time from service
       setMatches(fetchedMatches);
     } catch (error) {
       console.error("Error fetching matches:", error);
@@ -67,7 +63,7 @@ export default function MatchesPage() {
   }, [user?.role]);
 
 
-  const handleAddMatch = async (data: Omit<Match, "id" | "attendance" | "order">) => {
+  const handleAddMatch = async (data: Omit<Match, "id" | "attendance">) => {
     if (!user?.teamId) {
         toast({ title: "Error", description: "Team information is missing.", variant: "destructive"});
         return;
@@ -87,7 +83,7 @@ export default function MatchesPage() {
     setIsAddMatchDialogOpen(true);
   };
 
-  const handleUpdateMatch = async (data: Omit<Match, "id" | "attendance" | "order">) => {
+  const handleUpdateMatch = async (data: Omit<Match, "id" | "attendance">) => {
     if (!editingMatch || !editingMatch.id || !user?.teamId) {
         toast({ title: "Error", description: "Cannot update match. Missing information.", variant: "destructive"});
         return;
@@ -118,28 +114,8 @@ export default function MatchesPage() {
     }
   };
 
-  async function handleDragEnd(event: DragEndEvent) {
-    const {active, over} = event;
-    if (over && active.id !== over.id && user?.teamId) {
-      const oldIndex = matches.findIndex(item => item.id === active.id);
-      const newIndex = matches.findIndex(item => item.id === over.id);
-      if (oldIndex === -1 || newIndex === -1) return;
-
-      const newOrderedMatches = arrayMove(matches, oldIndex, newIndex);
-      setMatches(newOrderedMatches); 
-
-      try {
-        const orderUpdates = newOrderedMatches.map((match, index) => ({ id: match.id, order: index }));
-        await updateMatchesOrder(user.teamId, orderUpdates);
-        toast({ title: "Order Updated", description: "Match order saved." });
-      } catch (error) {
-        console.error("Error updating match order:", error);
-        toast({ title: "Error", description: "Could not save match order.", variant: "destructive" });
-        // Re-fetch to revert local state if backend update fails
-        if (user?.teamId) fetchMatches(user.teamId); 
-      }
-    }
-  }
+  // handleDragEnd function removed
+  // async function handleDragEnd(event: DragEndEvent) { ... }
   
   const isAdmin = user?.role === "admin";
 
@@ -169,7 +145,7 @@ export default function MatchesPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Match Schedule</h1>
           <p className="text-muted-foreground">
-            View and manage matches for {currentTeam.name}. {isAdmin && "Drag to reorder."}
+            View and manage matches for {currentTeam.name}. Matches are sorted by date and time.
           </p>
         </div>
         {isAdmin && (
@@ -230,24 +206,20 @@ export default function MatchesPage() {
             </CardContent>
         </Card>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={matches.map(m => m.id)} strategy={verticalListSortingStrategy}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {matches.map((match) => (
-                <SortableItem key={match.id} id={match.id} disabled={!isAdmin}>
-                  <MatchCard 
-                    match={match} 
-                    onEdit={isAdmin ? handleEditMatch : undefined} 
-                    onDelete={isAdmin ? handleDeleteMatch : undefined}
-                    dndListeners={isAdmin ? sensors : undefined} 
-                  />
-                </SortableItem>
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+        // DndContext and SortableContext removed
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {matches.map((match) => (
+            // SortableItem removed, directly rendering MatchCard
+            <MatchCard 
+              key={match.id}
+              match={match} 
+              onEdit={isAdmin ? handleEditMatch : undefined} 
+              onDelete={isAdmin ? handleDeleteMatch : undefined}
+              // dndListeners removed
+            />
+          ))}
+        </div>
       )}
     </div>
   );
 }
-

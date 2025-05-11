@@ -12,9 +12,9 @@ import {
   deleteDoc,
   query,
   orderBy,
-  type Timestamp, // Explicitly import Timestamp
+  type Timestamp, 
   getDoc,
-  writeBatch
+  // writeBatch // Removed as updateMatchesOrder is removed
 } from 'firebase/firestore';
 import { format, parseISO } from 'date-fns';
 
@@ -46,22 +46,6 @@ const getMatchDocRef = (teamId: string, matchId: string) => {
   return doc(db, 'teams', teamId, 'matches', matchId);
 };
 
-// Helper to convert Firestore Timestamp to ISO string or return undefined
-const processTimestamp = (timestamp: Timestamp | undefined): string | undefined => {
-  return timestamp ? timestamp.toDate().toISOString() : undefined;
-};
-
-// toFirestoreMatch is not currently used, but kept for potential future use.
-// It assumes matchData.date is already "yyyy-MM-dd" string.
-const toFirestoreMatch = (matchData: Omit<Match, 'id'>): any => {
-  const dateString = matchData.date; 
-  
-  return {
-    ...matchData,
-    date: dateString, 
-  };
-};
-
 const fromFirestoreMatch = (docSnap: any): Match => {
   const data = docSnap.data();
   return {
@@ -71,12 +55,11 @@ const fromFirestoreMatch = (docSnap: any): Match => {
   } as Match;
 };
 
-export const addMatch = async (teamId: string, matchData: Omit<Match, 'id' | 'attendance' | 'order'>): Promise<string> => {
-  // matchData.date comes from AddMatchForm, where it's already formatted to "yyyy-MM-dd" string
+export const addMatch = async (teamId: string, matchData: Omit<Match, 'id' | 'attendance'>): Promise<string> => {
   const firestorePayload = {
     ...matchData, 
     attendance: {}, 
-    order: (await getMatches(teamId)).length, 
+    // order: (await getMatches(teamId)).length, // Order field removed
   };
   const matchesColRef = getMatchesCollectionRef(teamId);
   const docRef = await addDoc(matchesColRef, firestorePayload);
@@ -86,7 +69,8 @@ export const addMatch = async (teamId: string, matchData: Omit<Match, 'id' | 'at
 export const getMatches = async (teamId: string): Promise<Match[]> => {
   if (!teamId) return [];
   const matchesColRef = getMatchesCollectionRef(teamId);
-  const q = query(matchesColRef, orderBy('order', 'asc'), orderBy('date', 'desc'), orderBy('time', 'desc'));
+  // Sort by date ascending (soonest first), then by time ascending
+  const q = query(matchesColRef, orderBy('date', 'asc'), orderBy('time', 'asc'));
   const matchSnapshot = await getDocs(q);
   return matchSnapshot.docs.map(fromFirestoreMatch);
 };
@@ -100,11 +84,24 @@ export const getMatchById = async (teamId: string, matchId: string): Promise<Mat
 
 export const updateMatch = async (teamId: string, matchId: string, data: Partial<Omit<Match, 'id'>>): Promise<void> => {
   const matchDocRef = getMatchDocRef(teamId, matchId);
-  // The 'data' argument, when coming from handleUpdateMatch in matches/page.tsx,
-  // already has its 'date' field formatted as a "yyyy-MM-dd" string.
-  // The type Partial<Omit<Match, 'id'>> means data.date is string | undefined.
-  // Therefore, no further date processing is needed here.
-  await updateDoc(matchDocRef, data);
+  const updateData: any = { ...data };
+
+  // Ensure date is correctly formatted if it's a Date object
+  if (data.date && typeof data.date !== 'string') {
+    console.warn("updateMatch received non-string date, formatting to yyyy-MM-dd", data.date);
+    updateData.date = format(parseISO(data.date), "yyyy-MM-dd");
+  } else if (data.date && typeof data.date === 'string') {
+    // Attempt to parse and reformat to ensure consistency, 
+    // but catch errors if it's already in a non-standard string format not parseable by parseISO
+    try {
+        updateData.date = format(parseISO(data.date), "yyyy-MM-dd");
+    } catch (e) {
+        console.warn(`Date string "${data.date}" in updateMatch was not in a standard ISO format. Using as is. Error: ${e}`);
+        updateData.date = data.date; // Use as is if parsing fails, assuming it's already yyyy-MM-dd
+    }
+  }
+  
+  await updateDoc(matchDocRef, updateData);
 };
 
 export const deleteMatch = async (teamId: string, matchId: string): Promise<void> => {
@@ -125,14 +122,6 @@ export const updateMatchAttendance = async (
   });
 };
 
-export const updateMatchesOrder = async (teamId: string, orderedMatches: Array<{ id: string; order: number }>): Promise<void> => {
-  if (!db) throw new Error("Firestore not initialized");
-  if (!teamId) throw new Error("Team ID is required for updating matches order.");
-  const batch = writeBatch(db);
-  
-  orderedMatches.forEach(match => {
-    const matchRef = getMatchDocRef(teamId, match.id); 
-    batch.update(matchRef, { order: match.order });
-  });
-  await batch.commit();
-};
+// updateMatchesOrder function removed as DND is removed
+// export const updateMatchesOrder = async (teamId: string, orderedMatches: Array<{ id: string; order: number }>): Promise<void> => { ... }
+

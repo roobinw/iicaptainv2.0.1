@@ -31,7 +31,7 @@ const matchSchema = z.object({
 type MatchFormValues = z.infer<typeof matchSchema>;
 
 interface AddMatchFormProps {
-  onSubmit: (data: Omit<Match, "id" | "attendance" | "order">) => void; // Exclude order
+  onSubmit: (data: Omit<Match, "id" | "attendance">) => void; // Exclude order
   initialData?: Match | null;
   onClose: () => void;
 }
@@ -41,21 +41,18 @@ export function AddMatchForm({ onSubmit, initialData, onClose }: AddMatchFormPro
     resolver: zodResolver(matchSchema),
     defaultValues: initialData ? {
       ...initialData,
-      date: new Date(initialData.date), // Convert date string back to Date object for calendar
+      date: new Date(initialData.date), 
     } : {
       opponent: "",
-      // date: new Date(), // Default to today or let user pick
-      time: "14:00", // Sensible default
-      location: "Home Ground", // Sensible default
+      time: "14:00", 
+      location: "Home Ground", 
     },
   });
 
   const handleSubmit = (data: MatchFormValues) => {
-    // The `order` field is handled by the service now (e.g., set to list length on add).
-    // `attendance` is initialized as empty by the service.
     onSubmit({
       ...data,
-      date: format(data.date, "yyyy-MM-dd"), // Format date to string for Firestore
+      date: format(data.date, "yyyy-MM-dd"), 
     });
   };
 
@@ -105,7 +102,7 @@ export function AddMatchForm({ onSubmit, initialData, onClose }: AddMatchFormPro
                     mode="single"
                     selected={field.value}
                     onSelect={field.onChange}
-                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} // Optionally disable past dates
+                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} 
                     initialFocus
                   />
                 </PopoverContent>
@@ -148,4 +145,3 @@ export function AddMatchForm({ onSubmit, initialData, onClose }: AddMatchFormPro
     </Form>
   );
 }
-

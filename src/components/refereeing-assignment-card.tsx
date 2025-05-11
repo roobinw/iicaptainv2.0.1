@@ -2,25 +2,25 @@
 "use client";
 
 import { format, parseISO } from "date-fns";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+// Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle removed as EventCardBase is used
+// Button removed
 import { Icons } from "@/components/icons";
-import type { RefereeingAssignment, User, Match, Training } from "@/types"; // Added Match, Training for EventCardBase
+import type { RefereeingAssignment, User, Match, Training } from "@/types"; 
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { getAllUsersByTeam } from "@/services/userService"; 
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Badge } from "./ui/badge";
-import { EventCardBase } from "./event-card-base"; // Import EventCardBase
+import { EventCardBase } from "./event-card-base"; 
 
 interface RefereeingAssignmentCardProps {
   assignment: RefereeingAssignment;
   onEdit?: (assignment: RefereeingAssignment) => void;
   onDelete?: (assignmentId: string) => void;
-  dndListeners?: any; 
+  // dndListeners?: any; // Removed
 }
 
-export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, dndListeners }: RefereeingAssignmentCardProps) {
+export function RefereeingAssignmentCard({ assignment, onEdit, onDelete }: RefereeingAssignmentCardProps) { // dndListeners removed
   const { user: currentUser, currentTeam } = useAuth();
   const [assignedPlayersDetails, setAssignedPlayersDetails] = useState<User[]>([]);
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
@@ -49,14 +49,14 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, dndList
 
   return (
     <EventCardBase
-        item={assignment as unknown as Match | Training} // Cast to satisfy EventCardBase, eventType="refereeing" handles specifics
+        item={assignment as unknown as Match | Training} 
         eventType="refereeing"
         icon={<Icons.Refereeing className="h-5 w-5 text-primary" />}
         titlePrefix={currentTeam?.name || "Team"}
-        renderDetails={() => ( // Custom renderer for refereeing details
+        renderDetails={() => ( 
             <>
                 <div className="text-xs sm:text-sm space-y-0.5 mt-1">
-                    <div>
+                    <div className="truncate">
                         {format(parseISO(assignment.date), "EEEE, MMM dd, yyyy")} at {assignment.time}
                     </div>
                 </div>
@@ -92,7 +92,7 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, dndList
         )}
         onEdit={onEdit ? () => onEdit(assignment) : undefined}
         onDelete={onDelete ? () => onDelete(assignment.id) : undefined}
-        dndListeners={dndListeners}
+        // dndListeners={dndListeners} // Removed
     />
   );
 }

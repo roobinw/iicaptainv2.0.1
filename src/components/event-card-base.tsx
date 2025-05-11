@@ -27,8 +27,8 @@ interface EventCardBaseProps {
   renderDetails: (item: Match | Training | RefereeingAssignment) => ReactNode;
   onEdit?: (item: Match | Training | RefereeingAssignment) => void; 
   onDelete?: (itemId: string) => void; 
-  dndListeners?: any; 
-  onAssignPlayersSuccess?: () => void; // Callback for when players are successfully assigned
+  // dndListeners?: any; // Removed as DND is no longer used
+  onAssignPlayersSuccess?: () => void; 
 }
 
 export function EventCardBase({
@@ -39,7 +39,7 @@ export function EventCardBase({
   renderDetails,
   onEdit,
   onDelete,
-  dndListeners, 
+  // dndListeners, // Removed
   onAssignPlayersSuccess,
 }: EventCardBaseProps) {
   const { user: currentUser, currentTeam } = useAuth(); 
@@ -48,7 +48,6 @@ export function EventCardBase({
   const [memberList, setMemberList] = useState<User[]>([]); 
   const [isLoadingMembers, setIsLoadingMembers] = useState(true); 
   
-  // Type assertion for item.attendance if it's a Match or Training
   const initialAttendanceSource = (eventType === "match" || eventType === "training") 
     ? (item as Match | Training).attendance 
     : {};
@@ -61,7 +60,6 @@ export function EventCardBase({
     members.forEach(member => {
       newAttendance[member.uid] = safeEventAttendance[member.uid] || 'present'; 
     });
-    // Ensure any existing attendance records for users not in current memberList (e.g., if a user was removed from team) are still included
     for (const uid in safeEventAttendance) {
         if (!newAttendance[uid]) {
             newAttendance[uid] = safeEventAttendance[uid];
@@ -95,8 +93,6 @@ export function EventCardBase({
       }
       setIsLoadingMembers(false);
     }
-  // item.id is included to re-fetch members if the item itself changes, though less common for this specific effect.
-  // item.attendance is crucial for re-initializing attendance when the prop changes.
   }, [currentUser?.teamId, item.id, (eventType === "match" || eventType === "training") ? (item as Match | Training).attendance : null, eventType, initializeAttendance]);
 
 
@@ -104,7 +100,8 @@ export function EventCardBase({
     if (eventType === "match" || eventType === "training") {
       initializeAttendance(memberList, (item as Match | Training).attendance);
     }
-  }, [(eventType === "match" || eventType === "training") ? (item as Match | Training).attendance : null, memberList, initializeAttendance, eventType]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(eventType === "match" || eventType === "training") ? (item as Match | Training).attendance : null, memberList, eventType]);
 
 
   const isAdmin = currentUser?.role === "admin";
@@ -129,8 +126,8 @@ export function EventCardBase({
   } else if (eventType === "training") {
     eventName = (item as Training).location;
      eventDateForDialog = (item as Training).date;
-  } else { // refereeing
-    eventName = `Assignment`; // Simplified for refereeing
+  } else { 
+    eventName = `Assignment`; 
      eventDateForDialog = (item as RefereeingAssignment).date;
   }
   
@@ -154,8 +151,7 @@ export function EventCardBase({
                 {renderDetails(item)}
             </CardDescription>
           </div>
-          {/* Actions Menu (Edit, Delete, Drag) */}
-          {isAdmin && (onEdit || onDelete || dndListeners) && (
+          {isAdmin && (onEdit || onDelete) && ( // Removed dndListeners check
             <div className="flex-shrink-0">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -165,11 +161,12 @@ export function EventCardBase({
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-card text-card-foreground border-border shadow-xl">
-                        {dndListeners && (
+                        {/* Reorder option removed */}
+                        {/* {dndListeners && (
                             <DropdownMenuItem {...dndListeners} className="cursor-grab hover:bg-accent/50">
                                 <Icons.GripVertical className="mr-2 h-4 w-4" /> Reorder
                             </DropdownMenuItem>
-                        )}
+                        )} */}
                         {onEdit && (
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(item);}} className="hover:bg-accent/50 cursor-pointer">
                                 <Icons.Edit className="mr-2 h-4 w-4" /> Edit {eventType}
@@ -297,16 +294,15 @@ export function EventCardBase({
             </Dialog>
           )}
         </div>
+         {/* Action buttons (Edit, Delete) - moved to DropdownMenu */}
       </CardFooter>
     </Card>
   );
 }
 
-// Add DropdownMenu related imports
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-  } from "@/components/ui/dropdown-menu"
-
+  } from "@/components/ui/dropdown-menu";

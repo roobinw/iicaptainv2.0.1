@@ -38,13 +38,13 @@ const refereeingAssignmentSchema = z.object({
 type RefereeingAssignmentFormValues = z.infer<typeof refereeingAssignmentSchema>;
 
 interface AddRefereeingAssignmentFormProps {
-  onSubmit: (data: Omit<RefereeingAssignment, "id" | "order">) => void;
+  onSubmit: (data: Omit<RefereeingAssignment, "id">) => void; // Exclude order
   initialData?: RefereeingAssignment | null;
   onClose: () => void;
 }
 
 export function AddRefereeingAssignmentForm({ onSubmit, initialData, onClose }: AddRefereeingAssignmentFormProps) {
-  const { user: currentUser, currentTeam } = useAuth();
+  const { user: currentUser } = useAuth(); // Removed currentTeam as it's not used
   const [teamMembers, setTeamMembers] = useState<User[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(true);
 
