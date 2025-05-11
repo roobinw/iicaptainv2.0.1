@@ -94,7 +94,7 @@ export default function SupportPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Support Center</h1>
           <p className="text-muted-foreground">
-            Need help? Fill out the form below and we'll get back to you.
+            Need help want to suggest a new function? Fill out the form below and we'll get back to you.
           </p>
         </div>
       </div>
@@ -103,7 +103,7 @@ export default function SupportPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Icons.Support className="h-6 w-6 text-primary" /> Submit a New Ticket</CardTitle>
           <CardDescription>
-            Describe your issue in detail. Current user: {user.name} ({user.email})
+            Describe your issue or suggestion in detail. Current user: {user.name} ({user.email})
           </CardDescription>
         </CardHeader>
         <CardContent>
