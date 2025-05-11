@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -106,12 +105,12 @@ export default function TrainingsPage() {
     }
     try {
       await bulkAddTrainings(user.teamId, data);
-      toast({ title: "Trainings Added", description: `${data.length} training session(s) have been scheduled.` });
+      toast({ title: "Trainings Scheduled", description: `${data.length} training session(s) have been scheduled.` });
       setForceUpdateCounter(prev => prev + 1);
       setIsBulkAddTrainingDialogOpen(false);
     } catch (error: any) {
       console.error("Detailed error bulk adding trainings:", error);
-      toast({ title: "Error Bulk Adding Trainings", description: error.message || "Could not add training sessions. Check console for details.", variant: "destructive" });
+      toast({ title: "Error Scheduling Trainings", description: error.message || "Could not schedule training sessions. Check console for details.", variant: "destructive" });
     }
   };
 
@@ -247,14 +246,14 @@ export default function TrainingsPage() {
                 <Dialog open={isBulkAddTrainingDialogOpen} onOpenChange={setIsBulkAddTrainingDialogOpen}>
                     <DialogTrigger asChild>
                         <Button variant="outline" className="w-full sm:w-auto">
-                            <Icons.ClipboardList className="mr-2 h-4 w-4" /> Bulk Add Trainings
+                            <Icons.ClipboardList className="mr-2 h-4 w-4" /> Schedule Recurring
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="w-[95vw] max-w-xl"> {/* Wider dialog for bulk add */}
+                    <DialogContent className="w-[95vw] max-w-xl"> 
                         <DialogHeader>
-                            <DialogTitle>Bulk Add Training Sessions</DialogTitle>
+                            <DialogTitle>Schedule Recurring Training</DialogTitle>
                             <DialogDescription>
-                                Add multiple training sessions at once.
+                                Define a base training session and how many additional weeks it should repeat.
                             </DialogDescription>
                         </DialogHeader>
                         <BulkAddTrainingForm
@@ -272,7 +271,7 @@ export default function TrainingsPage() {
             <CardHeader>
                 <CardTitle>No Trainings Yet</CardTitle>
                 <CardDescription>
-                There are no training sessions scheduled for your team. {isAdmin && "Click 'Add Training' or 'Bulk Add Trainings' to get started."}
+                There are no training sessions scheduled for your team. {isAdmin && "Click 'Add Training' or 'Schedule Recurring' to get started."}
                 </CardDescription>
             </CardHeader>
             <CardContent>
