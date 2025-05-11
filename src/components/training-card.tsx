@@ -22,10 +22,16 @@ export function TrainingCard({ training, onEdit, onDelete, dndListeners }: Train
       renderDetails={(itemDetails) => { 
         const currentTraining = itemDetails as Training;
         return (
-          <>
-            {format(parseISO(currentTraining.date), "EEEE, MMMM dd, yyyy")} at {currentTraining.time}
-            {currentTraining.description && <><br />Note: {currentTraining.description}</>}
-          </>
+          <div className="text-xs sm:text-sm space-y-0.5"> {/* Responsive text size and spacing */}
+            <div>
+              {format(parseISO(currentTraining.date), "EEEE, MMM dd, yyyy")} at {currentTraining.time}
+            </div>
+            {currentTraining.description && 
+              <div className="truncate"> {/* Truncate description if too long */}
+                Note: {currentTraining.description}
+              </div>
+            }
+          </div>
         );
       }}
       onEdit={onEdit ? (item) => onEdit(item as Training) : undefined} 
