@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ReactNode } from "react";
@@ -17,6 +16,12 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { AssignPlayersForm } from "@/components/assign-players-form";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+  } from "@/components/ui/dropdown-menu";
 
 
 interface EventCardBaseProps {
@@ -27,7 +32,6 @@ interface EventCardBaseProps {
   renderDetails: (item: Match | Training | RefereeingAssignment) => ReactNode;
   onEdit?: (item: Match | Training | RefereeingAssignment) => void; 
   onDelete?: (itemId: string) => void; 
-  // dndListeners?: any; // Removed as DND is no longer used
   onAssignPlayersSuccess?: () => void; 
 }
 
@@ -39,7 +43,6 @@ export function EventCardBase({
   renderDetails,
   onEdit,
   onDelete,
-  // dndListeners, // Removed
   onAssignPlayersSuccess,
 }: EventCardBaseProps) {
   const { user: currentUser, currentTeam } = useAuth(); 
@@ -93,7 +96,7 @@ export function EventCardBase({
       }
       setIsLoadingMembers(false);
     }
-  }, [currentUser?.teamId, item.id, (eventType === "match" || eventType === "training") ? (item as Match | Training).attendance : null, eventType, initializeAttendance]);
+  }, [currentUser?.teamId, item.id, eventType, initializeAttendance, (eventType === "match" || eventType === "training") ? (item as Match | Training).attendance : null]);
 
 
   useEffect(() => {
@@ -119,16 +122,19 @@ export function EventCardBase({
   const totalMembersForAttendanceCount = memberList.length > 0 ? memberList.length : Object.keys(currentAttendance).length;
   
   let eventName: string;
-  let eventDateForDialog: string = "";
-  if (eventType === "match") {
-    eventName = (item as Match).opponent;
-    eventDateForDialog = (item as Match).date;
-  } else if (eventType === "training") {
-    eventName = (item as Training).location;
-     eventDateForDialog = (item as Training).date;
-  } else { 
-    eventName = `Assignment`; 
-     eventDateForDialog = (item as RefereeingAssignment).date;
+  let eventDateForDialog: string = ""; // Initialize to prevent uninitialized access
+  if (eventType === "match" && 'opponent' in item && 'date' in item) {
+    eventName = item.opponent;
+    eventDateForDialog = item.date;
+  } else if (eventType === "training" && 'location' in item && 'date' in item) {
+    eventName = item.location;
+    eventDateForDialog = item.date;
+  } else if (eventType === "refereeing" && 'date' in item) {
+    eventName = `Assignment`;
+    eventDateForDialog = item.date;
+  } else {
+    eventName = "Event"; // Fallback
+    eventDateForDialog = item.date; // Assuming date is always present
   }
   
   const cardTitle = eventType === "refereeing" ? 
@@ -151,22 +157,129 @@ export function EventCardBase({
                 {renderDetails(item)}
             </CardDescription>
           </div>
-          {isAdmin && (onEdit || onDelete) && ( // Removed dndListeners check
-            <div className="flex-shrink-0">
+          {/* DropdownMenu was here, now moved to CardFooter */}
+        </div>
+      </CardHeader>
+      <CardContent className="flex-grow pt-2 pb-3">
+         {(eventType === "match" || eventType === "training") && (
+            <div className="text-sm text-muted-foreground">
+                Attendance: {isLoadingMembers && memberList.length === 0 && totalMembersForAttendanceCount === 0 ? ( 
+                    <span className="inline-block"><Skeleton className="h-4 w-20" /></span>
+                ) : (
+                    <span className="font-semibold text-primary">{presentCount} / {totalMembersForAttendanceCount}</span>
+                )} members present.
+            </div>
+         )}
+      </CardContent>
+      <CardFooter className="border-t pt-3 flex items-center gap-2">
+        {(eventType === "match" || eventType === "training") && (
+            <Dialog open={isAttendanceDialogOpen} onOpenChange={setIsAttendanceDialogOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="hover:bg-accent hover:text-accent-foreground whitespace-nowrap">
+                <Icons.Attendance className="mr-2 h-4 w-4" /> Manage Attendance
+                </Button>
+            </DialogTrigger>
+            <DialogContent 
+                className="w-[95vw] max-w-[400px] sm:max-w-md md:max-w-lg" 
+                onInteractOutside={(e) => {
+                const target = e.target as HTMLElement;
+                if (target.closest('.attendance-toggler-button')) { 
+                    e.preventDefault(); 
+                }
+                }}
+            >
+                <DialogHeader>
+                <DialogTitle>Manage Attendance</DialogTitle>
+                <DialogDescription>
+                    Update attendance for {eventName} on {format(parseISO(eventDateForDialog), "MMM dd, yyyy")}.
+                </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="h-[300px] md:h-[400px] pr-4">
+                {isLoadingMembers && memberList.length === 0 && totalMembersForAttendanceCount === 0 ? ( 
+                    <div className="space-y-3 py-1">
+                    {[1,2,3].map(i => (
+                        <div key={i} className="flex items-center justify-between p-2 border rounded-md">
+                            <div className="flex items-center gap-3">
+                                <Skeleton className="h-8 w-8 rounded-full" />
+                                <div className="space-y-1">
+                                    <Skeleton className="h-4 w-24" />
+                                    <Skeleton className="h-3 w-16" />
+                                </div>
+                            </div>
+                            <Skeleton className="h-7 w-24" />
+                        </div>
+                    ))}
+                    </div>
+                ) : memberList.length > 0 ? (
+                    <div className="space-y-3 py-1">
+                    {memberList.map((member) => (  
+                        <div key={member.uid} className="flex items-center justify-between p-2 border rounded-md bg-card hover:bg-secondary/30">
+                        <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                            <AvatarImage src={member.avatarUrl} alt={member.name} data-ai-hint="team member face"/>
+                            <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                            <p className="font-medium">{member.name}</p>
+                            <p className={cn("text-xs", getAttendanceStatusColor(currentAttendance[member.uid] || 'present'))}>
+                                Status: {getAttendanceStatusText(currentAttendance[member.uid] || 'present')}
+                            </p>
+                            </div>
+                        </div>
+                        <AttendanceToggler 
+                            item={{...(item as Match | Training), attendance: currentAttendance}} 
+                            player={member} 
+                            eventType={eventType as "match" | "training"} 
+                            onAttendanceChange={handleAttendanceChange} 
+                        />
+                        </div>
+                    ))}
+                    </div>
+                ) : (
+                    <p className="text-muted-foreground text-center py-4">No members found in your team.</p>
+                )}
+                </ScrollArea>
+            </DialogContent>
+            </Dialog>
+        )}
+        {eventType === "refereeing" && isAdmin && (
+          <Dialog open={isAssignPlayersDialogOpen} onOpenChange={setIsAssignPlayersDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="hover:bg-accent hover:text-accent-foreground whitespace-nowrap">
+                <Icons.Users className="mr-2 h-4 w-4" /> Manage Assignment
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="w-[95vw] max-w-[400px] sm:max-w-md md:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Assign Members</DialogTitle>
+                <DialogDescription>
+                  Assign members to refereeing duty for {eventName} on {format(parseISO(eventDateForDialog), "MMM dd, yyyy")}.
+                </DialogDescription>
+              </DialogHeader>
+              <AssignPlayersForm
+                assignment={item as RefereeingAssignment}
+                teamMembers={memberList}
+                isLoadingMembers={isLoadingMembers}
+                onClose={() => setIsAssignPlayersDialogOpen(false)}
+                onAssignSuccess={() => {
+                  setIsAssignPlayersDialogOpen(false);
+                  if(onAssignPlayersSuccess) onAssignPlayersSuccess();
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
+        {/* "More Options" DropdownMenu moved here */}
+        {isAdmin && (onEdit || onDelete) && (
+            <div className="ml-auto flex-shrink-0"> {/* Use ml-auto to push to the right if other elements are on the left */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-sidebar-accent">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent/50">
                             <Icons.MoreVertical className="h-4 w-4" />
                             <span className="sr-only">Actions</span>
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-card text-card-foreground border-border shadow-xl">
-                        {/* Reorder option removed */}
-                        {/* {dndListeners && (
-                            <DropdownMenuItem {...dndListeners} className="cursor-grab hover:bg-accent/50">
-                                <Icons.GripVertical className="mr-2 h-4 w-4" /> Reorder
-                            </DropdownMenuItem>
-                        )} */}
                         {onEdit && (
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(item);}} className="hover:bg-accent/50 cursor-pointer">
                                 <Icons.Edit className="mr-2 h-4 w-4" /> Edit {eventType}
@@ -181,128 +294,7 @@ export function EventCardBase({
                 </DropdownMenu>
             </div>
         )}
-        </div>
-      </CardHeader>
-      <CardContent className="flex-grow pt-2 pb-3">
-         {(eventType === "match" || eventType === "training") && (
-            <div className="text-sm text-muted-foreground">
-                Attendance: {isLoadingMembers && memberList.length === 0 && totalMembersForAttendanceCount === 0 ? ( 
-                    <span className="inline-block"><Skeleton className="h-4 w-20" /></span>
-                ) : (
-                    <span className="font-semibold text-primary">{presentCount} / {totalMembersForAttendanceCount}</span>
-                )} members present.
-            </div>
-         )}
-      </CardContent>
-      <CardFooter className="border-t pt-3 flex flex-wrap justify-between items-center gap-2">
-        <div className="flex-shrink-0">
-          {(eventType === "match" || eventType === "training") && (
-              <Dialog open={isAttendanceDialogOpen} onOpenChange={setIsAttendanceDialogOpen}>
-              <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="hover:bg-accent hover:text-accent-foreground whitespace-nowrap">
-                  <Icons.Attendance className="mr-2 h-4 w-4" /> Manage Attendance
-                  </Button>
-              </DialogTrigger>
-              <DialogContent 
-                  className="w-[95vw] max-w-[400px] sm:max-w-md md:max-w-lg" 
-                  onInteractOutside={(e) => {
-                  const target = e.target as HTMLElement;
-                  if (target.closest('.attendance-toggler-button')) { 
-                      e.preventDefault(); 
-                  }
-                  }}
-              >
-                  <DialogHeader>
-                  <DialogTitle>Manage Attendance</DialogTitle>
-                  <DialogDescription>
-                      Update attendance for {eventName} on {format(parseISO(eventDateForDialog), "MMM dd, yyyy")}.
-                  </DialogDescription>
-                  </DialogHeader>
-                  <ScrollArea className="h-[300px] md:h-[400px] pr-4">
-                  {isLoadingMembers && memberList.length === 0 && totalMembersForAttendanceCount === 0 ? ( 
-                      <div className="space-y-3 py-1">
-                      {[1,2,3].map(i => (
-                          <div key={i} className="flex items-center justify-between p-2 border rounded-md">
-                              <div className="flex items-center gap-3">
-                                  <Skeleton className="h-8 w-8 rounded-full" />
-                                  <div className="space-y-1">
-                                      <Skeleton className="h-4 w-24" />
-                                      <Skeleton className="h-3 w-16" />
-                                  </div>
-                              </div>
-                              <Skeleton className="h-7 w-24" />
-                          </div>
-                      ))}
-                      </div>
-                  ) : memberList.length > 0 ? (
-                      <div className="space-y-3 py-1">
-                      {memberList.map((member) => (  
-                          <div key={member.uid} className="flex items-center justify-between p-2 border rounded-md bg-card hover:bg-secondary/30">
-                          <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8">
-                              <AvatarImage src={member.avatarUrl} alt={member.name} data-ai-hint="team member face"/>
-                              <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
-                              </Avatar>
-                              <div>
-                              <p className="font-medium">{member.name}</p>
-                              <p className={cn("text-xs", getAttendanceStatusColor(currentAttendance[member.uid] || 'present'))}>
-                                  Status: {getAttendanceStatusText(currentAttendance[member.uid] || 'present')}
-                              </p>
-                              </div>
-                          </div>
-                          <AttendanceToggler 
-                              item={{...(item as Match | Training), attendance: currentAttendance}} 
-                              player={member} 
-                              eventType={eventType as "match" | "training"} 
-                              onAttendanceChange={handleAttendanceChange} 
-                          />
-                          </div>
-                      ))}
-                      </div>
-                  ) : (
-                      <p className="text-muted-foreground text-center py-4">No members found in your team.</p>
-                  )}
-                  </ScrollArea>
-              </DialogContent>
-              </Dialog>
-          )}
-          {eventType === "refereeing" && isAdmin && (
-            <Dialog open={isAssignPlayersDialogOpen} onOpenChange={setIsAssignPlayersDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="hover:bg-accent hover:text-accent-foreground whitespace-nowrap">
-                  <Icons.Users className="mr-2 h-4 w-4" /> Manage Assignment
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="w-[95vw] max-w-[400px] sm:max-w-md md:max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Assign Members</DialogTitle>
-                  <DialogDescription>
-                    Assign members to refereeing duty for {eventName} on {format(parseISO(eventDateForDialog), "MMM dd, yyyy")}.
-                  </DialogDescription>
-                </DialogHeader>
-                <AssignPlayersForm
-                  assignment={item as RefereeingAssignment}
-                  teamMembers={memberList}
-                  isLoadingMembers={isLoadingMembers}
-                  onClose={() => setIsAssignPlayersDialogOpen(false)}
-                  onAssignSuccess={() => {
-                    setIsAssignPlayersDialogOpen(false);
-                    if(onAssignPlayersSuccess) onAssignPlayersSuccess();
-                  }}
-                />
-              </DialogContent>
-            </Dialog>
-          )}
-        </div>
-         {/* Action buttons (Edit, Delete) - moved to DropdownMenu */}
       </CardFooter>
     </Card>
   );
 }
-
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-  } from "@/components/ui/dropdown-menu";
