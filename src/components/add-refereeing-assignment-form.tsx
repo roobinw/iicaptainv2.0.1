@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,7 +33,7 @@ const refereeingAssignmentSchema = z.object({
   homeTeam: z.string().min(1, { message: "Home team name is required." }),
   awayTeam: z.string().min(1, { message: "Away team name is required." }),
   location: z.string().min(1, { message: "Location is required." }),
-  assignedPlayerUids: z.array(z.string()).min(1, { message: "At least one player must be assigned." }),
+  assignedPlayerUids: z.array(z.string()).min(1, { message: "At least one team member must be assigned." }),
   notes: z.string().optional(),
 });
 
@@ -48,8 +47,8 @@ interface AddRefereeingAssignmentFormProps {
 
 export function AddRefereeingAssignmentForm({ onSubmit, initialData, onClose }: AddRefereeingAssignmentFormProps) {
   const { user: currentUser, currentTeam } = useAuth();
-  const [teamPlayers, setTeamPlayers] = useState<User[]>([]);
-  const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
+  const [teamMembers, setTeamMembers] = useState<User[]>([]); // Renamed to teamMembers for clarity
+  const [isLoadingMembers, setIsLoadingMembers] = useState(true); // Renamed for clarity
 
   const form = useForm<RefereeingAssignmentFormValues>({
     resolver: zodResolver(refereeingAssignmentSchema),
@@ -69,13 +68,13 @@ export function AddRefereeingAssignmentForm({ onSubmit, initialData, onClose }: 
 
   useEffect(() => {
     if (currentUser?.teamId) {
-      setIsLoadingPlayers(true);
-      getAllUsersByTeam(currentUser.teamId)
-        .then(players => {
-          setTeamPlayers(players.filter(p => p.role === 'player')); // Only list players
+      setIsLoadingMembers(true);
+      getAllUsersByTeam(currentUser.teamId) // This service function fetches all users (players and admins)
+        .then(members => {
+          setTeamMembers(members); // Set all fetched members (players and admins)
         })
         .catch(console.error)
-        .finally(() => setIsLoadingPlayers(false));
+        .finally(() => setIsLoadingMembers(false));
     }
   }, [currentUser?.teamId]);
 
@@ -181,41 +180,41 @@ export function AddRefereeingAssignmentForm({ onSubmit, initialData, onClose }: 
           name="assignedPlayerUids"
           render={() => (
             <FormItem>
-              <FormLabel>Assign Player(s) to Referee</FormLabel>
-              {isLoadingPlayers ? (
+              <FormLabel>Assign Member(s) to Referee</FormLabel>
+              {isLoadingMembers ? (
                 <div className="space-y-2">
                   <Skeleton className="h-8 w-full" />
                   <Skeleton className="h-8 w-full" />
                 </div>
-              ) : teamPlayers.length > 0 ? (
+              ) : teamMembers.length > 0 ? (
                 <ScrollArea className="h-32 w-full rounded-md border p-2">
-                  {teamPlayers.map((player) => (
+                  {teamMembers.map((member) => ( // Changed from teamPlayers to teamMembers
                     <FormField
-                      key={player.uid}
+                      key={member.uid}
                       control={form.control}
                       name="assignedPlayerUids"
                       render={({ field }) => {
                         return (
                           <FormItem
-                            key={player.uid}
+                            key={member.uid}
                             className="flex flex-row items-start space-x-3 space-y-0 py-2"
                           >
                             <FormControl>
                               <Checkbox
-                                checked={field.value?.includes(player.uid)}
+                                checked={field.value?.includes(member.uid)}
                                 onCheckedChange={(checked) => {
                                   return checked
-                                    ? field.onChange([...(field.value || []), player.uid])
+                                    ? field.onChange([...(field.value || []), member.uid])
                                     : field.onChange(
                                         (field.value || []).filter(
-                                          (value) => value !== player.uid
+                                          (value) => value !== member.uid
                                         )
                                       );
                                 }}
                               />
                             </FormControl>
                             <FormLabel className="font-normal text-sm">
-                              {player.name}
+                              {member.name} ({member.role})
                             </FormLabel>
                           </FormItem>
                         );
@@ -224,7 +223,7 @@ export function AddRefereeingAssignmentForm({ onSubmit, initialData, onClose }: 
                   ))}
                 </ScrollArea>
               ) : (
-                <p className="text-sm text-muted-foreground">No players available in your team to assign.</p>
+                <p className="text-sm text-muted-foreground">No members available in your team to assign.</p>
               )}
               <FormMessage />
             </FormItem>
@@ -251,3 +250,4 @@ export function AddRefereeingAssignmentForm({ onSubmit, initialData, onClose }: 
     </Form>
   );
 }
+
