@@ -42,17 +42,14 @@ export function EventCardBase({
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
   const [memberList, setMemberList] = useState<User[]>([]); 
   const [isLoadingMembers, setIsLoadingMembers] = useState(true); 
-  // This state now reflects the attendance including defaults for all members
   const [currentAttendance, setCurrentAttendance] = useState<Record<string, AttendanceStatus>>({});
 
 
   const initializeAttendance = useCallback((members: User[], eventAttendance: Record<string, AttendanceStatus>) => {
     const newAttendance: Record<string, AttendanceStatus> = {};
     members.forEach(member => {
-      newAttendance[member.uid] = eventAttendance[member.uid] || 'present'; // Default to 'present'
+      newAttendance[member.uid] = eventAttendance[member.uid] || 'present'; 
     });
-    // Also include any pre-existing attendance for users not in current memberList (e.g. if a user was removed)
-    // Though ideally, this shouldn't happen often if memberList is the source of truth for who *can* have attendance.
     for (const uid in eventAttendance) {
         if (!newAttendance[uid]) {
             newAttendance[uid] = eventAttendance[uid];
@@ -67,26 +64,22 @@ export function EventCardBase({
       getAllUsersByTeam(currentUser.teamId)
         .then(fetchedMembers => {
           setMemberList(fetchedMembers);
-          // Initialize attendance after members are fetched
           initializeAttendance(fetchedMembers, item.attendance || {});
         })
         .catch(err => {
           console.error(`Failed to fetch team members for ${eventType} card:`, err);
           setMemberList([]);
-          // Initialize with item.attendance even if members fetch fails, to show existing data
           initializeAttendance([], item.attendance || {});
         })
         .finally(() => setIsLoadingMembers(false));
     } else {
       setMemberList([]);
-      initializeAttendance([], item.attendance || {}); // Initialize with empty members if no teamId
+      initializeAttendance([], item.attendance || {}); 
       setIsLoadingMembers(false);
     }
   }, [currentUser?.teamId, item.id, item.attendance, eventType, initializeAttendance]);
 
 
-  // This effect ensures that if item.attendance prop changes externally (e.g., after a list refresh),
-  // the local currentAttendance state is re-initialized based on the new prop and current memberList.
   useEffect(() => {
     initializeAttendance(memberList, item.attendance || {});
   }, [item.attendance, memberList, initializeAttendance]);
@@ -96,7 +89,6 @@ export function EventCardBase({
 
   const handleAttendanceChange = useCallback((memberId: string, status: AttendanceStatus) => {
     setCurrentAttendance(prev => ({ ...prev, [memberId]: status }));
-    // The actual Firestore update is handled by AttendanceToggler
   }, []);
   
   const getInitials = (name: string) => {
@@ -113,7 +105,7 @@ export function EventCardBase({
     <Card className="shadow-lg hover:shadow-primary/10 transition-shadow duration-300 flex flex-col">
       <CardHeader>
         <div className="flex justify-between items-start">
-          <div className="flex-1 min-w-0"> {/* Added flex-1 and min-w-0 for better truncation handling */}
+          <div className="flex-1 min-w-0"> {/* Ensure this div can shrink and allows truncation */}
             <CardTitle className="flex items-center gap-2 text-lg sm:text-xl truncate">
                {icon} {currentTeam?.name || "Team"} {eventType === "match" ? titlePrefix : ""} {eventName}
             </CardTitle>
@@ -121,7 +113,7 @@ export function EventCardBase({
           </div>
 
           {isAdmin && (onEdit || onDelete || dndListeners) && (
-            <div className="flex items-center gap-0.5 ml-2 shrink-0"> {/* Added shrink-0 */}
+            <div className="flex items-center gap-0.5 ml-2 shrink-0"> {/* Buttons container */}
               {onEdit && (
                 <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onEdit(item);}} aria-label={`Edit ${eventType}`} className="h-8 w-8 hover:bg-sidebar-accent">
                   <Icons.Edit className="h-4 w-4" />
@@ -158,11 +150,10 @@ export function EventCardBase({
             </Button>
           </DialogTrigger>
           <DialogContent 
-            className="w-[95vw] max-w-[400px] sm:max-w-md md:max-w-lg" // Adjusted responsive widths
+            className="w-[95vw] max-w-[400px] sm:max-w-md md:max-w-lg" 
             onInteractOutside={(e) => {
-              // Allow interaction with attendance toggler buttons without closing dialog
               const target = e.target as HTMLElement;
-              if (target.closest('.attendance-toggler-button')) { // Added class to toggler buttons
+              if (target.closest('.attendance-toggler-button')) { 
                 e.preventDefault();
               }
             }}
@@ -206,7 +197,7 @@ export function EventCardBase({
                         </div>
                       </div>
                        <AttendanceToggler 
-                           item={{...item, attendance: currentAttendance}} // Pass currentAttendance state
+                           item={{...item, attendance: currentAttendance}} 
                            player={member} 
                            eventType={eventType} 
                            onAttendanceChange={handleAttendanceChange} 
