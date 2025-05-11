@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -23,6 +22,11 @@ export default function DashboardPage() {
   const [totalTeamMembers, setTotalTeamMembers] = useState(0);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
+  const [totalUpcomingMatchesCount, setTotalUpcomingMatchesCount] = useState(0);
+  const [totalUpcomingTrainingsCount, setTotalUpcomingTrainingsCount] = useState(0);
+  const [totalUpcomingRefereeingAssignmentsCount, setTotalUpcomingRefereeingAssignmentsCount] = useState(0);
+
+
   useEffect(() => {
     if (authIsLoading || !user || !user.teamId || !currentTeam) {
       if (!authIsLoading && (!user || !user.teamId || !currentTeam )) {
@@ -39,37 +43,34 @@ export default function DashboardPage() {
       setIsLoadingData(true);
       try {
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // Ensure comparison is date-based, not time-sensitive for "today"
+        today.setHours(0, 0, 0, 0); 
         
         const allMatches = await getMatches(teamId);
-        const futureMatches = allMatches
+        const allFutureMatches = allMatches
           .filter(match => {
             const matchDate = parseISO(match.date);
             return isAfter(matchDate, today) || isEqual(matchDate, today);
-          })
-          .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime())
-          .slice(0, 2);
-        setUpcomingMatches(futureMatches);
+          });
+        setTotalUpcomingMatchesCount(allFutureMatches.length);
+        setUpcomingMatches(allFutureMatches.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime()).slice(0, 2));
 
         const allTrainings = await getTrainings(teamId);
-        const futureTrainings = allTrainings
+        const allFutureTrainings = allTrainings
           .filter(training => {
             const trainingDate = parseISO(training.date);
             return isAfter(trainingDate, today) || isEqual(trainingDate, today);
-          })
-          .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime())
-          .slice(0, 2);
-        setUpcomingTrainings(futureTrainings);
+          });
+        setTotalUpcomingTrainingsCount(allFutureTrainings.length);
+        setUpcomingTrainings(allFutureTrainings.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime()).slice(0, 2));
 
         const allRefereeingAssignments = await getRefereeingAssignments(teamId);
-        const futureRefereeingAssignments = allRefereeingAssignments
+        const allFutureRefereeingAssignments = allRefereeingAssignments
           .filter(assignment => {
             const assignmentDate = parseISO(assignment.date);
             return isAfter(assignmentDate, today) || isEqual(assignmentDate, today);
-          })
-          .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime())
-          .slice(0, 2); // Show top 2 upcoming
-        setUpcomingRefereeingAssignments(futureRefereeingAssignments);
+          });
+        setTotalUpcomingRefereeingAssignmentsCount(allFutureRefereeingAssignments.length);
+        setUpcomingRefereeingAssignments(allFutureRefereeingAssignments.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime()).slice(0, 2));
         
         const teamMembers = await getAllUsersByTeam(teamId);
         setTotalTeamMembers(teamMembers.length);
@@ -93,7 +94,7 @@ export default function DashboardPage() {
             <Skeleton className="h-5 w-80" />
           </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"> {/* Adjusted for 3 summary cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1,2,3].map(i => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -107,7 +108,7 @@ export default function DashboardPage() {
             </Card>
           ))}
         </div>
-        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3"> {/* Adjusted for 3 detailed cards */}
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
             <Skeleton className="h-72 w-full rounded-lg" />
             <Skeleton className="h-72 w-full rounded-lg" />
             <Skeleton className="h-72 w-full rounded-lg" />
@@ -136,14 +137,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"> {/* Adjusted for 3 summary cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Upcoming Matches</CardTitle>
             <Icons.Matches className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{upcomingMatches.length > 0 ? upcomingMatches.length : 0}</div>
+            <div className="text-2xl font-bold">{totalUpcomingMatchesCount}</div>
             <p className="text-xs text-muted-foreground">
               Next: {upcomingMatches.length > 0 ? `vs ${upcomingMatches[0].opponent} on ${format(parseISO(upcomingMatches[0].date), "MMM dd")}` : "None scheduled"}
             </p>
@@ -155,7 +156,7 @@ export default function DashboardPage() {
             <Icons.Trainings className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{upcomingTrainings.length > 0 ? upcomingTrainings.length : 0}</div>
+            <div className="text-2xl font-bold">{totalUpcomingTrainingsCount}</div>
             <p className="text-xs text-muted-foreground">
                Next: {upcomingTrainings.length > 0 ? `${format(parseISO(upcomingTrainings[0].date), "MMM dd")} at ${upcomingTrainings[0].location}` : "None scheduled"}
             </p>
@@ -167,7 +168,7 @@ export default function DashboardPage() {
             <Icons.Refereeing className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{upcomingRefereeingAssignments.length > 0 ? upcomingRefereeingAssignments.length : 0}</div>
+            <div className="text-2xl font-bold">{totalUpcomingRefereeingAssignmentsCount}</div>
             <p className="text-xs text-muted-foreground">
               Next: {upcomingRefereeingAssignments.length > 0 ? `${format(parseISO(upcomingRefereeingAssignments[0].date), "MMM dd")} at ${upcomingRefereeingAssignments[0].time}` : "None scheduled"}
             </p>
@@ -175,7 +176,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3"> {/* Adjusted for 3 detailed cards */}
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Icons.Matches className="h-5 w-5 text-primary" /> Next Matches</CardTitle>
@@ -240,7 +241,6 @@ export default function DashboardPage() {
                     {format(parseISO(assignment.date), "EEEE, MMMM dd, yyyy")} at {assignment.time}
                   </p>
                   {assignment.notes && <p className="text-xs text-muted-foreground mt-1">Notes: {assignment.notes}</p>}
-                   {/* Add display for assignedPlayerUids if needed, might require fetching names */}
                 </div>
               ))
             ) : (
