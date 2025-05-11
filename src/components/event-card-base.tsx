@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from "react";
@@ -50,6 +51,8 @@ export function EventCardBase({
     members.forEach(member => {
       newAttendance[member.uid] = eventAttendance[member.uid] || 'present'; 
     });
+    // Ensure any existing attendance for users not in the current memberList (e.g., if a user was removed) is still carried over.
+    // This might not be strictly necessary if memberList is always authoritative for who *can* have attendance.
     for (const uid in eventAttendance) {
         if (!newAttendance[uid]) {
             newAttendance[uid] = eventAttendance[uid];
@@ -64,23 +67,31 @@ export function EventCardBase({
       getAllUsersByTeam(currentUser.teamId)
         .then(fetchedMembers => {
           setMemberList(fetchedMembers);
+          // Initialize attendance after fetching members, using the item's current attendance.
+          // This ensures currentAttendance reflects the latest DB state for these members.
           initializeAttendance(fetchedMembers, item.attendance || {});
         })
         .catch(err => {
           console.error(`Failed to fetch team members for ${eventType} card:`, err);
-          setMemberList([]);
-          initializeAttendance([], item.attendance || {});
+          setMemberList([]); // Clear member list on error
+          initializeAttendance([], item.attendance || {}); // Initialize with empty members but potentially existing attendance
         })
         .finally(() => setIsLoadingMembers(false));
     } else {
+      // No teamId, so no members to fetch.
       setMemberList([]);
-      initializeAttendance([], item.attendance || {}); 
+      initializeAttendance([], item.attendance || {}); // Initialize with empty members but potentially existing attendance
       setIsLoadingMembers(false);
     }
+  // item.id is included to re-fetch/re-initialize if the item itself changes (e.g. navigating between different item detail views if this component was reused)
+  // item.attendance is crucial: if this prop changes from parent (e.g. due to optimistic update elsewhere or re-fetch), re-initialize.
   }, [currentUser?.teamId, item.id, item.attendance, eventType, initializeAttendance]);
 
 
+  // This effect ensures that if item.attendance prop changes (e.g. parent re-fetched),
+  // the local currentAttendance state is updated to reflect it.
   useEffect(() => {
+    // Re-initialize currentAttendance using the current memberList and the potentially updated item.attendance.
     initializeAttendance(memberList, item.attendance || {});
   }, [item.attendance, memberList, initializeAttendance]);
 
@@ -88,7 +99,15 @@ export function EventCardBase({
   const isAdmin = currentUser?.role === "admin";
 
   const handleAttendanceChange = useCallback((memberId: string, status: AttendanceStatus) => {
+    // This function is called by AttendanceToggler and updates the local `currentAttendance` state.
+    // This is the "optimistic" update visible in the dialog immediately.
+    // The actual save to Firestore happens in AttendanceToggler.
     setCurrentAttendance(prev => ({ ...prev, [memberId]: status }));
+    // No need to call item.attendance = currentAttendance here as item is a prop.
+    // The parent (MatchesPage/TrainingsPage) should handle updating its state that feeds `item` prop
+    // if it needs to reflect this change before a full re-fetch.
+    // However, the current design of AttendanceToggler directly updates Firestore
+    // and the parent (MatchesPage) re-fetches via forceUpdateCounter, which is good.
   }, []);
   
   const getInitials = (name: string) => {
@@ -96,7 +115,10 @@ export function EventCardBase({
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
 
+  // Calculate presentCount based on the local currentAttendance state
   const presentCount = Object.values(currentAttendance).filter(status => status === 'present').length;
+  // Total members for attendance count should be based on the fetched memberList if available,
+  // otherwise fallback to keys in currentAttendance (e.g., if members couldn't be fetched but attendance data exists)
   const totalMembersForAttendanceCount = memberList.length > 0 ? memberList.length : Object.keys(currentAttendance).length;
   
   const eventName = eventType === "match" ? (item as Match).opponent : (item as Training).location;
@@ -106,8 +128,11 @@ export function EventCardBase({
       <CardHeader>
         <div className="flex justify-between items-start">
           <div className="flex-1 min-w-0"> {/* Ensure this div can shrink and allows truncation */}
-            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl truncate">
-               {icon} {currentTeam?.name || "Team"} {eventType === "match" ? titlePrefix : ""} {eventName}
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+               {icon}
+              <span className="truncate">
+                {currentTeam?.name || "Team"} {eventType === "match" ? titlePrefix : ""} {eventName}
+              </span>
             </CardTitle>
             <CardDescription className="mt-1">{renderDetails(item)}</CardDescription>
           </div>
@@ -152,9 +177,11 @@ export function EventCardBase({
           <DialogContent 
             className="w-[95vw] max-w-[400px] sm:max-w-md md:max-w-lg" 
             onInteractOutside={(e) => {
+              // Check if the click target is one of the attendance toggler buttons
               const target = e.target as HTMLElement;
+              // Using a class on the buttons for easier targeting
               if (target.closest('.attendance-toggler-button')) { 
-                e.preventDefault();
+                e.preventDefault(); // Prevent dialog from closing
               }
             }}
           >
@@ -197,10 +224,11 @@ export function EventCardBase({
                         </div>
                       </div>
                        <AttendanceToggler 
+                           // Pass a clone of the item with the current local attendance state for the toggler
                            item={{...item, attendance: currentAttendance}} 
                            player={member} 
                            eventType={eventType} 
-                           onAttendanceChange={handleAttendanceChange} 
+                           onAttendanceChange={handleAttendanceChange} // This updates currentAttendance locally
                        />
                     </div>
                   ))}

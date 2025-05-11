@@ -1,3 +1,4 @@
+
 "use client";
 
 import { format, parseISO } from "date-fns";
@@ -22,11 +23,18 @@ export function MatchCard({ match, onEdit, onDelete, dndListeners }: MatchCardPr
       renderDetails={(itemDetails) => { 
         const currentMatch = itemDetails as Match;
         return (
-          <>
-            {format(parseISO(currentMatch.date), "EEEE, MMMM dd, yyyy")} at {currentMatch.time}
-            <br />
-            Location: {currentMatch.location || "N/A"}
-          </>
+          <div className="text-xs sm:text-sm space-y-0.5"> {/* Stack details and adjust text size */}
+            <div> {/* Date and Time line */}
+              {format(parseISO(currentMatch.date), "EEE, MMM dd, yyyy")} {/* Shorter date format */}
+              {' at '}
+              {currentMatch.time}
+            </div>
+            {currentMatch.location && (
+              <div className="truncate"> {/* Truncate location if too long */}
+                Location: {currentMatch.location}
+              </div>
+            )}
+          </div>
         );
       }}
       onEdit={onEdit ? (item) => onEdit(item as Match) : undefined} 
