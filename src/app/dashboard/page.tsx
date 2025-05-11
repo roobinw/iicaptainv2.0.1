@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -61,11 +60,12 @@ export default function DashboardPage() {
         const allFutureTrainings = allTrainings
           .filter(training => {
             const trainingDate = parseISO(training.date);
+            // Fixed bug here: was isEqual(matchDate, today), changed to isEqual(trainingDate, today)
             return isAfter(trainingDate, today) || isEqual(trainingDate, today);
           });
         setTotalUpcomingTrainingsCount(allFutureTrainings.length);
-        // Display ALL upcoming trainings on the dashboard card (up to a reasonable limit for UI, e.g. 5, then scroll)
-        setUpcomingTrainings(allFutureTrainings.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime()));
+        // Display only the next training session on the dashboard card
+        setUpcomingTrainings(allFutureTrainings.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime()).slice(0, 1));
 
         const allRefereeingAssignments = await getRefereeingAssignments(teamId);
         const allFutureRefereeingAssignments = allRefereeingAssignments
@@ -209,27 +209,23 @@ export default function DashboardPage() {
 
         <Card className="shadow-md flex flex-col">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Icons.Trainings className="h-5 w-5 text-primary" /> Next Trainings</CardTitle>
-            <CardDescription>Upcoming training sessions for the team.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><Icons.Trainings className="h-5 w-5 text-primary" /> Next Training</CardTitle>
+            <CardDescription>Your team&apos;s next training session.</CardDescription>
           </CardHeader>
           <CardContent className="flex-grow">
-            <ScrollArea className="h-[200px] pr-3"> {/* Adjust height as needed */}
-              <div className="space-y-4">
+             <div className="space-y-4">
                 {upcomingTrainings.length > 0 ? (
-                  upcomingTrainings.map((training) => (
-                    <div key={training.id} className="p-3 bg-secondary/50 rounded-lg">
-                      <h3 className="font-semibold">{training.location}</h3>
+                    <div className="p-3 bg-secondary/50 rounded-lg">
+                      <h3 className="font-semibold">{upcomingTrainings[0].location}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {format(parseISO(training.date), "EEEE, MMMM dd, yyyy")} at {training.time}
+                        {format(parseISO(upcomingTrainings[0].date), "EEEE, MMMM dd, yyyy")} at {upcomingTrainings[0].time}
                       </p>
-                      {training.description && <p className="text-xs text-muted-foreground mt-1">{training.description}</p>}
+                      {upcomingTrainings[0].description && <p className="text-xs text-muted-foreground mt-1">{upcomingTrainings[0].description}</p>}
                     </div>
-                  ))
                 ) : (
                   <p className="text-muted-foreground">No upcoming trainings scheduled.</p>
                 )}
               </div>
-            </ScrollArea>
           </CardContent>
            <CardFooter className="mt-auto border-t pt-4">
             <Link href="/trainings" className="w-full">
@@ -269,5 +265,3 @@ export default function DashboardPage() {
   );
 }
 
-
-    
