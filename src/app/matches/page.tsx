@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -93,8 +92,8 @@ export default function MatchesPage() {
         return;
     }
     try {
-      const updatePayload = { ...data, date: typeof data.date === 'string' ? data.date : (data.date as Date).toISOString().split('T')[0] };
-      await updateMatch(user.teamId, editingMatch.id, updatePayload);
+      // The date is already a "yyyy-MM-dd" string from the form submission logic
+      await updateMatch(user.teamId, editingMatch.id, data as Partial<Omit<Match, 'id'>>);
       toast({ title: "Match Updated", description: `Match against ${data.opponent} updated.` });
       setForceUpdateCounter(prev => prev + 1);
       setIsAddMatchDialogOpen(false);
@@ -183,7 +182,7 @@ export default function MatchesPage() {
                 <Icons.Add className="mr-2 h-4 w-4" /> Add Match
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="w-[95vw] max-w-[400px] sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>{editingMatch ? "Edit Match" : "Add New Match"}</DialogTitle>
                 <DialogDescription>
@@ -229,7 +228,7 @@ export default function MatchesPage() {
             </CardContent>
         </Card>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} >
           <SortableContext items={matches.map(m => m.id)} strategy={verticalListSortingStrategy}>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {matches.map((match) => (

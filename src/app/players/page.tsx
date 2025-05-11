@@ -180,7 +180,7 @@ export default function PlayersPage() {
                 <Icons.Add className="mr-2 h-4 w-4" /> Add Player & Create Account
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="w-[95vw] max-w-[400px] sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>{editingPlayer ? "Edit Player Profile" : "Add New Player & Create Account"}</DialogTitle>
                 <DialogDescription>

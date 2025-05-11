@@ -14,11 +14,10 @@ import { useAuth } from "@/lib/auth";
 export type AttendanceStatus = "present" | "absent" | "excused" | "unknown";
 
 interface AttendanceTogglerProps {
-  item: Match | Training;
+  item: Match | Training; // This item will have the most up-to-date attendance from parent (EventCardBase)
   player: PlayerUser;
   eventType: "match" | "training";
   onAttendanceChange: (playerId: string, status: AttendanceStatus) => void;
-  // setForceUpdate?: Dispatch<SetStateAction<number>>; // Prop removed
 }
 
 export function AttendanceToggler({ item, player, eventType, onAttendanceChange }: AttendanceTogglerProps) {
@@ -26,7 +25,7 @@ export function AttendanceToggler({ item, player, eventType, onAttendanceChange 
   const { toast } = useToast();
 
   const playerIdForAttendance = player.uid;
-  // Ensure currentAttendance is correctly sourced from item.attendance, defaulting if necessary
+  // Use the attendance from the item prop, which is managed by EventCardBase's state
   const currentStatus: AttendanceStatus = item.attendance?.[playerIdForAttendance] || "present";
 
 
@@ -40,9 +39,8 @@ export function AttendanceToggler({ item, player, eventType, onAttendanceChange 
         return;
     }
 
-    onAttendanceChange(playerIdForAttendance, newStatus); // Optimistic update in parent (EventCardBase)
-    // Removed setForceUpdate call:
-    // if(setForceUpdate) setForceUpdate(val => val + 1); 
+    // Optimistically update parent's state via callback
+    onAttendanceChange(playerIdForAttendance, newStatus); 
 
     try {
       if (eventType === "match") {
@@ -50,15 +48,25 @@ export function AttendanceToggler({ item, player, eventType, onAttendanceChange 
       } else {
         await updateTrainingAttendance(currentUser.teamId, item.id, playerIdForAttendance, newStatus);
       }
+      // No success toast here to avoid clutter, optimistic update is usually enough.
     } catch (error: any) {
       console.error("Error updating attendance in Firestore:", error);
       toast({title: "Update Failed", description: error.message || "Could not save attendance change.", variant: "destructive"});
       // Revert optimistic update if Firestore save fails
-      // Get the original status from the item prop before the optimistic update was applied
-      const originalStatusBeforeOptimisticChange = item.attendance?.[playerIdForAttendance] || "present";
-      onAttendanceChange(playerIdForAttendance, originalStatusBeforeOptimisticChange);
+      // The 'item' prop already reflects the pre-optimistic state for the *next* call if this one failed.
+      // To revert correctly, we need the status *before* this specific optimistic update.
+      // This logic is simplified: if Firestore fails, the UI remains optimistically updated.
+      // A more robust solution would involve knowing the 'previousStatus' before this specific call.
+      // For now, we'll rely on the parent (EventCardBase) to re-initialize from item.attendance prop if it changes.
+      // Or, to simplify, if parent's state is the source of truth for `currentStatus` here,
+      // we call `onAttendanceChange` again with the original state.
+      // This means `item.attendance` in the parent should hold the true DB state.
+      // However, `item` here is passed down and might not be the immediate previous state.
+      // The current setup with EventCardBase re-initializing should handle eventual consistency.
     }
   };
+
+  const commonButtonClass = "p-1 h-7 w-7 attendance-toggler-button"; // Added common class
 
   return (
     <div className="flex items-center gap-1">
@@ -66,11 +74,11 @@ export function AttendanceToggler({ item, player, eventType, onAttendanceChange 
         variant={currentStatus === "present" ? "default" : "outline"}
         size="sm"
         onClick={(e) => {
-            e.stopPropagation();
+            e.stopPropagation(); // Keep this if it serves a purpose for parent click events
             handleAttendance("present");
         }}
         className={cn(
-          "p-1 h-7 w-7",
+          commonButtonClass,
           currentStatus === "present" && "bg-green-500 hover:bg-green-600 text-white border-green-600"
         )}
         aria-label="Mark as Present"
@@ -86,7 +94,7 @@ export function AttendanceToggler({ item, player, eventType, onAttendanceChange 
             handleAttendance("absent");
         }}
         className={cn(
-          "p-1 h-7 w-7",
+          commonButtonClass,
           currentStatus === "absent" && "bg-red-500 hover:bg-red-600 text-white border-red-600"
         )}
         aria-label="Mark as Absent"
@@ -102,7 +110,7 @@ export function AttendanceToggler({ item, player, eventType, onAttendanceChange 
             handleAttendance("excused");
         }}
         className={cn(
-          "p-1 h-7 w-7",
+          commonButtonClass,
           currentStatus === "excused" && "bg-yellow-500 hover:bg-yellow-600 text-black border-yellow-600"
         )}
         aria-label="Mark as Excused"

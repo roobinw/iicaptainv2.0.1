@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -99,8 +98,8 @@ export default function TrainingsPage() {
       return;
     }
     try {
-      const updatePayload = { ...data, date: typeof data.date === 'string' ? data.date : (data.date as Date).toISOString().split('T')[0] };
-      await updateTraining(user.teamId, editingTraining.id, updatePayload);
+      // The date is already a "yyyy-MM-dd" string from the form submission logic
+      await updateTraining(user.teamId, editingTraining.id, data as Partial<Omit<Training, 'id'>>);
       toast({ title: "Training Updated", description: `Training at ${data.location} updated.` });
       setForceUpdateCounter(prev => prev + 1);
       setIsAddTrainingDialogOpen(false);
@@ -189,7 +188,7 @@ export default function TrainingsPage() {
                 <Icons.Add className="mr-2 h-4 w-4" /> Add Training
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="w-[95vw] max-w-[400px] sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>{editingTraining ? "Edit Training" : "Add New Training"}</DialogTitle>
                 <DialogDescription>
