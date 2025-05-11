@@ -124,23 +124,31 @@ export function EventCardBase({
 
   let eventName: string;
   let eventDateForDialog: string = ""; // Initialize to prevent uninitialized access
+  
+  // Determine eventName and eventDateForDialog based on eventType
   if (eventType === "match" && 'opponent' in item && 'date' in item) {
     eventName = (item as Match).opponent;
     eventDateForDialog = (item as Match).date;
   } else if (eventType === "training" && 'location' in item && 'date' in item) {
-    eventName = (item as Training).location;
+    eventName = (item as Training).location; // Main identifier for training
     eventDateForDialog = (item as Training).date;
   } else if (eventType === "refereeing" && 'date' in item) {
-    eventName = `Assignment`;
+    eventName = `Assignment`; // Main identifier for refereeing
     eventDateForDialog = (item as RefereeingAssignment).date;
   } else {
     eventName = "Event"; // Fallback
     eventDateForDialog = item.date; // Assuming date is always present
   }
-
-  const cardTitle = eventType === "refereeing" ?
-    `${titlePrefix || ""} ${eventName} - ${format(parseISO(eventDateForDialog), "MMM dd")}` :
-    `${titlePrefix || ""} ${eventName}`;
+  
+  // Construct the card title based on eventType
+  const cardTitle =
+    eventType === "match"
+      ? `${titlePrefix || ""} ${eventName}` // For matches, prefix with team name vs opponent
+      : eventType === "training"
+      ? `${eventName}` // For trainings, use location as title
+      : eventType === "refereeing"
+      ? `${eventName} - ${format(parseISO(eventDateForDialog), "MMM dd")}` // For refereeing, "Assignment - Date"
+      : `${eventName}`; // Fallback
 
 
   return (
@@ -246,7 +254,7 @@ export function EventCardBase({
           <Dialog open={isAssignPlayersDialogOpen} onOpenChange={setIsAssignPlayersDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" className="hover:bg-accent hover:text-accent-foreground whitespace-nowrap">
-                <Icons.Players className="mr-2 h-4 w-4" /> Manage Assignment 
+                <Icons.Players className="mr-2 h-4 w-4" /> Manage Assignment
               </Button>
             </DialogTrigger>
             <DialogContent className="w-[95vw] max-w-[400px] sm:max-w-md md:max-w-lg">
@@ -297,3 +305,4 @@ export function EventCardBase({
     </Card>
   );
 }
+

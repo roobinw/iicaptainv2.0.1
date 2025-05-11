@@ -1,9 +1,6 @@
-
 "use client";
 
 import { format, parseISO } from "date-fns";
-// Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle removed as EventCardBase is used
-// Button removed
 import { Icons } from "@/components/icons";
 import type { RefereeingAssignment, User, Match, Training } from "@/types"; 
 import { useAuth } from "@/lib/auth";
@@ -17,10 +14,10 @@ interface RefereeingAssignmentCardProps {
   assignment: RefereeingAssignment;
   onEdit?: (assignment: RefereeingAssignment) => void;
   onDelete?: (assignmentId: string) => void;
-  // dndListeners?: any; // Removed
+  onAssignPlayersSuccess?: () => void;
 }
 
-export function RefereeingAssignmentCard({ assignment, onEdit, onDelete }: RefereeingAssignmentCardProps) { // dndListeners removed
+export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, onAssignPlayersSuccess }: RefereeingAssignmentCardProps) {
   const { user: currentUser, currentTeam } = useAuth();
   const [assignedPlayersDetails, setAssignedPlayersDetails] = useState<User[]>([]);
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
@@ -49,10 +46,10 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete }: Refer
 
   return (
     <EventCardBase
-        item={assignment as unknown as Match | Training} 
+        item={assignment as unknown as Match | Training | RefereeingAssignment} 
         eventType="refereeing"
         icon={<Icons.Refereeing className="h-5 w-5 text-primary" />}
-        titlePrefix={currentTeam?.name || "Team"}
+        titlePrefix={currentTeam?.name || "Team"} // EventCardBase will ignore this for refereeing title
         renderDetails={() => ( 
             <>
                 <div className="text-xs sm:text-sm space-y-0.5 mt-1">
@@ -92,7 +89,8 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete }: Refer
         )}
         onEdit={onEdit ? () => onEdit(assignment) : undefined}
         onDelete={onDelete ? () => onDelete(assignment.id) : undefined}
-        // dndListeners={dndListeners} // Removed
+        onAssignPlayersSuccess={onAssignPlayersSuccess}
     />
   );
 }
+
