@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -92,7 +93,6 @@ export default function MatchesPage() {
         return;
     }
     try {
-      // The date is already a "yyyy-MM-dd" string from the form submission logic
       await updateMatch(user.teamId, editingMatch.id, data as Partial<Omit<Match, 'id'>>);
       toast({ title: "Match Updated", description: `Match against ${data.opponent} updated.` });
       setForceUpdateCounter(prev => prev + 1);
@@ -165,7 +165,7 @@ export default function MatchesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Match Schedule</h1>
           <p className="text-muted-foreground">
@@ -173,35 +173,37 @@ export default function MatchesPage() {
           </p>
         </div>
         {isAdmin && (
-          <Dialog open={isAddMatchDialogOpen} onOpenChange={(isOpen) => {
-            setIsAddMatchDialogOpen(isOpen);
-            if (!isOpen) setEditingMatch(null); 
-          }}>
-            <DialogTrigger asChild>
-              <Button>
-                <Icons.Add className="mr-2 h-4 w-4" /> Add Match
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="w-[95vw] max-w-[400px] sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>{editingMatch ? "Edit Match" : "Add New Match"}</DialogTitle>
-                <DialogDescription>
-                  {editingMatch 
-                    ? `Update details for match vs ${editingMatch.opponent} on ${format(parseISO(editingMatch.date), "MMM dd, yyyy")}.`
-                    : "Fill in the details for the new match."
-                  }
-                </DialogDescription>
-              </DialogHeader>
-              <AddMatchForm 
-                onSubmit={editingMatch ? handleUpdateMatch : handleAddMatch} 
-                initialData={editingMatch} 
-                onClose={() => {
-                  setIsAddMatchDialogOpen(false);
-                  setEditingMatch(null);
-                }}
-              />
-            </DialogContent>
-          </Dialog>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Dialog open={isAddMatchDialogOpen} onOpenChange={(isOpen) => {
+              setIsAddMatchDialogOpen(isOpen);
+              if (!isOpen) setEditingMatch(null); 
+            }}>
+              <DialogTrigger asChild>
+                <Button className="w-full sm:w-auto">
+                  <Icons.Add className="mr-2 h-4 w-4" /> Add Match
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="w-[95vw] max-w-[400px] sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>{editingMatch ? "Edit Match" : "Add New Match"}</DialogTitle>
+                  <DialogDescription>
+                    {editingMatch 
+                      ? `Update details for match vs ${editingMatch.opponent} on ${format(parseISO(editingMatch.date), "MMM dd, yyyy")}.`
+                      : "Fill in the details for the new match."
+                    }
+                  </DialogDescription>
+                </DialogHeader>
+                <AddMatchForm 
+                  onSubmit={editingMatch ? handleUpdateMatch : handleAddMatch} 
+                  initialData={editingMatch} 
+                  onClose={() => {
+                    setIsAddMatchDialogOpen(false);
+                    setEditingMatch(null);
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         )}
       </div>
 
@@ -237,6 +239,7 @@ export default function MatchesPage() {
                     match={match} 
                     onEdit={isAdmin ? handleEditMatch : undefined} 
                     onDelete={isAdmin ? handleDeleteMatch : undefined}
+                    dndListeners={isAdmin ? sensors : undefined} // Pass sensors if admin for DnD handle
                   />
                 </SortableItem>
               ))}
