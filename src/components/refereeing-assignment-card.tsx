@@ -1,3 +1,4 @@
+
 "use client";
 
 import { format, parseISO } from "date-fns";
@@ -23,11 +24,11 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, onAssig
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
 
   useEffect(() => {
-    if (currentUser?.teamId && assignment.assignedPlayerUids.length > 0) {
+    if (currentUser?.teamId && assignment.assignedPlayerUids && assignment.assignedPlayerUids.length > 0) {
       setIsLoadingPlayers(true);
       getAllUsersByTeam(currentUser.teamId)
         .then(allTeamMembers => {
-          const details = allTeamMembers.filter(member => assignment.assignedPlayerUids.includes(member.uid));
+          const details = allTeamMembers.filter(member => assignment.assignedPlayerUids!.includes(member.uid));
           setAssignedPlayersDetails(details);
         })
         .catch(console.error)
@@ -49,13 +50,18 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, onAssig
         item={assignment as unknown as Match | Training | RefereeingAssignment} 
         eventType="refereeing"
         icon={<Icons.Refereeing className="h-5 w-5 text-primary" />}
-        titlePrefix={currentTeam?.name || "Team"} // EventCardBase will ignore this for refereeing title
+        titlePrefix={currentTeam?.name || "Team"} 
         renderDetails={() => ( 
             <>
                 <div className="text-xs sm:text-sm space-y-0.5 mt-1">
                     <div className="truncate">
                         {format(parseISO(assignment.date), "EEEE, MMM dd, yyyy")} at {assignment.time}
                     </div>
+                    {assignment.homeTeam && (
+                      <div className="truncate">
+                        Home Team: {assignment.homeTeam}
+                      </div>
+                    )}
                 </div>
                 <div className="mt-2">
                   <h4 className="text-xs font-semibold text-muted-foreground mb-1">Assigned Referee(s):</h4>
@@ -93,4 +99,5 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, onAssig
     />
   );
 }
+
 

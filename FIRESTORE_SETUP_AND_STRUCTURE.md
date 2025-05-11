@@ -45,7 +45,6 @@ This is a top-level collection where each document represents a unique team.
             *   Keys: Player Firebase Auth UIDs (String).
             *   Values: (String) "present", "absent", "excused", or "unknown".
             *   Example: `{"firebaseUserUid1": "present", "firebaseUserUid2": "absent"}`
-        *   `order`: (Number, optional) REMOVED - Sorting is now done by date and time.
 
 *   **Subcollection of `teams/{teamId}`: `trainings`**
     *   Stores all training sessions for a specific team.
@@ -56,7 +55,6 @@ This is a top-level collection where each document represents a unique team.
         *   `location`: (String) Location of the training session.
         *   `description`: (String, optional) Additional details about the training.
         *   `attendance`: (Map) Stores player attendance (same structure as in `matches`).
-        *   `order`: (Number, optional) REMOVED - Sorting is now done by date and time.
 
 *   **Subcollection of `teams/{teamId}`: `refereeingAssignments`**
     *   Stores all refereeing assignments for a specific team.
@@ -64,9 +62,9 @@ This is a top-level collection where each document represents a unique team.
     *   **Fields:**
         *   `date`: (String) Assignment date in "yyyy-MM-dd" format.
         *   `time`: (String) Assignment time in "HH:mm" format (24-hour).
+        *   `homeTeam`: (String, optional) The name of the home team for the match being refereed.
         *   `assignedPlayerUids`: (Array of Strings) Firebase Auth UIDs of the players assigned to referee.
         *   `notes`: (String, optional) Additional details or instructions for the assignment.
-        *   `order`: (Number, optional) REMOVED - Sorting is now done by date and time.
 
 ### Collection: `users`
 
@@ -129,6 +127,7 @@ This is a top-level collection where each document represents a support ticket.
 {
   "date": "2023-11-12",
   "time": "10:00",
+  "homeTeam": "The Bears",
   "assignedPlayerUids": ["playerFirebaseUidMno", "playerFirebaseUidJkl"],
   "notes": "Remember to bring whistles and cards. Arrive 30 mins early."
 }
@@ -416,3 +415,4 @@ You can create these indexes in the Firebase console:
 **Note on Index Creation Time:** Composite indexes can take a few minutes to build, especially if you already have data in your collections. Firestore will indicate the status of index creation in the console.
 
 By following this structure, implementing robust security rules, and creating the necessary indexes, your iiCaptain application will have a solid foundation for managing team data securely and efficiently for multiple teams.
+

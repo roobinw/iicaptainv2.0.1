@@ -54,8 +54,10 @@ export interface RefereeingAssignment {
   id: string;
   date: string; // "yyyy-MM-dd"
   time: string; // "HH:mm"
+  homeTeam?: string; // Name of the home team for the match being refereed
   assignedPlayerUids?: string[]; // Array of User UIDs - now optional
   notes?: string;
 }
+
 
 

@@ -11,7 +11,7 @@ import {
   query,
   orderBy,
   getDoc,
-  writeBatch, // Keep writeBatch if updateRefereeingAssignmentsOrder is ever re-added
+  writeBatch, 
   type Timestamp
 } from 'firebase/firestore';
 import { format, parseISO } from "date-fns"; 
@@ -50,17 +50,18 @@ const fromFirestoreRefereeingAssignment = (docSnap: any): RefereeingAssignment =
     id: docSnap.id,
     date: data.date,
     time: data.time,
-    assignedPlayerUids: data.assignedPlayerUids || [], // Default to empty array
+    homeTeam: data.homeTeam, // Added homeTeam
+    assignedPlayerUids: data.assignedPlayerUids || [], 
     notes: data.notes,
   } as RefereeingAssignment;
 };
 
-// The assignmentData type now reflects that assignedPlayerUids might not be present
 export const addRefereeingAssignment = async (teamId: string, assignmentData: Omit<RefereeingAssignment, 'id' | 'assignedPlayerUids'> & { assignedPlayerUids?: string[] }): Promise<string> => {
   const firestorePayload = {
     date: assignmentData.date, 
     time: assignmentData.time,
-    assignedPlayerUids: assignmentData.assignedPlayerUids || [], // Default to empty array if not provided
+    homeTeam: assignmentData.homeTeam, // Added homeTeam
+    assignedPlayerUids: assignmentData.assignedPlayerUids || [], 
     notes: assignmentData.notes,
   };
   const assignmentsColRef = getRefereeingAssignmentsCollectionRef(teamId);
@@ -85,33 +86,33 @@ export const getRefereeingAssignmentById = async (teamId: string, assignmentId: 
 
 export const updateRefereeingAssignment = async (teamId: string, assignmentId: string, data: Partial<Omit<RefereeingAssignment, 'id'>>): Promise<void> => {
   const assignmentDocRef = getRefereeingAssignmentDocRef(teamId, assignmentId);
-  // Create a mutable copy of data to work with
   const updateData: { [key: string]: any } = { ...data };
   
   if (data.date && typeof data.date !== 'string') {
-     // This case assumes data.date might be a Date object, which should ideally be formatted before calling this service
      console.warn("updateRefereeingAssignment received non-string date, formatting to yyyy-MM-dd", data.date);
      updateData.date = format(data.date as unknown as Date, "yyyy-MM-dd"); 
   } else if (data.date && typeof data.date === 'string') {
-    // If it's a string, try to parse and reformat to ensure yyyy-MM-dd
     try {
         updateData.date = format(parseISO(data.date), "yyyy-MM-dd");
     } catch (e) {
-        // If parsing fails, it might already be in yyyy-MM-dd or an unparseable format.
-        // Log a warning but use the value as-is if it's unparseable, assuming it might be correct.
         console.warn(`Date string "${data.date}" in updateRefereeingAssignment was not in a standard ISO format. Using as is. Error: ${e}`);
         updateData.date = data.date;
     }
   }
 
-  // Ensure assignedPlayerUids is handled correctly (e.g., not set to undefined if not provided)
   if (data.assignedPlayerUids === undefined && !(data.hasOwnProperty('assignedPlayerUids'))) {
-    // If assignedPlayerUids is not in the partial update, don't modify it.
-    delete updateData.assignedPlayerUids; // Remove from updateData if not explicitly passed
+    delete updateData.assignedPlayerUids; 
   } else if (data.assignedPlayerUids === null) {
-     updateData.assignedPlayerUids = []; // Convert null to empty array
+     updateData.assignedPlayerUids = []; 
   }
-  // If data.assignedPlayerUids is an array (including empty), it will be passed as is.
+  
+  // Handle homeTeam update
+  if (data.homeTeam !== undefined) {
+    updateData.homeTeam = data.homeTeam;
+  } else if (data.hasOwnProperty('homeTeam') && data.homeTeam === null) {
+    updateData.homeTeam = null; // Or field delete if preferred for nulls
+  }
+
 
   await updateDoc(assignmentDocRef, updateData);
 };
@@ -120,4 +121,5 @@ export const deleteRefereeingAssignment = async (teamId: string, assignmentId: s
   const assignmentDocRef = getRefereeingAssignmentDocRef(teamId, assignmentId);
   await deleteDoc(assignmentDocRef);
 };
+
 

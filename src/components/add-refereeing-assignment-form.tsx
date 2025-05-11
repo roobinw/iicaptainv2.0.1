@@ -17,8 +17,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-// Removed Checkbox, ScrollArea, User, getAllUsersByTeam, Skeleton, useEffect, useState, useAuth
-// as they were related to the removed assignedPlayerUids field.
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { Icons } from "./icons";
@@ -28,7 +26,7 @@ import type { RefereeingAssignment } from "@/types";
 const refereeingAssignmentSchema = z.object({
   date: z.date({ required_error: "Assignment date is required." }),
   time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: "Invalid time format (HH:MM)." }),
-  // assignedPlayerUids removed from schema
+  homeTeam: z.string().min(1, { message: "Home team name is required." }).optional(), // Optional to handle existing data, but form makes it feel required
   notes: z.string().optional(),
 });
 
@@ -46,16 +44,14 @@ export function AddRefereeingAssignmentForm({ onSubmit, initialData, onClose }: 
     defaultValues: initialData ? {
       date: parseISO(initialData.date),
       time: initialData.time,
-      // assignedPlayerUids: initialData.assignedPlayerUids || [], // Removed
+      homeTeam: initialData.homeTeam || "",
       notes: initialData.notes || "",
     } : {
       time: "10:00", 
-      // assignedPlayerUids: [], // Removed
+      homeTeam: "",
       notes: "",
     },
   });
-
-  // Removed useEffect for fetching team members
 
   const handleSubmit = (data: RefereeingAssignmentFormValues) => {
     // Ensure assignedPlayerUids is not part of the submitted data from this form
@@ -117,7 +113,19 @@ export function AddRefereeingAssignmentForm({ onSubmit, initialData, onClose }: 
             </FormItem>
           )}
         />
-        {/* FormField for assignedPlayerUids has been removed */}
+         <FormField
+          control={form.control}
+          name="homeTeam"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Home Team</FormLabel>
+              <FormControl>
+                <Input placeholder="Name of the home team" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="notes"
@@ -139,4 +147,5 @@ export function AddRefereeingAssignmentForm({ onSubmit, initialData, onClose }: 
     </Form>
   );
 }
+
 
