@@ -51,15 +51,14 @@ const processTimestamp = (timestamp: Timestamp | undefined): string | undefined 
   return timestamp ? timestamp.toDate().toISOString() : undefined;
 };
 
+// toFirestoreMatch is not currently used, but kept for potential future use.
+// It assumes matchData.date is already "yyyy-MM-dd" string.
 const toFirestoreMatch = (matchData: Omit<Match, 'id'>): any => {
-  // Assuming matchData.date is already "yyyy-MM-dd" string as per Match type and form logic.
-  // The forms (AddMatchForm) are responsible for this formatting.
   const dateString = matchData.date; 
   
   return {
     ...matchData,
     date: dateString, 
-    // any other transformations if necessary, e.g. serverTimestamp for a created/updated field
   };
 };
 
@@ -68,20 +67,18 @@ const fromFirestoreMatch = (docSnap: any): Match => {
   return {
     id: docSnap.id,
     ...data,
-    // Ensure attendance is always an object, even if undefined in Firestore
     attendance: data.attendance || {}, 
   } as Match;
 };
 
-export const addMatch = async (teamId: string, matchData: Omit<Match, 'id' | 'attendance'>): Promise<string> => {
+export const addMatch = async (teamId: string, matchData: Omit<Match, 'id' | 'attendance' | 'order'>): Promise<string> => {
   // matchData.date comes from AddMatchForm, where it's already formatted to "yyyy-MM-dd" string
   const firestorePayload = {
     ...matchData, 
-    attendance: {}, // Initialize attendance as empty object
-    order: (await getMatches(teamId)).length, // Set initial order
+    attendance: {}, 
+    order: (await getMatches(teamId)).length, 
   };
   const matchesColRef = getMatchesCollectionRef(teamId);
-  // Pass firestorePayload directly as its date is already string
   const docRef = await addDoc(matchesColRef, firestorePayload);
   return docRef.id;
 };
@@ -89,7 +86,6 @@ export const addMatch = async (teamId: string, matchData: Omit<Match, 'id' | 'at
 export const getMatches = async (teamId: string): Promise<Match[]> => {
   if (!teamId) return [];
   const matchesColRef = getMatchesCollectionRef(teamId);
-  // Default sort by order, then by date and time if order is not set or equal
   const q = query(matchesColRef, orderBy('order', 'asc'), orderBy('date', 'desc'), orderBy('time', 'desc'));
   const matchSnapshot = await getDocs(q);
   return matchSnapshot.docs.map(fromFirestoreMatch);
@@ -104,28 +100,11 @@ export const getMatchById = async (teamId: string, matchId: string): Promise<Mat
 
 export const updateMatch = async (teamId: string, matchId: string, data: Partial<Omit<Match, 'id'>>): Promise<void> => {
   const matchDocRef = getMatchDocRef(teamId, matchId);
-  
-  const updateData = {...data};
-  // Ensure date is correctly formatted if present and it's a Date object
-  // If it's already a "yyyy-MM-dd" string (as expected from forms), it remains unchanged.
-  if (data.date) {
-    if (typeof data.date === 'string') {
-        // Validate or re-format if necessary, but typically it's already "yyyy-MM-dd"
-        // For simplicity, assume it's correct if string.
-        updateData.date = data.date;
-    } else if (data.date instanceof Date) {
-        updateData.date = format(data.date, "yyyy-MM-dd");
-    } else {
-        // Handle unexpected date type if necessary, or rely on TypeScript to catch this.
-        // This path might indicate an issue upstream.
-        updateData.date = format(parseISO(data.date as string), "yyyy-MM-dd"); // Fallback for string not in "yyyy-MM-dd"
-    }
-  }
-  
-  // Remove id from data if it exists to prevent trying to update it
-  if ('id' in updateData) delete (updateData as any).id;
-
-  await updateDoc(matchDocRef, updateData);
+  // The 'data' argument, when coming from handleUpdateMatch in matches/page.tsx,
+  // already has its 'date' field formatted as a "yyyy-MM-dd" string.
+  // The type Partial<Omit<Match, 'id'>> means data.date is string | undefined.
+  // Therefore, no further date processing is needed here.
+  await updateDoc(matchDocRef, data);
 };
 
 export const deleteMatch = async (teamId: string, matchId: string): Promise<void> => {
@@ -136,11 +115,11 @@ export const deleteMatch = async (teamId: string, matchId: string): Promise<void
 export const updateMatchAttendance = async (
   teamId: string,
   matchId: string,
-  playerId: string, // This should be Firebase UID of the player
+  playerId: string, 
   status: "present" | "absent" | "excused" | "unknown"
 ): Promise<void> => {
   const matchDocRef = getMatchDocRef(teamId, matchId);
-  const fieldPath = `attendance.${playerId}`; // Use dot notation for map fields
+  const fieldPath = `attendance.${playerId}`; 
   await updateDoc(matchDocRef, {
     [fieldPath]: status,
   });
@@ -152,9 +131,8 @@ export const updateMatchesOrder = async (teamId: string, orderedMatches: Array<{
   const batch = writeBatch(db);
   
   orderedMatches.forEach(match => {
-    const matchRef = getMatchDocRef(teamId, match.id); // Use helper for consistency
+    const matchRef = getMatchDocRef(teamId, match.id); 
     batch.update(matchRef, { order: match.order });
   });
   await batch.commit();
 };
-

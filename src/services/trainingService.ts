@@ -51,9 +51,9 @@ const processTimestamp = (timestamp: Timestamp | undefined): string | undefined 
   return timestamp ? timestamp.toDate().toISOString() : undefined;
 };
 
+// toFirestoreTraining is not currently used, but kept for potential future use.
+// It assumes trainingData.date is already "yyyy-MM-dd" string.
 const toFirestoreTraining = (trainingData: Omit<Training, 'id'>): any => {
-  // Assuming trainingData.date is already "yyyy-MM-dd" string as per Training type and form logic.
-  // The forms (AddTrainingForm) are responsible for this formatting.
   const dateString = trainingData.date;
 
   return {
@@ -67,19 +67,18 @@ const fromFirestoreTraining = (docSnap: any): Training => {
   return {
     id: docSnap.id,
     ...data,
-    attendance: data.attendance || {}, // Ensure attendance is always an object
+    attendance: data.attendance || {}, 
   } as Training;
 };
 
-export const addTraining = async (teamId: string, trainingData: Omit<Training, 'id' | 'attendance'>): Promise<string> => {
+export const addTraining = async (teamId: string, trainingData: Omit<Training, 'id' | 'attendance' | 'order'>): Promise<string> => {
   // trainingData.date comes from AddTrainingForm, where it's already formatted "yyyy-MM-dd"
   const firestorePayload = {
     ...trainingData,
-    attendance: {}, // Initialize attendance as empty object
-    order: (await getTrainings(teamId)).length, // Set initial order
+    attendance: {}, 
+    order: (await getTrainings(teamId)).length, 
   };
   const trainingsColRef = getTrainingsCollectionRef(teamId);
-  // Pass firestorePayload directly as its date is already string
   const docRef = await addDoc(trainingsColRef, firestorePayload);
   return docRef.id;
 };
@@ -87,7 +86,6 @@ export const addTraining = async (teamId: string, trainingData: Omit<Training, '
 export const getTrainings = async (teamId: string): Promise<Training[]> => {
   if (!teamId) return [];
   const trainingsColRef = getTrainingsCollectionRef(teamId);
-  // Default sort by order, then by date and time if order is not set or equal
   const q = query(trainingsColRef, orderBy('order', 'asc'), orderBy('date', 'desc'), orderBy('time', 'desc'));
   const trainingSnapshot = await getDocs(q);
   return trainingSnapshot.docs.map(fromFirestoreTraining);
@@ -102,23 +100,11 @@ export const getTrainingById = async (teamId: string, trainingId: string): Promi
 
 export const updateTraining = async (teamId: string, trainingId: string, data: Partial<Omit<Training, 'id'>>): Promise<void> => {
   const trainingDocRef = getTrainingDocRef(teamId, trainingId);
-  
-  const updateData = {...data};
-  // Ensure date is correctly formatted if present and it's a Date object
-  // If it's already a "yyyy-MM-dd" string (as expected from forms), it remains unchanged.
-  if (data.date) {
-    if (typeof data.date === 'string') {
-        // Validate or re-format if necessary, but typically it's already "yyyy-MM-dd"
-        updateData.date = data.date;
-    } else if (data.date instanceof Date) {
-        updateData.date = format(data.date, "yyyy-MM-dd");
-    } else {
-        updateData.date = format(parseISO(data.date as string), "yyyy-MM-dd"); // Fallback
-    }
-  }
-  if ('id' in updateData) delete (updateData as any).id;
-
-  await updateDoc(trainingDocRef, updateData);
+  // The 'data' argument, when coming from handleUpdateTraining in trainings/page.tsx,
+  // already has its 'date' field formatted as a "yyyy-MM-dd" string.
+  // The type Partial<Omit<Training, 'id'>> means data.date is string | undefined.
+  // Therefore, no further date processing is needed here.
+  await updateDoc(trainingDocRef, data);
 };
 
 export const deleteTraining = async (teamId: string, trainingId: string): Promise<void> => {
@@ -129,11 +115,11 @@ export const deleteTraining = async (teamId: string, trainingId: string): Promis
 export const updateTrainingAttendance = async (
   teamId: string,
   trainingId: string,
-  playerId: string, // Firebase UID of the player
+  playerId: string, 
   status: "present" | "absent" | "excused" | "unknown"
 ): Promise<void> => {
   const trainingDocRef = getTrainingDocRef(teamId, trainingId);
-  const fieldPath = `attendance.${playerId}`; // Use dot notation
+  const fieldPath = `attendance.${playerId}`; 
   await updateDoc(trainingDocRef, {
     [fieldPath]: status,
   });
@@ -150,4 +136,3 @@ export const updateTrainingsOrder = async (teamId: string, orderedTrainings: Arr
   });
   await batch.commit();
 };
-
