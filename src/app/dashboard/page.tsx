@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -74,8 +75,8 @@ export default function DashboardPage() {
             return isAfter(assignmentDate, today) || isEqual(assignmentDate, today);
           });
         setTotalUpcomingRefereeingAssignmentsCount(allFutureRefereeingAssignments.length);
-        // Display only the next 2 refereeing assignments on the dashboard card
-        setUpcomingRefereeingAssignments(allFutureRefereeingAssignments.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime()).slice(0, 2));
+        // Display only the next refereeing assignment on the dashboard card
+        setUpcomingRefereeingAssignments(allFutureRefereeingAssignments.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime()).slice(0, 1));
         
         const teamMembers = await getAllUsersByTeam(teamId);
         setTotalTeamMembers(teamMembers.length);
@@ -241,15 +242,13 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-4 flex-grow">
             {upcomingRefereeingAssignments.length > 0 ? (
-              upcomingRefereeingAssignments.map((assignment) => (
-                <div key={assignment.id} className="p-3 bg-secondary/50 rounded-lg">
+                <div className="p-3 bg-secondary/50 rounded-lg">
                   <h3 className="font-semibold">Assignment</h3>
                   <p className="text-sm text-muted-foreground">
-                    {format(parseISO(assignment.date), "EEEE, MMMM dd, yyyy")} at {assignment.time}
+                    {format(parseISO(upcomingRefereeingAssignments[0].date), "EEEE, MMMM dd, yyyy")} at {upcomingRefereeingAssignments[0].time}
                   </p>
-                  {assignment.notes && <p className="text-xs text-muted-foreground mt-1">Notes: {assignment.notes}</p>}
+                  {upcomingRefereeingAssignments[0].notes && <p className="text-xs text-muted-foreground mt-1">Notes: {upcomingRefereeingAssignments[0].notes}</p>}
                 </div>
-              ))
             ) : (
               <p className="text-muted-foreground">No upcoming refereeing assignments.</p>
             )}
@@ -265,3 +264,5 @@ export default function DashboardPage() {
   );
 }
 
+
+    
