@@ -207,42 +207,46 @@ export default function RefereeingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Refereeing Assignments</h1>
           <p className="text-muted-foreground">
-            Manage refereeing assignments for {currentTeam.name}. Drag to reorder.
+            Manage refereeing assignments for {currentTeam.name}. {isAdmin && "Drag to reorder."}
           </p>
         </div>
-        <Dialog open={isAddAssignmentDialogOpen} onOpenChange={(isOpen) => {
-          setIsAddAssignmentDialogOpen(isOpen);
-          if (!isOpen) setEditingAssignment(null); 
-        }}>
-          <DialogTrigger asChild>
-            <Button>
-              <Icons.Add className="mr-2 h-4 w-4" /> Add Assignment
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="w-[95vw] max-w-[450px] sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>{editingAssignment ? "Edit Assignment" : "Add New Assignment"}</DialogTitle>
-              <DialogDescription>
-                {editingAssignment 
-                  ? `Update details for assignment on ${format(parseISO(editingAssignment.date), "MMM dd, yyyy")}.`
-                  : "Fill in the details for the new refereeing assignment."
-                }
-              </DialogDescription>
-            </DialogHeader>
-            <AddRefereeingAssignmentForm 
-              onSubmit={editingAssignment ? handleUpdateAssignment : handleAddAssignment} 
-              initialData={editingAssignment} 
-              onClose={() => {
-                setIsAddAssignmentDialogOpen(false);
-                setEditingAssignment(null);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        {isAdmin && (
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Dialog open={isAddAssignmentDialogOpen} onOpenChange={(isOpen) => {
+              setIsAddAssignmentDialogOpen(isOpen);
+              if (!isOpen) setEditingAssignment(null); 
+            }}>
+              <DialogTrigger asChild>
+                <Button className="w-full sm:w-auto">
+                  <Icons.Add className="mr-2 h-4 w-4" /> Add Assignment
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="w-[95vw] max-w-[450px] sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>{editingAssignment ? "Edit Assignment" : "Add New Assignment"}</DialogTitle>
+                  <DialogDescription>
+                    {editingAssignment 
+                      ? `Update details for assignment on ${format(parseISO(editingAssignment.date), "MMM dd, yyyy")}.`
+                      : "Fill in the details for the new refereeing assignment."
+                    }
+                  </DialogDescription>
+                </DialogHeader>
+                <AddRefereeingAssignmentForm 
+                  onSubmit={editingAssignment ? handleUpdateAssignment : handleAddAssignment} 
+                  initialData={editingAssignment} 
+                  onClose={() => {
+                    setIsAddAssignmentDialogOpen(false);
+                    setEditingAssignment(null);
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </div>
 
       {assignments.length === 0 ? (
@@ -285,3 +289,4 @@ export default function RefereeingPage() {
     </div>
   );
 }
+
