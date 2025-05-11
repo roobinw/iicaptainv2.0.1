@@ -1,4 +1,3 @@
-
 "use client";
 
 import { format, parseISO } from "date-fns";
@@ -62,6 +61,11 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, dndList
           </div>
           {isAdmin && (onEdit || onDelete || dndListeners) && (
             <div className="flex items-center gap-0.5 ml-2 shrink-0">
+              {dndListeners && ( 
+                <Button variant="ghost" size="icon" {...dndListeners} aria-label="Reorder" className="h-8 w-8 cursor-grab active:cursor-grabbing hover:bg-sidebar-accent">
+                  <Icons.GripVertical className="h-4 w-4" />
+                </Button>
+              )}
               {onEdit && (
                 <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onEdit(assignment);}} aria-label="Edit assignment" className="h-8 w-8 hover:bg-sidebar-accent">
                   <Icons.Edit className="h-4 w-4" />
@@ -70,11 +74,6 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, dndList
               {onDelete && (
                 <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(assignment.id);}} aria-label="Delete assignment" className="h-8 w-8 hover:bg-sidebar-accent">
                   <Icons.Delete className="h-4 w-4 text-destructive" />
-                </Button>
-              )}
-              {dndListeners && ( 
-                <Button variant="ghost" size="icon" {...dndListeners} aria-label="Reorder" className="h-8 w-8 cursor-grab active:cursor-grabbing hover:bg-sidebar-accent">
-                  <Icons.MoreVertical className="h-4 w-4" />
                 </Button>
               )}
             </div>
