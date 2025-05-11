@@ -25,7 +25,7 @@ import {
   MoreVertical, 
   KeyRound, 
   LifeBuoy,
-  Whistle, // Added for Refereeing
+  Gavel, // Replaced Whistle with Gavel
   type LucideProps,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -61,7 +61,7 @@ export const Icons = {
   MoreVertical: MoreVertical,
   KeyRound: KeyRound, 
   Support: LifeBuoy,
-  Refereeing: Whistle, // Added
+  Refereeing: Gavel, // Updated to Gavel
   TeamLogo: ({ className, ...props }: TeamLogoProps) => ( 
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -79,3 +79,4 @@ export const Icons = {
   ),
   CalendarDays: CalendarDays,
 };
+
