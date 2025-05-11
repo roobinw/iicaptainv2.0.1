@@ -55,18 +55,17 @@ export default function DashboardPage() {
           });
         setTotalUpcomingMatchesCount(allFutureMatches.length);
         // Display only the next match on the dashboard card
-        setUpcomingMatches(allFutureMatches.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime()).slice(0, 1));
+        setUpcomingMatches(allFutureMatches.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime() || a.time.localeCompare(b.time)).slice(0, 1));
 
         const allTrainings = await getTrainings(teamId);
         const allFutureTrainings = allTrainings
           .filter(training => {
             const trainingDate = parseISO(training.date);
-            // Fixed bug here: was isEqual(matchDate, today), changed to isEqual(trainingDate, today)
             return isAfter(trainingDate, today) || isEqual(trainingDate, today);
           });
         setTotalUpcomingTrainingsCount(allFutureTrainings.length);
         // Display only the next training session on the dashboard card
-        setUpcomingTrainings(allFutureTrainings.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime()).slice(0, 1));
+        setUpcomingTrainings(allFutureTrainings.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime() || a.time.localeCompare(b.time)).slice(0, 1));
 
         const allRefereeingAssignments = await getRefereeingAssignments(teamId);
         const allFutureRefereeingAssignments = allRefereeingAssignments
@@ -76,7 +75,7 @@ export default function DashboardPage() {
           });
         setTotalUpcomingRefereeingAssignmentsCount(allFutureRefereeingAssignments.length);
         // Display only the next refereeing assignment on the dashboard card
-        setUpcomingRefereeingAssignments(allFutureRefereeingAssignments.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime()).slice(0, 1));
+        setUpcomingRefereeingAssignments(allFutureRefereeingAssignments.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime() || a.time.localeCompare(b.time)).slice(0, 1));
         
         const teamMembers = await getAllUsersByTeam(teamId);
         setTotalTeamMembers(teamMembers.length);
@@ -243,7 +242,7 @@ export default function DashboardPage() {
           <CardContent className="space-y-4 flex-grow">
             {upcomingRefereeingAssignments.length > 0 ? (
                 <div className="p-3 bg-secondary/50 rounded-lg">
-                  <h3 className="font-semibold">Assignment</h3>
+                  <h3 className="font-semibold">Assignment vs {upcomingRefereeingAssignments[0].homeTeam || 'TBD'}</h3>
                   <p className="text-sm text-muted-foreground">
                     {format(parseISO(upcomingRefereeingAssignments[0].date), "EEEE, MMMM dd, yyyy")} at {upcomingRefereeingAssignments[0].time}
                   </p>
