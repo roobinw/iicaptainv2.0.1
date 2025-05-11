@@ -4,13 +4,13 @@ import type { ReactNode } from "react";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"; 
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
 import type { Match, Training, User, RefereeingAssignment } from "@/types";
 import { useAuth } from "@/lib/auth";
-import { getAllUsersByTeam } from "@/services/userService"; 
+import { getAllUsersByTeam } from "@/services/userService";
 import { AttendanceToggler, getAttendanceStatusColor, getAttendanceStatusText, type AttendanceStatus } from "./attendance-toggler";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,13 +26,13 @@ import {
 
 interface EventCardBaseProps {
   item: Match | Training | RefereeingAssignment;
-  eventType: "match" | "training" | "refereeing"; 
+  eventType: "match" | "training" | "refereeing";
   icon: ReactNode;
   titlePrefix?: string;
   renderDetails: (item: Match | Training | RefereeingAssignment) => ReactNode;
-  onEdit?: (item: Match | Training | RefereeingAssignment) => void; 
-  onDelete?: (itemId: string) => void; 
-  onAssignPlayersSuccess?: () => void; 
+  onEdit?: (item: Match | Training | RefereeingAssignment) => void;
+  onDelete?: (itemId: string) => void;
+  onAssignPlayersSuccess?: () => void;
 }
 
 export function EventCardBase({
@@ -45,14 +45,14 @@ export function EventCardBase({
   onDelete,
   onAssignPlayersSuccess,
 }: EventCardBaseProps) {
-  const { user: currentUser, currentTeam } = useAuth(); 
+  const { user: currentUser, currentTeam } = useAuth();
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
   const [isAssignPlayersDialogOpen, setIsAssignPlayersDialogOpen] = useState(false);
-  const [memberList, setMemberList] = useState<User[]>([]); 
-  const [isLoadingMembers, setIsLoadingMembers] = useState(true); 
-  
-  const initialAttendanceSource = (eventType === "match" || eventType === "training") 
-    ? (item as Match | Training).attendance 
+  const [memberList, setMemberList] = useState<User[]>([]);
+  const [isLoadingMembers, setIsLoadingMembers] = useState(true);
+
+  const initialAttendanceSource = (eventType === "match" || eventType === "training")
+    ? (item as Match | Training).attendance
     : {};
   const [currentAttendance, setCurrentAttendance] = useState<Record<string, AttendanceStatus>>(initialAttendanceSource || {});
 
@@ -61,7 +61,7 @@ export function EventCardBase({
     const newAttendance: Record<string, AttendanceStatus> = {};
     const safeEventAttendance = eventAttendance || {};
     members.forEach(member => {
-      newAttendance[member.uid] = safeEventAttendance[member.uid] || 'present'; 
+      newAttendance[member.uid] = safeEventAttendance[member.uid] || 'present';
     });
     for (const uid in safeEventAttendance) {
         if (!newAttendance[uid]) {
@@ -70,9 +70,9 @@ export function EventCardBase({
     }
     setCurrentAttendance(newAttendance);
   }, []);
-  
+
   useEffect(() => {
-    if (currentUser?.teamId) { 
+    if (currentUser?.teamId) {
       setIsLoadingMembers(true);
       getAllUsersByTeam(currentUser.teamId)
         .then(fetchedMembers => {
@@ -83,7 +83,7 @@ export function EventCardBase({
         })
         .catch(err => {
           console.error(`Failed to fetch team members for ${eventType} card:`, err);
-          setMemberList([]); 
+          setMemberList([]);
           if (eventType === "match" || eventType === "training") {
             initializeAttendance([], (item as Match | Training).attendance);
           }
@@ -96,7 +96,8 @@ export function EventCardBase({
       }
       setIsLoadingMembers(false);
     }
-  }, [currentUser?.teamId, item.id, eventType, initializeAttendance, (eventType === "match" || eventType === "training") ? (item as Match | Training).attendance : null]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.teamId, item.id, eventType, (eventType === "match" || eventType === "training") ? (item as Match | Training).attendance : null]);
 
 
   useEffect(() => {
@@ -112,7 +113,7 @@ export function EventCardBase({
   const handleAttendanceChange = useCallback((memberId: string, status: AttendanceStatus) => {
     setCurrentAttendance(prev => ({ ...prev, [memberId]: status }));
   }, []);
-  
+
   const getInitials = (name: string) => {
     if (!name) return "?";
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -120,24 +121,24 @@ export function EventCardBase({
 
   const presentCount = Object.values(currentAttendance).filter(status => status === 'present').length;
   const totalMembersForAttendanceCount = memberList.length > 0 ? memberList.length : Object.keys(currentAttendance).length;
-  
+
   let eventName: string;
   let eventDateForDialog: string = ""; // Initialize to prevent uninitialized access
   if (eventType === "match" && 'opponent' in item && 'date' in item) {
-    eventName = item.opponent;
-    eventDateForDialog = item.date;
+    eventName = (item as Match).opponent;
+    eventDateForDialog = (item as Match).date;
   } else if (eventType === "training" && 'location' in item && 'date' in item) {
-    eventName = item.location;
-    eventDateForDialog = item.date;
+    eventName = (item as Training).location;
+    eventDateForDialog = (item as Training).date;
   } else if (eventType === "refereeing" && 'date' in item) {
     eventName = `Assignment`;
-    eventDateForDialog = item.date;
+    eventDateForDialog = (item as RefereeingAssignment).date;
   } else {
     eventName = "Event"; // Fallback
     eventDateForDialog = item.date; // Assuming date is always present
   }
-  
-  const cardTitle = eventType === "refereeing" ? 
+
+  const cardTitle = eventType === "refereeing" ?
     `${titlePrefix || ""} ${eventName} - ${format(parseISO(eventDateForDialog), "MMM dd")}` :
     `${titlePrefix || ""} ${eventName}`;
 
@@ -146,7 +147,7 @@ export function EventCardBase({
     <Card className="shadow-lg hover:shadow-primary/10 transition-shadow duration-300 flex flex-col h-full w-full">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start gap-2">
-          <div className="flex-1 min-w-0"> 
+          <div className="flex-1 min-w-0">
              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
               {icon}
               <span className="truncate min-w-0">
@@ -157,13 +158,12 @@ export function EventCardBase({
                 {renderDetails(item)}
             </CardDescription>
           </div>
-          {/* DropdownMenu was here, now moved to CardFooter */}
         </div>
       </CardHeader>
       <CardContent className="flex-grow pt-2 pb-3">
          {(eventType === "match" || eventType === "training") && (
             <div className="text-sm text-muted-foreground">
-                Attendance: {isLoadingMembers && memberList.length === 0 && totalMembersForAttendanceCount === 0 ? ( 
+                Attendance: {isLoadingMembers && memberList.length === 0 && totalMembersForAttendanceCount === 0 ? (
                     <span className="inline-block"><Skeleton className="h-4 w-20" /></span>
                 ) : (
                     <span className="font-semibold text-primary">{presentCount} / {totalMembersForAttendanceCount}</span>
@@ -179,12 +179,12 @@ export function EventCardBase({
                 <Icons.Attendance className="mr-2 h-4 w-4" /> Manage Attendance
                 </Button>
             </DialogTrigger>
-            <DialogContent 
-                className="w-[95vw] max-w-[400px] sm:max-w-md md:max-w-lg" 
+            <DialogContent
+                className="w-[95vw] max-w-[400px] sm:max-w-md md:max-w-lg"
                 onInteractOutside={(e) => {
                 const target = e.target as HTMLElement;
-                if (target.closest('.attendance-toggler-button')) { 
-                    e.preventDefault(); 
+                if (target.closest('.attendance-toggler-button')) {
+                    e.preventDefault();
                 }
                 }}
             >
@@ -195,7 +195,7 @@ export function EventCardBase({
                 </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="h-[300px] md:h-[400px] pr-4">
-                {isLoadingMembers && memberList.length === 0 && totalMembersForAttendanceCount === 0 ? ( 
+                {isLoadingMembers && memberList.length === 0 && totalMembersForAttendanceCount === 0 ? (
                     <div className="space-y-3 py-1">
                     {[1,2,3].map(i => (
                         <div key={i} className="flex items-center justify-between p-2 border rounded-md">
@@ -212,7 +212,7 @@ export function EventCardBase({
                     </div>
                 ) : memberList.length > 0 ? (
                     <div className="space-y-3 py-1">
-                    {memberList.map((member) => (  
+                    {memberList.map((member) => (
                         <div key={member.uid} className="flex items-center justify-between p-2 border rounded-md bg-card hover:bg-secondary/30">
                         <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
@@ -226,11 +226,11 @@ export function EventCardBase({
                             </p>
                             </div>
                         </div>
-                        <AttendanceToggler 
-                            item={{...(item as Match | Training), attendance: currentAttendance}} 
-                            player={member} 
-                            eventType={eventType as "match" | "training"} 
-                            onAttendanceChange={handleAttendanceChange} 
+                        <AttendanceToggler
+                            item={{...(item as Match | Training), attendance: currentAttendance}}
+                            player={member}
+                            eventType={eventType as "match" | "training"}
+                            onAttendanceChange={handleAttendanceChange}
                         />
                         </div>
                     ))}
@@ -246,7 +246,7 @@ export function EventCardBase({
           <Dialog open={isAssignPlayersDialogOpen} onOpenChange={setIsAssignPlayersDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" className="hover:bg-accent hover:text-accent-foreground whitespace-nowrap">
-                <Icons.Users className="mr-2 h-4 w-4" /> Manage Assignment
+                <Icons.Players className="mr-2 h-4 w-4" /> Manage Assignment 
               </Button>
             </DialogTrigger>
             <DialogContent className="w-[95vw] max-w-[400px] sm:max-w-md md:max-w-lg">
@@ -269,9 +269,8 @@ export function EventCardBase({
             </DialogContent>
           </Dialog>
         )}
-        {/* "More Options" DropdownMenu moved here */}
         {isAdmin && (onEdit || onDelete) && (
-            <div className="ml-auto flex-shrink-0"> {/* Use ml-auto to push to the right if other elements are on the left */}
+            <div className="ml-auto flex-shrink-0"> 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent/50">
