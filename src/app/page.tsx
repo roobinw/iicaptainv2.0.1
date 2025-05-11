@@ -51,12 +51,11 @@ export default function LandingPage() {
             </div>
             <div className="mt-16 sm:mt-24 max-w-4xl mx-auto">
               <Image
-                src="https://picsum.photos/seed/team-huddle/1200/600"
-                alt="Sports team huddle"
+                src="/screenshotwebappiicaptain.png" 
+                alt="Screenshot of iiCaptain web application"
                 width={1200}
                 height={600}
                 className="rounded-xl shadow-2xl border-2 border-border/20"
-                data-ai-hint="team sport"
                 priority
               />
             </div>
@@ -160,3 +159,4 @@ export default function LandingPage() {
     </div>
   );
 }
+
