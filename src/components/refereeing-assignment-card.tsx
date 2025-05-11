@@ -56,7 +56,7 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, dndList
               <Icons.Refereeing className="h-5 w-5 text-primary" />
               Refereeing Duty
             </CardTitle>
-            <CardDescription className="mt-1">
+            <CardDescription className="mt-1 overflow-hidden"> {/* Added overflow-hidden for consistency */}
               {format(parseISO(assignment.date), "EEEE, MMMM dd, yyyy")} at {assignment.time}
             </CardDescription>
           </div>
@@ -107,7 +107,7 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, dndList
         {assignment.notes && (
           <div>
             <h4 className="text-sm font-semibold text-muted-foreground mb-1">Notes:</h4>
-            <p className="text-sm text-foreground bg-secondary/30 p-2 rounded-md">{assignment.notes}</p>
+            <p className="text-sm text-foreground bg-secondary/30 p-2 rounded-md break-words">{assignment.notes}</p> {/* Added break-words */}
           </div>
         )}
       </CardContent>
