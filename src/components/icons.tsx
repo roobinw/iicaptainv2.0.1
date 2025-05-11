@@ -12,7 +12,7 @@ import {
   MoreHorizontal,
   Settings,
   UserCircle,
-  ClipboardList,
+  ClipboardList, // Ensure ClipboardList is imported
   AlertCircle,
   CheckCircle2,
   XCircle,
@@ -25,7 +25,7 @@ import {
   MoreVertical, 
   KeyRound, 
   LifeBuoy,
-  Gavel, // Replaced Whistle with Gavel
+  Gavel, 
   type LucideProps,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -49,7 +49,7 @@ export const Icons = {
   MoreHorizontal: MoreHorizontal,
   Settings: Settings,
   User: UserCircle,
-  Attendance: ClipboardList, 
+  Attendance: ClipboardList, // This was already here
   AlertCircle: AlertCircle,
   CheckCircle2: CheckCircle2,
   XCircle: XCircle,
@@ -61,7 +61,8 @@ export const Icons = {
   MoreVertical: MoreVertical,
   KeyRound: KeyRound, 
   Support: LifeBuoy,
-  Refereeing: Gavel, // Updated to Gavel
+  Refereeing: Gavel,
+  ClipboardList: ClipboardList, // Explicitly ensure it's available if needed elsewhere
   TeamLogo: ({ className, ...props }: TeamLogoProps) => ( 
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -71,12 +72,13 @@ export const Icons = {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={cn("h-6 w-6", className)} // Merge passed className with defaults
-      {...props} // Spread other lucide props if any
+      className={cn("h-6 w-6", className)} 
+      {...props} 
     >
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
     </svg>
   ),
   CalendarDays: CalendarDays,
 };
+
 

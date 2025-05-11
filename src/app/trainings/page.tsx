@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Icons } from "@/components/icons";
 import { TrainingCard } from "@/components/training-card";
 import { AddTrainingForm } from "@/components/add-training-form";
+import { BulkAddTrainingForm, type SingleTrainingFormInput } from "@/components/bulk-add-training-form";
 import type { Training } from "@/types";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +15,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableItem } from '@/components/sortable-item';
-import { addTraining, getTrainings, updateTraining, deleteTraining, updateTrainingsOrder } from "@/services/trainingService";
+import { addTraining, getTrainings, updateTraining, deleteTraining, updateTrainingsOrder, bulkAddTrainings } from "@/services/trainingService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 
@@ -23,6 +25,7 @@ export default function TrainingsPage() {
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isAddTrainingDialogOpen, setIsAddTrainingDialogOpen] = useState(false);
+  const [isBulkAddTrainingDialogOpen, setIsBulkAddTrainingDialogOpen] = useState(false);
   const [editingTraining, setEditingTraining] = useState<Training | null>(null);
   const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
 
@@ -64,10 +67,15 @@ export default function TrainingsPage() {
   }, [authLoading, user, currentTeam, forceUpdateCounter]); 
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.hash === "#add" && user?.role === "admin") {
-      setIsAddTrainingDialogOpen(true);
-      setEditingTraining(null);
-      window.location.hash = "";
+    if (typeof window !== 'undefined' && user?.role === "admin") {
+        if (window.location.hash === "#add") {
+            setIsAddTrainingDialogOpen(true);
+            setEditingTraining(null);
+            window.location.hash = "";
+        } else if (window.location.hash === "#bulk-add") {
+            setIsBulkAddTrainingDialogOpen(true);
+            window.location.hash = "";
+        }
     }
   }, [user?.role]);
 
@@ -87,6 +95,27 @@ export default function TrainingsPage() {
     }
   };
 
+  const handleBulkAddTrainings = async (data: SingleTrainingFormInput[]) => {
+    if (!user?.teamId) {
+      toast({ title: "Error", description: "Team information is missing.", variant: "destructive" });
+      return;
+    }
+    if (data.length === 0) {
+      toast({ title: "No Trainings", description: "Please add at least one training session to submit.", variant: "destructive" });
+      return;
+    }
+    try {
+      await bulkAddTrainings(user.teamId, data);
+      toast({ title: "Trainings Added", description: `${data.length} training session(s) have been scheduled.` });
+      setForceUpdateCounter(prev => prev + 1);
+      setIsBulkAddTrainingDialogOpen(false);
+    } catch (error: any) {
+      console.error("Detailed error bulk adding trainings:", error);
+      toast({ title: "Error Bulk Adding Trainings", description: error.message || "Could not add training sessions. Check console for details.", variant: "destructive" });
+    }
+  };
+
+
   const handleEditTraining = (training: Training) => {
     setEditingTraining(training);
     setIsAddTrainingDialogOpen(true);
@@ -98,7 +127,6 @@ export default function TrainingsPage() {
       return;
     }
     try {
-      // The date is already a "yyyy-MM-dd" string from the form submission logic
       await updateTraining(user.teamId, editingTraining.id, data as Partial<Omit<Training, 'id'>>);
       toast({ title: "Training Updated", description: `Training at ${data.location} updated.` });
       setForceUpdateCounter(prev => prev + 1);
@@ -143,7 +171,6 @@ export default function TrainingsPage() {
       } catch (error) {
         console.error("Error updating training order:", error);
         toast({ title: "Error", description: "Could not save training order. Check console for details.", variant: "destructive" });
-        // Re-fetch to revert local state if backend update fails
         if (user?.teamId) fetchTrainings(user.teamId); 
       }
     }
@@ -154,11 +181,18 @@ export default function TrainingsPage() {
   if (authLoading || isLoadingData) {
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <Skeleton className="h-9 w-1/2" />
-                {isAdmin && <Skeleton className="h-10 w-36" />}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div>
+                    <Skeleton className="h-9 w-60 mb-1" />
+                    <Skeleton className="h-5 w-80" />
+                </div>
+                {isAdmin && (
+                    <div className="flex gap-2">
+                        <Skeleton className="h-10 w-36" />
+                        <Skeleton className="h-10 w-44" />
+                    </div>
+                )}
             </div>
-            <Skeleton className="h-5 w-3/4" />
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {[1,2,3].map(i => <Skeleton key={i} className="h-60 w-full rounded-lg" />)}
             </div>
@@ -171,7 +205,7 @@ export default function TrainingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Training Schedule</h1>
           <p className="text-muted-foreground">
@@ -179,35 +213,57 @@ export default function TrainingsPage() {
           </p>
         </div>
         {isAdmin && (
-          <Dialog open={isAddTrainingDialogOpen} onOpenChange={(isOpen) => {
-            setIsAddTrainingDialogOpen(isOpen);
-            if (!isOpen) setEditingTraining(null);
-          }}>
-            <DialogTrigger asChild>
-              <Button>
-                <Icons.Add className="mr-2 h-4 w-4" /> Add Training
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="w-[95vw] max-w-[400px] sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>{editingTraining ? "Edit Training" : "Add New Training"}</DialogTitle>
-                <DialogDescription>
-                  {editingTraining 
-                    ? `Update details for training at ${editingTraining.location} on ${format(parseISO(editingTraining.date), "MMM dd, yyyy")}.`
-                    : "Fill in the details for the new training session."
-                  }
-                </DialogDescription>
-              </DialogHeader>
-              <AddTrainingForm 
-                onSubmit={editingTraining ? handleUpdateTraining : handleAddTraining} 
-                initialData={editingTraining}
-                onClose={() => {
-                  setIsAddTrainingDialogOpen(false);
-                  setEditingTraining(null);
-                }}
-              />
-            </DialogContent>
-          </Dialog>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Dialog open={isAddTrainingDialogOpen} onOpenChange={(isOpen) => {
+                    setIsAddTrainingDialogOpen(isOpen);
+                    if (!isOpen) setEditingTraining(null);
+                }}>
+                    <DialogTrigger asChild>
+                    <Button className="w-full sm:w-auto">
+                        <Icons.Add className="mr-2 h-4 w-4" /> Add Training
+                    </Button>
+                    </DialogTrigger>
+                    <DialogContent className="w-[95vw] max-w-[400px] sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>{editingTraining ? "Edit Training" : "Add New Training"}</DialogTitle>
+                        <DialogDescription>
+                        {editingTraining 
+                            ? `Update details for training at ${editingTraining.location} on ${format(parseISO(editingTraining.date), "MMM dd, yyyy")}.`
+                            : "Fill in the details for the new training session."
+                        }
+                        </DialogDescription>
+                    </DialogHeader>
+                    <AddTrainingForm 
+                        onSubmit={editingTraining ? handleUpdateTraining : handleAddTraining} 
+                        initialData={editingTraining}
+                        onClose={() => {
+                        setIsAddTrainingDialogOpen(false);
+                        setEditingTraining(null);
+                        }}
+                    />
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={isBulkAddTrainingDialogOpen} onOpenChange={setIsBulkAddTrainingDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" className="w-full sm:w-auto">
+                            <Icons.ClipboardList className="mr-2 h-4 w-4" /> Bulk Add Trainings
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="w-[95vw] max-w-xl"> {/* Wider dialog for bulk add */}
+                        <DialogHeader>
+                            <DialogTitle>Bulk Add Training Sessions</DialogTitle>
+                            <DialogDescription>
+                                Add multiple training sessions at once.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <BulkAddTrainingForm
+                            onSubmit={handleBulkAddTrainings}
+                            onClose={() => setIsBulkAddTrainingDialogOpen(false)}
+                        />
+                    </DialogContent>
+                </Dialog>
+          </div>
         )}
       </div>
 
@@ -216,7 +272,7 @@ export default function TrainingsPage() {
             <CardHeader>
                 <CardTitle>No Trainings Yet</CardTitle>
                 <CardDescription>
-                There are no training sessions scheduled for your team. {isAdmin && "Click 'Add Training' to get started."}
+                There are no training sessions scheduled for your team. {isAdmin && "Click 'Add Training' or 'Bulk Add Trainings' to get started."}
                 </CardDescription>
             </CardHeader>
             <CardContent>

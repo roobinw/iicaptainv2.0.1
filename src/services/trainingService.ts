@@ -17,6 +17,8 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { format, parseISO } from 'date-fns';
+import type { SingleTrainingFormInput } from '@/components/bulk-add-training-form';
+
 
 const getTrainingsCollectionRef = (teamId: string) => {
   if (!db) {
@@ -51,37 +53,52 @@ const processTimestamp = (timestamp: Timestamp | undefined): string | undefined 
   return timestamp ? timestamp.toDate().toISOString() : undefined;
 };
 
-// toFirestoreTraining is not currently used, but kept for potential future use.
-// It assumes trainingData.date is already "yyyy-MM-dd" string.
-const toFirestoreTraining = (trainingData: Omit<Training, 'id'>): any => {
-  const dateString = trainingData.date;
-
-  return {
-    ...trainingData,
-    date: dateString,
-  };
-};
-
 const fromFirestoreTraining = (docSnap: any): Training => {
   const data = docSnap.data();
   return {
     id: docSnap.id,
     ...data,
+    // Ensure date is a string; if it's a Timestamp, convert it.
+    date: data.date instanceof Timestamp ? format(data.date.toDate(), "yyyy-MM-dd") : data.date,
     attendance: data.attendance || {}, 
   } as Training;
 };
 
 export const addTraining = async (teamId: string, trainingData: Omit<Training, 'id' | 'attendance' | 'order'>): Promise<string> => {
-  // trainingData.date comes from AddTrainingForm, where it's already formatted "yyyy-MM-dd"
+  const currentTrainings = await getTrainings(teamId);
   const firestorePayload = {
     ...trainingData,
+    date: trainingData.date, // Already "yyyy-MM-dd" string
     attendance: {}, 
-    order: (await getTrainings(teamId)).length, 
+    order: currentTrainings.length, 
   };
   const trainingsColRef = getTrainingsCollectionRef(teamId);
   const docRef = await addDoc(trainingsColRef, firestorePayload);
   return docRef.id;
 };
+
+export const bulkAddTrainings = async (teamId: string, trainingsData: SingleTrainingFormInput[]): Promise<void> => {
+  if (!db) throw new Error("Firestore not initialized");
+  if (!teamId) throw new Error("Team ID is required for bulk adding trainings.");
+  if (trainingsData.length === 0) return;
+
+  const trainingsColRef = getTrainingsCollectionRef(teamId);
+  const batch = writeBatch(db);
+  const currentTrainingsCount = (await getDocs(query(trainingsColRef))).size;
+
+  trainingsData.forEach((training, index) => {
+    const newDocRef = doc(trainingsColRef); // Auto-generate ID
+    const firestorePayload = {
+      ...training, // date is already "yyyy-MM-dd" string from BulkAddTrainingForm
+      attendance: {},
+      order: currentTrainingsCount + index,
+    };
+    batch.set(newDocRef, firestorePayload);
+  });
+
+  await batch.commit();
+};
+
 
 export const getTrainings = async (teamId: string): Promise<Training[]> => {
   if (!teamId) return [];
@@ -100,11 +117,14 @@ export const getTrainingById = async (teamId: string, trainingId: string): Promi
 
 export const updateTraining = async (teamId: string, trainingId: string, data: Partial<Omit<Training, 'id'>>): Promise<void> => {
   const trainingDocRef = getTrainingDocRef(teamId, trainingId);
-  // The 'data' argument, when coming from handleUpdateTraining in trainings/page.tsx,
-  // already has its 'date' field formatted as a "yyyy-MM-dd" string.
-  // The type Partial<Omit<Training, 'id'>> means data.date is string | undefined.
-  // Therefore, no further date processing is needed here.
-  await updateDoc(trainingDocRef, data);
+  const updateData: Partial<Training> = { ...data };
+  if (data.date && !(data.date instanceof Date)) { // data.date should be "yyyy-MM-dd"
+     updateData.date = data.date;
+  } else if (data.date instanceof Date) { // Should not happen if form submits string
+     console.warn("updateTraining received Date object for date, expected string. Formatting anyway.");
+     updateData.date = format(data.date, "yyyy-MM-dd");
+  }
+  await updateDoc(trainingDocRef, updateData);
 };
 
 export const deleteTraining = async (teamId: string, trainingId: string): Promise<void> => {
@@ -136,3 +156,4 @@ export const updateTrainingsOrder = async (teamId: string, orderedTrainings: Arr
   });
   await batch.commit();
 };
+
