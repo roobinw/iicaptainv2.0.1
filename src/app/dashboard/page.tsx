@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -52,6 +53,7 @@ export default function DashboardPage() {
             return isAfter(matchDate, today) || isEqual(matchDate, today);
           });
         setTotalUpcomingMatchesCount(allFutureMatches.length);
+        // Display only the next 2 matches on the dashboard card
         setUpcomingMatches(allFutureMatches.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime()).slice(0, 2));
 
         const allTrainings = await getTrainings(teamId);
@@ -61,7 +63,8 @@ export default function DashboardPage() {
             return isAfter(trainingDate, today) || isEqual(trainingDate, today);
           });
         setTotalUpcomingTrainingsCount(allFutureTrainings.length);
-        setUpcomingTrainings(allFutureTrainings.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime()).slice(0, 2));
+        // Display ALL upcoming trainings on the dashboard card
+        setUpcomingTrainings(allFutureTrainings.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime()));
 
         const allRefereeingAssignments = await getRefereeingAssignments(teamId);
         const allFutureRefereeingAssignments = allRefereeingAssignments
@@ -70,6 +73,7 @@ export default function DashboardPage() {
             return isAfter(assignmentDate, today) || isEqual(assignmentDate, today);
           });
         setTotalUpcomingRefereeingAssignmentsCount(allFutureRefereeingAssignments.length);
+        // Display only the next 2 refereeing assignments on the dashboard card
         setUpcomingRefereeingAssignments(allFutureRefereeingAssignments.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || parseISO(a.date).getTime() - parseISO(b.date).getTime()).slice(0, 2));
         
         const teamMembers = await getAllUsersByTeam(teamId);
@@ -256,3 +260,5 @@ export default function DashboardPage() {
   );
 }
 
+
+    
