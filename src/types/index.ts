@@ -26,7 +26,6 @@ export interface Match {
   opponent: string;
   location?: string; 
   attendance: Record<string, "present" | "absent" | "excused" | "unknown">; // User's Firebase UID: status
-  // order?: number; // Removed for DND ordering
 }
 
 export interface Training {
@@ -36,7 +35,6 @@ export interface Training {
   location: string;
   description?: string;
   attendance: Record<string, "present" | "absent" | "excused" | "unknown">; // User's Firebase UID: status
-  // order?: number; // Removed for DND ordering
 }
 
 export interface Ticket {
@@ -56,8 +54,8 @@ export interface RefereeingAssignment {
   id: string;
   date: string; // "yyyy-MM-dd"
   time: string; // "HH:mm"
-  assignedPlayerUids: string[]; // Array of User UIDs
+  assignedPlayerUids?: string[]; // Array of User UIDs - now optional
   notes?: string;
-  // order?: number; // Removed for DND ordering
 }
+
 

@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,66 +17,51 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// Removed Checkbox, ScrollArea, User, getAllUsersByTeam, Skeleton, useEffect, useState, useAuth
+// as they were related to the removed assignedPlayerUids field.
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { Icons } from "./icons";
-import type { RefereeingAssignment, User } from "@/types";
-import { useAuth } from "@/lib/auth";
-import { getAllUsersByTeam } from "@/services/userService";
-import { useEffect, useState } from "react";
-import { Skeleton } from "./ui/skeleton";
+import type { RefereeingAssignment } from "@/types";
+
 
 const refereeingAssignmentSchema = z.object({
   date: z.date({ required_error: "Assignment date is required." }),
   time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: "Invalid time format (HH:MM)." }),
-  assignedPlayerUids: z.array(z.string()).min(1, { message: "At least one team member must be assigned." }),
+  // assignedPlayerUids removed from schema
   notes: z.string().optional(),
 });
 
 type RefereeingAssignmentFormValues = z.infer<typeof refereeingAssignmentSchema>;
 
 interface AddRefereeingAssignmentFormProps {
-  onSubmit: (data: Omit<RefereeingAssignment, "id">) => void; // Exclude order
+  onSubmit: (data: Omit<RefereeingAssignment, "id" | "assignedPlayerUids">) => void; 
   initialData?: RefereeingAssignment | null;
   onClose: () => void;
 }
 
 export function AddRefereeingAssignmentForm({ onSubmit, initialData, onClose }: AddRefereeingAssignmentFormProps) {
-  const { user: currentUser } = useAuth(); // Removed currentTeam as it's not used
-  const [teamMembers, setTeamMembers] = useState<User[]>([]);
-  const [isLoadingMembers, setIsLoadingMembers] = useState(true);
-
   const form = useForm<RefereeingAssignmentFormValues>({
     resolver: zodResolver(refereeingAssignmentSchema),
     defaultValues: initialData ? {
       date: parseISO(initialData.date),
       time: initialData.time,
-      assignedPlayerUids: initialData.assignedPlayerUids || [],
+      // assignedPlayerUids: initialData.assignedPlayerUids || [], // Removed
       notes: initialData.notes || "",
     } : {
       time: "10:00", 
-      assignedPlayerUids: [],
+      // assignedPlayerUids: [], // Removed
       notes: "",
     },
   });
 
-  useEffect(() => {
-    if (currentUser?.teamId) {
-      setIsLoadingMembers(true);
-      getAllUsersByTeam(currentUser.teamId)
-        .then(members => {
-          setTeamMembers(members);
-        })
-        .catch(console.error)
-        .finally(() => setIsLoadingMembers(false));
-    }
-  }, [currentUser?.teamId]);
+  // Removed useEffect for fetching team members
 
   const handleSubmit = (data: RefereeingAssignmentFormValues) => {
+    // Ensure assignedPlayerUids is not part of the submitted data from this form
+    const { ...restData } = data; 
     onSubmit({
-      ...data,
+      ...restData,
       date: format(data.date, "yyyy-MM-dd"),
     });
   };
@@ -132,60 +117,7 @@ export function AddRefereeingAssignmentForm({ onSubmit, initialData, onClose }: 
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="assignedPlayerUids"
-          render={() => (
-            <FormItem>
-              <FormLabel>Assign Member(s) to Referee</FormLabel>
-              {isLoadingMembers ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-8 w-full" />
-                </div>
-              ) : teamMembers.length > 0 ? (
-                <ScrollArea className="h-32 w-full rounded-md border p-2">
-                  {teamMembers.map((member) => (
-                    <FormField
-                      key={member.uid}
-                      control={form.control}
-                      name="assignedPlayerUids"
-                      render={({ field }) => {
-                        return (
-                          <FormItem
-                            key={member.uid}
-                            className="flex flex-row items-start space-x-3 space-y-0 py-2"
-                          >
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes(member.uid)}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([...(field.value || []), member.uid])
-                                    : field.onChange(
-                                        (field.value || []).filter(
-                                          (value) => value !== member.uid
-                                        )
-                                      );
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal text-sm">
-                              {member.name} ({member.role})
-                            </FormLabel>
-                          </FormItem>
-                        );
-                      }}
-                    />
-                  ))}
-                </ScrollArea>
-              ) : (
-                <p className="text-sm text-muted-foreground">No members available in your team to assign.</p>
-              )}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* FormField for assignedPlayerUids has been removed */}
         <FormField
           control={form.control}
           name="notes"
@@ -207,3 +139,4 @@ export function AddRefereeingAssignmentForm({ onSubmit, initialData, onClose }: 
     </Form>
   );
 }
+

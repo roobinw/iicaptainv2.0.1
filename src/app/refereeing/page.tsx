@@ -11,16 +11,11 @@ import { AddRefereeingAssignmentForm } from "@/components/add-refereeing-assignm
 import type { RefereeingAssignment } from "@/types";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-// DND related imports removed
-// import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
-// import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-// import { SortableItem } from '@/components/sortable-item';
 import { 
   addRefereeingAssignment, 
   getRefereeingAssignments, 
   updateRefereeingAssignment, 
   deleteRefereeingAssignment, 
-  // updateRefereeingAssignmentsOrder // Removed
 } from "@/services/refereeingService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
@@ -34,13 +29,11 @@ export default function RefereeingPage() {
   const [editingAssignment, setEditingAssignment] = useState<RefereeingAssignment | null>(null);
   const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
 
-  // DND sensors removed
-  // const sensors = useSensors(...);
 
   const fetchAssignments = async (teamId: string) => {
     setIsLoadingData(true);
     try {
-      const fetchedAssignments = await getRefereeingAssignments(teamId); // Will be sorted by date/time from service
+      const fetchedAssignments = await getRefereeingAssignments(teamId); 
       setAssignments(fetchedAssignments);
     } catch (error) {
       console.error("Error fetching refereeing assignments:", error);
@@ -69,13 +62,14 @@ export default function RefereeingPage() {
   }, [user?.role]);
 
 
-  const handleAddAssignment = async (data: Omit<RefereeingAssignment, "id">) => {
+  const handleAddAssignment = async (data: Omit<RefereeingAssignment, "id" | "assignedPlayerUids">) => {
     if (!user?.teamId) {
         toast({ title: "Error", description: "Team information is missing.", variant: "destructive"});
         return;
     }
     try {
-      await addRefereeingAssignment(user.teamId, data);
+      // assignedPlayerUids will be initialized to [] by the service if not provided
+      await addRefereeingAssignment(user.teamId, data); 
       toast({ title: "Assignment Added", description: `Refereeing assignment on ${format(parseISO(data.date), "MMM dd, yyyy")} scheduled.` });
       setForceUpdateCounter(prev => prev + 1); 
       setIsAddAssignmentDialogOpen(false);
@@ -89,13 +83,20 @@ export default function RefereeingPage() {
     setIsAddAssignmentDialogOpen(true);
   };
 
-  const handleUpdateAssignment = async (data: Omit<RefereeingAssignment, "id">) => {
+  const handleUpdateAssignment = async (data: Omit<RefereeingAssignment, "id" | "assignedPlayerUids">) => {
     if (!editingAssignment || !editingAssignment.id || !user?.teamId) {
         toast({ title: "Error", description: "Cannot update assignment. Missing information.", variant: "destructive"});
         return;
     }
     try {
-      await updateRefereeingAssignment(user.teamId, editingAssignment.id, data as Partial<Omit<RefereeingAssignment, 'id'>>);
+      // Pass only the fields that can be updated from this form. 
+      // assignedPlayerUids is managed separately via AssignPlayersForm.
+      const updatePayload: Partial<Omit<RefereeingAssignment, 'id' | 'assignedPlayerUids'>> = {
+        date: data.date,
+        time: data.time,
+        notes: data.notes,
+      };
+      await updateRefereeingAssignment(user.teamId, editingAssignment.id, updatePayload);
       toast({ title: "Assignment Updated", description: `Assignment on ${format(parseISO(data.date), "MMM dd, yyyy")} has been updated.` });
       setForceUpdateCounter(prev => prev + 1);
       setIsAddAssignmentDialogOpen(false);
@@ -119,9 +120,6 @@ export default function RefereeingPage() {
       toast({ title: "Error deleting assignment", description: error.message || "Could not delete assignment.", variant: "destructive" });
     }
   };
-
-  // handleDragEnd function removed
-  // async function handleDragEnd(event: DragEndEvent) { ... }
   
   const isAdmin = user?.role === "admin";
 
@@ -144,7 +142,6 @@ export default function RefereeingPage() {
     return <div className="flex h-full items-center justify-center"><p>Loading team data or redirecting...</p></div>;
   }
   
-  // Simplified view for non-admins as DND/editing is admin-only anyway
   if (!isAdmin) {
     return (
         <div className="space-y-6">
@@ -249,16 +246,14 @@ export default function RefereeingPage() {
             </CardContent>
         </Card>
       ) : (
-        // DndContext and SortableContext removed
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {assignments.map((assignment) => (
-            // SortableItem removed, directly rendering RefereeingAssignmentCard
             <RefereeingAssignmentCard 
               key={assignment.id}
               assignment={assignment} 
               onEdit={isAdmin ? handleEditAssignment : undefined} 
               onDelete={isAdmin ? handleDeleteAssignment : undefined}
-              // dndListeners removed
+              onAssignPlayersSuccess={() => setForceUpdateCounter(prev => prev + 1)}
             />
           ))}
         </div>
@@ -266,3 +261,4 @@ export default function RefereeingPage() {
     </div>
   );
 }
+
