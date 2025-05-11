@@ -12,7 +12,7 @@ interface MatchCardProps {
   match: Match;
   onEdit?: (match: Match) => void;
   onDelete?: (matchId: string) => void;
-  dndListeners?: any; // For drag-and-drop handle
+  dndListeners?: any; 
 }
 
 export function MatchCard({ match, onEdit, onDelete, dndListeners }: MatchCardProps) {
@@ -20,20 +20,20 @@ export function MatchCard({ match, onEdit, onDelete, dndListeners }: MatchCardPr
   return (
     <EventCardBase
       item={match}
-      eventType="match"
+      eventType="match" // Explicitly set eventType
       icon={<Icons.Matches className="h-5 w-5 text-primary" />}
       titlePrefix={currentTeam?.name ? `${currentTeam.name} vs` : "vs"}
       renderDetails={(itemDetails) => { 
         const currentMatch = itemDetails as Match;
         return (
-          <div className="text-xs sm:text-sm space-y-0.5 mt-1"> {/* Added mt-1 for spacing from title */}
-            <div> {/* Date and Time line */}
-              {format(parseISO(currentMatch.date), "EEE, MMM dd, yyyy")} {/* Shorter date format */}
+          <div className="text-xs sm:text-sm space-y-0.5 mt-1"> 
+            <div> 
+              {format(parseISO(currentMatch.date), "EEE, MMM dd, yyyy")}
               {' at '}
               {currentMatch.time}
             </div>
             {currentMatch.location && (
-              <div className="truncate"> {/* Truncate location if too long */}
+              <div className="truncate">
                 Location: {currentMatch.location}
               </div>
             )}
@@ -46,4 +46,3 @@ export function MatchCard({ match, onEdit, onDelete, dndListeners }: MatchCardPr
     />
   );
 }
-

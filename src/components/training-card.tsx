@@ -12,7 +12,7 @@ interface TrainingCardProps {
   training: Training;
   onEdit?: (training: Training) => void;
   onDelete?: (trainingId: string) => void;
-  dndListeners?: any; // For drag-and-drop handle
+  dndListeners?: any; 
 }
 
 export function TrainingCard({ training, onEdit, onDelete, dndListeners }: TrainingCardProps) {
@@ -20,18 +20,18 @@ export function TrainingCard({ training, onEdit, onDelete, dndListeners }: Train
   return (
     <EventCardBase
       item={training}
-      eventType="training"
+      eventType="training" // Explicitly set eventType
       icon={<Icons.Trainings className="h-5 w-5 text-primary" />}
       titlePrefix={currentTeam?.name || "Team"}
       renderDetails={(itemDetails) => { 
         const currentTraining = itemDetails as Training;
         return (
-          <div className="text-xs sm:text-sm space-y-0.5 mt-1"> {/* Added mt-1 and responsive text size */}
+          <div className="text-xs sm:text-sm space-y-0.5 mt-1"> 
             <div>
               {format(parseISO(currentTraining.date), "EEEE, MMM dd, yyyy")} at {currentTraining.time}
             </div>
             {currentTraining.description && 
-              <div className="truncate"> {/* Truncate description if too long */}
+              <div className="truncate"> 
                 Note: {currentTraining.description}
               </div>
             }
@@ -44,4 +44,3 @@ export function TrainingCard({ training, onEdit, onDelete, dndListeners }: Train
     />
   );
 }
-
