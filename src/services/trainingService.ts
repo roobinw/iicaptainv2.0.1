@@ -1,4 +1,3 @@
-
 // 'use server'; // Removed to run client-side
 
 import { db } from '@/lib/firebase';
@@ -12,7 +11,7 @@ import {
   deleteDoc,
   query,
   orderBy,
-  type Timestamp, // Explicitly import Timestamp
+  Timestamp, // Changed from 'type Timestamp'
   getDoc,
   writeBatch
 } from 'firebase/firestore';
@@ -49,7 +48,7 @@ const getTrainingDocRef = (teamId: string, trainingId: string) => {
 };
 
 // Helper to convert Firestore Timestamp to ISO string or return undefined
-const processTimestamp = (timestamp: Timestamp | undefined): string | undefined => {
+const processFirestoreTimestamp = (timestamp: Timestamp | undefined): string | undefined => {
   return timestamp ? timestamp.toDate().toISOString() : undefined;
 };
 
@@ -118,9 +117,9 @@ export const getTrainingById = async (teamId: string, trainingId: string): Promi
 export const updateTraining = async (teamId: string, trainingId: string, data: Partial<Omit<Training, 'id'>>): Promise<void> => {
   const trainingDocRef = getTrainingDocRef(teamId, trainingId);
   const updateData: Partial<Training> = { ...data };
-  if (data.date && !(data.date instanceof Date)) { // data.date should be "yyyy-MM-dd"
+  if (data.date && typeof data.date === 'string') { 
      updateData.date = data.date;
-  } else if (data.date instanceof Date) { // Should not happen if form submits string
+  } else if (data.date && data.date instanceof Date) { 
      console.warn("updateTraining received Date object for date, expected string. Formatting anyway.");
      updateData.date = format(data.date, "yyyy-MM-dd");
   }
