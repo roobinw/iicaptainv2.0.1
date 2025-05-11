@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "Dashboard" },
   { href: "/matches", label: "Matches", icon: "Matches" },
   { href: "/trainings", label: "Trainings", icon: "Trainings" },
-  { href: "/refereeing", label: "Refereeing", icon: "Refereeing", adminOnly: true },
+  { href: "/refereeing", label: "Refereeing", icon: "Refereeing" },
   { href: "/players", label: "Players", icon: "Players" },
 ];
 
@@ -114,7 +114,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const sidebarNavigation = (isMobileContext = false) => (
     <nav className="grid items-start justify-items-center gap-3 px-2 py-4"> 
       {navItems.map((item) => {
-        if (item.adminOnly && user?.role !== "admin") {
+        if (item.adminOnly && user?.role !== "admin" && item.label === "Refereeing") { // Only hide Refereeing for non-admins
           return null;
         }
         const IconComponent = Icons[item.icon];
@@ -125,7 +125,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 href={item.href}
                 onClick={() => isMobileContext && setIsMobileSheetOpen(false)} 
                 className={cn(
-                  "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-10 md:w-10",
+                  "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-10 md:w-10", // Adjusted icon size for desktop
                   pathname.startsWith(item.href) 
                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
                     : "text-sidebar-foreground"
@@ -179,7 +179,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[115px_1fr] lg:grid-cols-[115px_1fr]">
+    <div className="grid min-h-screen w-full md:grid-cols-[100px_1fr] lg:grid-cols-[100px_1fr]"> {/* Adjusted sidebar width */}
       <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg sticky top-0 h-screen">
         <div> 
            <div className="flex h-10 items-center justify-center mb-4 mt-2">
@@ -187,7 +187,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 href="/dashboard" 
                 className="text-sidebar-foreground flex justify-center"
             >
-              <Icons.TeamLogo className="mt-[10px] h-10 w-10" /> 
+              <Icons.TeamLogo className="mt-[10px] h-10 w-10" /> {/* Adjusted icon size */}
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
@@ -197,7 +197,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
         
         {user && (
-            <div className="mt-auto p-1 flex justify-center md:block"> 
+            <div className="mt-auto p-1 flex justify-center"> 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full w-12 h-12">
@@ -229,13 +229,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     <span className="sr-only">Toggle navigation menu</span>
                 </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="flex flex-col bg-sidebar p-2 text-sidebar-foreground w-[144px] shadow-xl"> 
+                <SheetContent side="left" className="flex flex-col bg-sidebar p-2 text-sidebar-foreground w-[115px] shadow-xl"> {/* Adjusted width for mobile */}
                  <SheetHeader>
                     <SheetTitle className="sr-only">Navigation Menu</SheetTitle> 
                  </SheetHeader>
                  <div className="flex h-10 items-center justify-center mb-4 mt-2">
                      <Link href="/dashboard" className="flex items-center justify-center" onClick={() => setIsMobileSheetOpen(false)}>
-                        <Icons.TeamLogo className="h-10 w-10 text-sidebar-foreground" /> 
+                        <Icons.TeamLogo className="h-10 w-10 text-sidebar-foreground" /> {/* Adjusted icon size */}
                         <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
                     </Link>
                   </div>
@@ -261,17 +261,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 )}
                 </SheetContent>
             </Sheet>
-             <div className="flex-1">
+             <div className="flex-1 text-center"> {/* Center the team name */}
                 {currentTeam && (
-                    <div className="flex items-center justify-center h-full">
-                        <h1 className="text-lg font-semibold text-foreground">{currentTeam.name}</h1>
-                    </div>
+                    <h1 className="text-lg font-semibold text-foreground inline-block">{currentTeam.name}</h1>
                 )}
              </div> 
              {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full w-10 h-10 md:hidden">
+                  <Button variant="ghost" size="icon" className="rounded-full w-10 h-10">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar mobile top"/>
                       <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
@@ -279,7 +277,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     <span className="sr-only">User Menu</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-card text-card-foreground border-border shadow-xl md:hidden">
+                <DropdownMenuContent align="end" className="w-56 bg-card text-card-foreground border-border shadow-xl">
                   {userProfileDropdownContent}
                 </DropdownMenuContent>
               </DropdownMenu>
