@@ -81,7 +81,7 @@ export function AddMatchForm({ onSubmit, initialData, onClose }: AddMatchFormPro
           render={({ field }) => (
             <FormItem className="flex flex-col">
               <FormLabel>Date</FormLabel>
-              <Popover>
+              <Popover modal={true}>
                 <PopoverTrigger asChild>
                   <FormControl>
                     <Button
@@ -100,7 +100,7 @@ export function AddMatchForm({ onSubmit, initialData, onClose }: AddMatchFormPro
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0" align="center" side="bottom" sideOffset={8}>
                   <Calendar
                     mode="single"
                     selected={field.value}
@@ -148,3 +148,4 @@ export function AddMatchForm({ onSubmit, initialData, onClose }: AddMatchFormPro
     </Form>
   );
 }
+

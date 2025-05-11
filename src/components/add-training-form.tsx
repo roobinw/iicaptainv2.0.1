@@ -81,7 +81,7 @@ export function AddTrainingForm({ onSubmit, initialData, onClose }: AddTrainingF
           render={({ field }) => (
             <FormItem className="flex flex-col">
               <FormLabel>Date</FormLabel>
-              <Popover>
+              <Popover modal={true}>
                 <PopoverTrigger asChild>
                   <FormControl>
                     <Button
@@ -100,7 +100,7 @@ export function AddTrainingForm({ onSubmit, initialData, onClose }: AddTrainingF
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0" align="center" side="bottom" sideOffset={8}>
                   <Calendar
                     mode="single"
                     selected={field.value}
@@ -148,3 +148,4 @@ export function AddTrainingForm({ onSubmit, initialData, onClose }: AddTrainingF
     </Form>
   );
 }
+
