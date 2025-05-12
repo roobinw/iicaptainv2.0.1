@@ -19,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Icons } from "@/components/icons";
-import { PanelLeft, LogOut, Settings as SettingsIcon, LifeBuoy, MessagesSquare } from "lucide-react"; 
+import { PanelLeft, LogOut, Settings as SettingsIcon, LifeBuoy } from "lucide-react"; 
 import { useEffect, useState } from "react";
 
 interface NavItem {
@@ -31,11 +31,11 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "Dashboard" },
+  { href: "/messages", label: "Messages", icon: "MessagesSquare" }, 
   { href: "/matches", label: "Matches", icon: "Matches" },
   { href: "/trainings", label: "Trainings", icon: "Trainings" },
   { href: "/refereeing", label: "Refereeing", icon: "Refereeing" },
   { href: "/players", label: "Players", icon: "Players" },
-  { href: "/messages", label: "Messages", icon: "MessagesSquare" }, // Added Messages page
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
