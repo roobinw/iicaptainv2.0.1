@@ -1,4 +1,5 @@
 
+
 import { db } from '@/lib/firebase';
 import type { RefereeingAssignment } from '@/types';
 import {
@@ -62,9 +63,24 @@ const fromFirestoreRefereeingAssignment = (docSnap: any): RefereeingAssignment =
 };
 
 export const addRefereeingAssignment = async (teamId: string, assignmentData: Omit<RefereeingAssignment, 'id' | 'isArchived' | 'date'> & { date: string | Date }): Promise<string> => {
-  const dateString = typeof assignmentData.date === 'string'
-    ? assignmentData.date
-    : format(assignmentData.date, "yyyy-MM-dd");
+  let dateString: string;
+  if (typeof assignmentData.date === 'string') {
+     try {
+      dateString = format(parseISO(assignmentData.date), "yyyy-MM-dd");
+    } catch (e) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(assignmentData.date)) {
+        dateString = assignmentData.date;
+      } else {
+        console.error("Invalid date string format in addRefereeingAssignment:", assignmentData.date);
+        throw new Error("Invalid date format. Please use YYYY-MM-DD or a valid ISO string.");
+      }
+    }
+  } else if (typeof assignmentData.date === 'object' && assignmentData.date instanceof Date) {
+    dateString = format(assignmentData.date, "yyyy-MM-dd");
+  } else {
+    console.error("Invalid date type in addRefereeingAssignment:", assignmentData.date);
+    throw new Error("Invalid date type. Date must be a string or Date object.");
+  }
 
   const firestorePayload = {
     ...assignmentData,
@@ -117,16 +133,16 @@ export const updateRefereeingAssignment = async (
 
   if (typeof dateValue === 'string') {
     try {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue) && !dateValue.includes('T')) {
-        updateData.date = dateValue; 
-      } else {
-        const parsed = parseISO(dateValue); 
-        updateData.date = format(parsed, "yyyy-MM-dd");
-      }
+      const parsedDate = parseISO(dateValue); 
+      updateData.date = format(parsedDate, "yyyy-MM-dd");
     } catch (e) {
-      console.error(`Date string "${dateValue}" in updateRefereeingAssignment is not valid. Date will not be updated. Error: ${e}`);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+        updateData.date = dateValue;
+      } else {
+        console.error(`Date string "${dateValue}" in updateRefereeingAssignment is not a valid ISO string or yyyy-MM-dd format. Date will not be updated. Error: ${e}`);
+      }
     }
-  } else if (dateValue && typeof dateValue === 'object') {
+  } else if (typeof dateValue === 'object' && dateValue !== null) {
     if (dateValue instanceof Date) {
         updateData.date = format(dateValue, "yyyy-MM-dd");
     } else if ('toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') { 
@@ -135,11 +151,7 @@ export const updateRefereeingAssignment = async (
         console.error(`updateRefereeingAssignment received an unhandled object date type/value. Value:`, dateValue);
     }
   } else if (dateValue === null) {
-    updateData.date = null; 
-  } else if (dateValue === undefined) {
-    // Date is undefined, do nothing for updateData.date
-  } else {
-    console.error(`updateRefereeingAssignment received an unexpected date type/value. Type: ${typeof dateValue}, Value:`, dateValue);
+    console.warn(`updateRefereeingAssignment received null for date. Date will not be updated for assignment: ${assignmentId}`);
   }
 
 

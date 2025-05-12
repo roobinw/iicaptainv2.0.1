@@ -65,9 +65,24 @@ const fromFirestoreTraining = (docSnap: any): Training => {
 };
 
 export const addTraining = async (teamId: string, trainingData: Omit<Training, 'id' | 'attendance' | 'isArchived' | 'date'> & { date: string | Date }): Promise<string> => {
-  const dateString = typeof trainingData.date === 'string'
-    ? trainingData.date
-    : format(trainingData.date, "yyyy-MM-dd");
+  let dateString: string;
+  if (typeof trainingData.date === 'string') {
+     try {
+      dateString = format(parseISO(trainingData.date), "yyyy-MM-dd");
+    } catch (e) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trainingData.date)) {
+        dateString = trainingData.date;
+      } else {
+        console.error("Invalid date string format in addTraining:", trainingData.date);
+        throw new Error("Invalid date format. Please use YYYY-MM-DD or a valid ISO string.");
+      }
+    }
+  } else if (typeof trainingData.date === 'object' && trainingData.date instanceof Date) {
+    dateString = format(trainingData.date, "yyyy-MM-dd");
+  } else {
+    console.error("Invalid date type in addTraining:", trainingData.date);
+    throw new Error("Invalid date type. Date must be a string or Date object.");
+  }
 
   const firestorePayload = {
     ...trainingData,
@@ -136,16 +151,16 @@ export const updateTraining = async (teamId: string, trainingId: string, data: P
 
   if (typeof dateValue === 'string') {
     try {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue) && !dateValue.includes('T')) {
+      const parsedDate = parseISO(dateValue);
+      updateData.date = format(parsedDate, "yyyy-MM-dd");
+    } catch (e) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
         updateData.date = dateValue;
       } else {
-        const parsed = parseISO(dateValue);
-        updateData.date = format(parsed, "yyyy-MM-dd");
+        console.error(`Date string "${dateValue}" in updateTraining is not a valid ISO string or yyyy-MM-dd format. Date will not be updated. Error: ${e}`);
       }
-    } catch (e) {
-      console.error(`Date string "${dateValue}" in updateTraining is not valid. Date will not be updated. Error: ${e}`);
     }
-  } else if (dateValue && typeof dateValue === 'object') {
+  } else if (typeof dateValue === 'object' && dateValue !== null) {
     if (dateValue instanceof Date) {
       updateData.date = format(dateValue, "yyyy-MM-dd");
     } else if ('toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
@@ -154,12 +169,9 @@ export const updateTraining = async (teamId: string, trainingId: string, data: P
       console.error(`updateTraining received an unhandled object date type/value. Value:`, dateValue);
     }
   } else if (dateValue === null) {
-    updateData.date = null;
-  } else if (dateValue === undefined) {
-    // Date is undefined, do nothing
-  } else {
-    console.error(`updateTraining received an unexpected date type/value. Type: ${typeof dateValue}, Value:`, dateValue);
+    console.warn(`updateTraining received null for date. Date will not be updated for training: ${trainingId}`);
   }
+  
 
   for (const key in data) {
     if (key !== 'date' && Object.prototype.hasOwnProperty.call(data, key)) {
