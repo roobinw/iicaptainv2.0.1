@@ -16,7 +16,9 @@ import {
   where, // Added for filtering by isArchived
 } from 'firebase/firestore';
 import { format, parseISO } from "date-fns"; 
-import type { EventArchiveFilter } from './matchService'; // Reuse filter type
+// Removed unused import: import type { EventArchiveFilter } from './matchService'; 
+import type { EventArchiveFilter } from '@/services/matchService';
+
 
 const getRefereeingAssignmentsCollectionRef = (teamId: string) => {
   if (!db) {
@@ -59,7 +61,7 @@ const fromFirestoreRefereeingAssignment = (docSnap: any): RefereeingAssignment =
   } as RefereeingAssignment;
 };
 
-export const addRefereeingAssignment = async (teamId: string, assignmentData: Omit<RefereeingAssignment, 'id' | 'assignedPlayerUids' | 'isArchived'> & { assignedPlayerUids?: string[] }): Promise<string> => {
+export const addRefereeingAssignment = async (teamId: string, assignmentData: Omit<RefereeingAssignment, 'id' | 'isArchived'>): Promise<string> => {
   const firestorePayload = {
     date: assignmentData.date, 
     time: assignmentData.time,
@@ -111,7 +113,7 @@ export const updateRefereeingAssignment = async (teamId: string, assignmentId: s
         try {
           updateData.date = format(parseISO(data.date as unknown as string), "yyyy-MM-dd");
         } catch (e) {
-          console.error(`Date string "${data.date}" in updateRefereeingAssignment was not a valid ISO string. Cannot format. Error: ${e}`);
+          console.error(`Date string "${String(data.date)}" in updateRefereeingAssignment was not a valid ISO string. Cannot format. Error: ${e}`);
           delete updateData.date;
         }
      }
@@ -153,3 +155,4 @@ export const unarchiveRefereeingAssignment = async (teamId: string, assignmentId
   const assignmentDocRef = getRefereeingAssignmentDocRef(teamId, assignmentId);
   await updateDoc(assignmentDocRef, { isArchived: false });
 };
+

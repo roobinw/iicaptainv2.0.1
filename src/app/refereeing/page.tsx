@@ -19,8 +19,8 @@ import {
   deleteRefereeingAssignment,
   archiveRefereeingAssignment,
   unarchiveRefereeingAssignment,
-  type EventArchiveFilter 
 } from "@/services/refereeingService";
+import type { EventArchiveFilter } from "@/services/matchService"; // Corrected import path
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 
@@ -66,7 +66,7 @@ export default function RefereeingPage() {
   }, [user?.role]);
 
 
-  const handleAddAssignment = async (data: Omit<RefereeingAssignment, "id" | "assignedPlayerUids" | "isArchived">) => {
+  const handleAddAssignment = async (data: Omit<RefereeingAssignment, "id" | "isArchived">) => {
     if (!user?.teamId) {
         toast({ title: "Error", description: "Team information is missing.", variant: "destructive"});
         return;
@@ -87,16 +87,17 @@ export default function RefereeingPage() {
     setIsAddAssignmentDialogOpen(true);
   };
 
-  const handleUpdateAssignment = async (data: Omit<RefereeingAssignment, "id" | "assignedPlayerUids" | "isArchived">) => {
+  const handleUpdateAssignment = async (data: Omit<RefereeingAssignment, "id" | "isArchived">) => {
     if (!editingAssignment || !editingAssignment.id || !user?.teamId) {
         toast({ title: "Error", description: "Cannot update assignment. Missing information.", variant: "destructive"});
         return;
     }
     try {
-      const updatePayload: Partial<Omit<RefereeingAssignment, 'id' | 'assignedPlayerUids'>> = {
+      const updatePayload: Partial<Omit<RefereeingAssignment, 'id'>> = { // Ensure 'isArchived' is not part of this direct update
         date: data.date,
         time: data.time,
         homeTeam: data.homeTeam,
+        assignedPlayerUids: data.assignedPlayerUids,
         notes: data.notes,
       };
       await updateRefereeingAssignment(user.teamId, editingAssignment.id, updatePayload);
@@ -152,7 +153,7 @@ export default function RefereeingPage() {
         <Skeleton className="h-5 w-3/4" />
         <Skeleton className="h-10 w-full mb-4" /> {/* Skeleton for Tabs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1,2,3].map(i => <Skeleton key={i} className="h-60 w-full rounded-lg" />)}
+            {[1,2,3].map(i => <Skeleton key={i} className="h-72 w-full rounded-lg" />)}
         </div>
       </div>
     );
@@ -215,7 +216,7 @@ export default function RefereeingPage() {
         <TabsContent value={assignmentFilter} className="mt-4">
           {isLoadingData ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1,2,3].map(i => <Skeleton key={i} className="h-60 w-full rounded-lg" />)}
+                {[1,2,3].map(i => <Skeleton key={i} className="h-72 w-full rounded-lg" />)}
             </div>
           ) : assignments.length === 0 ? (
             <Card className="col-span-full">
@@ -257,3 +258,4 @@ export default function RefereeingPage() {
     </div>
   );
 }
+
