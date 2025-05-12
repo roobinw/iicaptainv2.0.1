@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -113,14 +112,10 @@ export default function DashboardPage() {
 
   const handleMessageDeleted = useCallback((messageId: string) => {
     setMessages(prevMessages => prevMessages.filter(msg => msg.id !== messageId));
-    // Optionally re-fetch all messages if order might change or for consistency
-    // if (user?.teamId) {
-    //   fetchTeamMessages(user.teamId);
-    // }
   }, []);
 
 
-  if (authIsLoading || isLoadingData || (!user && !currentTeam)) { // Check user and currentTeam here for initial load
+  if (authIsLoading || isLoadingData || (!user && !currentTeam)) { 
     return (
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -129,6 +124,18 @@ export default function DashboardPage() {
             <Skeleton className="h-5 w-80" />
           </div>
         </div>
+         {/* Skeleton for Message Board */}
+        <Card className="mt-6">
+          <CardHeader>
+            <Skeleton className="h-7 w-48 mb-2" />
+            <Skeleton className="h-5 w-64" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {user?.role === 'admin' && <Skeleton className="h-24 w-full" />}
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </CardContent>
+        </Card>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1,2,3].map(i => (
             <Card key={i}>
@@ -148,18 +155,6 @@ export default function DashboardPage() {
             <Skeleton className="h-72 w-full rounded-lg" />
             <Skeleton className="h-72 w-full rounded-lg" />
         </div>
-         {/* Skeleton for Message Board */}
-        <Card className="mt-6">
-          <CardHeader>
-            <Skeleton className="h-7 w-48 mb-2" />
-            <Skeleton className="h-5 w-64" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {user?.role === 'admin' && <Skeleton className="h-24 w-full" />}
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </CardContent>
-        </Card>
       </div>
     );
   }
@@ -183,6 +178,48 @@ export default function DashboardPage() {
           </p>
         </div>
       </div>
+
+      {/* Message Board Section */}
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Icons.MessageSquare className="h-6 w-6 text-primary" /> Team Message Board</CardTitle>
+          <CardDescription>
+            {user?.role === 'admin' ? 'Post messages to your team here.' : 'View messages from your team admin.'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {user?.role === 'admin' && (
+            <MessageInputForm onMessagePosted={handleMessagePosted} />
+          )}
+          {isLoadingMessages ? (
+            <div className="space-y-3 py-2">
+              {[1,2].map(i => (
+                <div key={i} className="flex items-start space-x-3 p-3 border rounded-md bg-card/50">
+                  <Skeleton className="h-9 w-9 rounded-full" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : messages.length === 0 ? (
+            <p className="text-muted-foreground text-center py-4">No messages yet. {user?.role === 'admin' && 'Post the first message!'} </p>
+          ) : (
+            <ScrollArea className="h-[300px] max-h-[40vh] pr-3"> {/* Adjust max-h as needed */}
+              <div className="space-y-4">
+                {messages.map((msg) => (
+                  <MessageCard key={msg.id} message={msg} onMessageDeleted={handleMessageDeleted} />
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
@@ -301,48 +338,6 @@ export default function DashboardPage() {
           </CardFooter>
         </Card>
       </div>
-
-      {/* Message Board Section */}
-      <Card className="mt-6 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Icons.MessageSquare className="h-6 w-6 text-primary" /> Team Message Board</CardTitle>
-          <CardDescription>
-            {user?.role === 'admin' ? 'Post messages to your team here.' : 'View messages from your team admin.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {user?.role === 'admin' && (
-            <MessageInputForm onMessagePosted={handleMessagePosted} />
-          )}
-          {isLoadingMessages ? (
-            <div className="space-y-3 py-2">
-              {[1,2].map(i => (
-                <div key={i} className="flex items-start space-x-3 p-3 border rounded-md bg-card/50">
-                  <Skeleton className="h-9 w-9 rounded-full" />
-                  <div className="flex-1 space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <Skeleton className="h-4 w-28" />
-                      <Skeleton className="h-3 w-20" />
-                    </div>
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : messages.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No messages yet. {user?.role === 'admin' && 'Post the first message!'} </p>
-          ) : (
-            <ScrollArea className="h-[300px] max-h-[40vh] pr-3"> {/* Adjust max-h as needed */}
-              <div className="space-y-4">
-                {messages.map((msg) => (
-                  <MessageCard key={msg.id} message={msg} onMessageDeleted={handleMessageDeleted} />
-                ))}
-              </div>
-            </ScrollArea>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
