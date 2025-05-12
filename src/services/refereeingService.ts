@@ -12,7 +12,7 @@ import {
   orderBy,
   getDoc,
   writeBatch, 
-  Timestamp, // Corrected import type Timestamp
+  Timestamp, 
   where, 
 } from 'firebase/firestore';
 import { format, parseISO } from "date-fns"; 
@@ -100,36 +100,48 @@ export const getRefereeingAssignmentById = async (teamId: string, assignmentId: 
   return docSnap.exists() ? fromFirestoreRefereeingAssignment(docSnap) : null;
 };
 
-export const updateRefereeingAssignment = async (teamId: string, assignmentId: string, data: Partial<Omit<RefereeingAssignment, 'id'>>): Promise<void> => {
+// Broaden the type for `data.date` to allow Date or Timestamp objects as input for flexibility,
+// even though RefereeingAssignment stores date as a string.
+export const updateRefereeingAssignment = async (
+  teamId: string, 
+  assignmentId: string, 
+  data: Partial<Omit<RefereeingAssignment, 'id'> & { date?: string | Date | Timestamp | null }>
+): Promise<void> => {
   const assignmentDocRef = getRefereeingAssignmentDocRef(teamId, assignmentId);
-  const updateData: { [key: string]: any } = { ...data };
+  const updateData: { [key: string]: any } = { ...data }; // Copy initially
   
-  if (data.date !== undefined && data.date !== null) {
-    if (typeof data.date === 'string') {
+  // Handle date specifically
+  if (data.date !== undefined && data.date !== null) { // Check if date is provided and not null
+    if (typeof data.date === 'string') { // If it's a string
         try {
-            const parsed = parseISO(data.date);
+            // Try to parse it as ISO and format to yyyy-MM-dd
+            const parsed = parseISO(data.date); 
             updateData.date = format(parsed, "yyyy-MM-dd");
         } catch (e) {
+            // If parsing fails, check if it's already in yyyy-MM-dd format
             if (/^\d{4}-\d{2}-\d{2}$/.test(data.date)) {
                  console.warn(`Date string "${data.date}" in updateRefereeingAssignment is not ISO but matches yyyy-MM-dd. Using as is.`);
-                 updateData.date = data.date;
+                 updateData.date = data.date; // Use as is if it matches yyyy-MM-dd
             } else {
+                // If it's not ISO and not yyyy-MM-dd, log error and don't update date
                 console.error(`Date string "${data.date}" in updateRefereeingAssignment is not a valid ISO string nor yyyy-MM-dd. Date will not be updated. Error: ${e}`);
-                delete updateData.date;
+                delete updateData.date; // Remove date from update payload
             }
         }
-    } else if (typeof data.date === 'object' && data.date instanceof Date) {
+    } else if (data.date instanceof Date) { // Check for Date object
         console.warn("updateRefereeingAssignment received Date object for date, formatting to yyyy-MM-dd", data.date);
         updateData.date = format(data.date, "yyyy-MM-dd");
-    } else if (typeof data.date === 'object' && typeof (data.date as any).toDate === 'function') {
+    } else if (typeof data.date === 'object' && 'toDate' in data.date && typeof (data.date as any).toDate === 'function') { // Check for Firestore Timestamp-like object
         console.warn("updateRefereeingAssignment received Timestamp-like object for date, formatting to yyyy-MM-dd", data.date);
         updateData.date = format((data.date as Timestamp).toDate(), "yyyy-MM-dd");
     } else {
+        // If date is present but not string, Date, or Timestamp-like, log error and don't update
         console.error(`updateRefereeingAssignment received unhandled date type: ${typeof data.date}. Date will not be updated.`);
         delete updateData.date;
     }
   } else if (data.hasOwnProperty('date') && data.date === null) {
-    updateData.date = null;
+    // Allow explicitly setting date to null if needed by application logic
+    updateData.date = null; 
   }
 
 
