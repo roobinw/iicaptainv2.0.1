@@ -61,9 +61,9 @@ export const addMatch = async (teamId: string, matchData: Omit<Match, 'id' | 'at
   // Ensure date is a string in "yyyy-MM-dd" format
   const dateString = typeof matchData.date === 'string' 
       ? matchData.date 
-      // Ensure date is formatted correctly if it's a Date object from the form
-      : format(matchData.date, "yyyy-MM-dd");
-
+      // Ensure date is formatted correctly if it's a Date object from the form before initial stringification elsewhere
+      : format( (matchData.date instanceof Date ? matchData.date : parseISO(matchData.date as unknown as string)) , "yyyy-MM-dd");
+  
   const firestorePayload = {
     ...matchData, 
     date: dateString,
@@ -120,21 +120,25 @@ export const updateMatch = async (teamId: string, matchId: string, data: Partial
     } catch (e) {
       console.error(`Date string "${dateValue}" in updateMatch is not valid. Date will not be updated. Error: ${e}`);
     }
-  } else if (dateValue instanceof Date) {
-    updateData.date = format(dateValue, "yyyy-MM-dd");
-  } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
-    updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+  } else if (dateValue && typeof dateValue === 'object') {
+    if (dateValue instanceof Date) {
+        updateData.date = format(dateValue, "yyyy-MM-dd");
+    } else if ('toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+        updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+    } else {
+        console.error(`updateMatch received an unhandled object date type/value. Value:`, dateValue);
+    }
   } else if (dateValue === null) {
     updateData.date = null;
   } else if (dateValue === undefined) {
     // Date is undefined, do nothing
   } else {
-    console.error(`updateMatch received an unhandled date type/value. Type: ${typeof dateValue}, Value:`, dateValue);
+    console.error(`updateMatch received an unexpected date type/value. Type: ${typeof dateValue}, Value:`, dateValue);
   }
   
 
   for (const key in data) {
-    if (key !== 'date' && data.hasOwnProperty(key)) {
+    if (key !== 'date' && Object.prototype.hasOwnProperty.call(data, key)) {
       (updateData as any)[key] = (data as any)[key];
     }
   }

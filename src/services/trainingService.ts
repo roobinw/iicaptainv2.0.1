@@ -145,20 +145,24 @@ export const updateTraining = async (teamId: string, trainingId: string, data: P
     } catch (e) {
       console.error(`Date string "${dateValue}" in updateTraining is not valid. Date will not be updated. Error: ${e}`);
     }
-  } else if (dateValue instanceof Date) {
-    updateData.date = format(dateValue, "yyyy-MM-dd");
-  } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
-    updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+  } else if (dateValue && typeof dateValue === 'object') {
+    if (dateValue instanceof Date) {
+      updateData.date = format(dateValue, "yyyy-MM-dd");
+    } else if ('toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+      updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+    } else {
+      console.error(`updateTraining received an unhandled object date type/value. Value:`, dateValue);
+    }
   } else if (dateValue === null) {
     updateData.date = null;
   } else if (dateValue === undefined) {
     // Date is undefined, do nothing
   } else {
-    console.error(`updateTraining received an unhandled date type/value. Type: ${typeof dateValue}, Value:`, dateValue);
+    console.error(`updateTraining received an unexpected date type/value. Type: ${typeof dateValue}, Value:`, dateValue);
   }
 
   for (const key in data) {
-    if (key !== 'date' && data.hasOwnProperty(key)) {
+    if (key !== 'date' && Object.prototype.hasOwnProperty.call(data, key)) {
       (updateData as any)[key] = (data as any)[key];
     }
   }
