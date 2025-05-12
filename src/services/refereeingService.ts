@@ -53,7 +53,7 @@ const fromFirestoreRefereeingAssignment = (docSnap: any): RefereeingAssignment =
   const data = docSnap.data();
   return {
     id: docSnap.id,
-    date: data.date,
+    date: data.date, // Firestore typically stores dates as Timestamps or strings
     time: data.time,
     homeTeam: data.homeTeam, 
     assignedPlayerUids: data.assignedPlayerUids || [], 
@@ -66,16 +66,18 @@ export const addRefereeingAssignment = async (teamId: string, assignmentData: Om
   let dateString: string;
   if (typeof assignmentData.date === 'string') {
      try {
+      // If it's a string, try to parse it as ISO first, then format.
+      // If parseISO fails, check if it's already "yyyy-MM-dd"
       dateString = format(parseISO(assignmentData.date), "yyyy-MM-dd");
     } catch (e) {
       if (/^\d{4}-\d{2}-\d{2}$/.test(assignmentData.date)) {
-        dateString = assignmentData.date;
+        dateString = assignmentData.date; // Already in correct format
       } else {
         console.error("Invalid date string format in addRefereeingAssignment:", assignmentData.date);
         throw new Error("Invalid date format. Please use YYYY-MM-DD or a valid ISO string.");
       }
     }
-  } else if (typeof assignmentData.date === 'object' && assignmentData.date instanceof Date) {
+  } else if (assignmentData.date instanceof Date) {
     dateString = format(assignmentData.date, "yyyy-MM-dd");
   } else {
     console.error("Invalid date type in addRefereeingAssignment:", assignmentData.date);
@@ -142,30 +144,31 @@ export const updateRefereeingAssignment = async (
         console.error(`Date string "${dateValue}" in updateRefereeingAssignment is not a valid ISO string or yyyy-MM-dd format. Date will not be updated. Error: ${e}`);
       }
     }
-  } else if (typeof dateValue === 'object' && dateValue !== null) {
-    if (dateValue instanceof Date) {
-        updateData.date = format(dateValue, "yyyy-MM-dd");
-    } else if ('toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') { 
-        updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
-    } else {
-        console.error(`updateRefereeingAssignment received an unhandled object date type/value. Value:`, dateValue);
-    }
+  } else if (dateValue instanceof Date) { 
+    updateData.date = format(dateValue, "yyyy-MM-dd");
+  } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+    updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
   } else if (dateValue === null) {
     console.warn(`updateRefereeingAssignment received null for date. Date will not be updated for assignment: ${assignmentId}`);
+  } else if (dateValue === undefined) {
+    // Date is not being updated, this is fine.
+  } else {
+    console.error(`updateRefereeingAssignment received an unhandled date type/value for assignment ${assignmentId}. Value:`, dateValue);
   }
 
 
   for (const key in data) {
     if (key !== 'date' && Object.prototype.hasOwnProperty.call(data, key)) {
-      if (key === 'assignedPlayerUids' && (data as any)[key] === null) {
-        (updateData as any)[key] = [];
-      } else if (key === 'homeTeam' && ((data as any)[key] === null || (data as any)[key] === undefined)) {
-        (updateData as any)[key] = "";
-      } else if (key === 'notes' && ((data as any)[key] === null || (data as any)[key] === undefined)) {
-        (updateData as any)[key] = "";
+      const K = key as keyof typeof data;
+      if (K === 'assignedPlayerUids' && (data as any)[K] === null) {
+        updateData[K] = [];
+      } else if (K === 'homeTeam' && ((data as any)[K] === null || (data as any)[K] === undefined)) {
+        updateData[K] = "";
+      } else if (K === 'notes' && ((data as any)[K] === null || (data as any)[K] === undefined)) {
+        updateData[K] = "";
       }
       else {
-        (updateData as any)[key] = (data as any)[key];
+        updateData[K] = data[K];
       }
     }
   }

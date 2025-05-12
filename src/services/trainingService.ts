@@ -77,7 +77,7 @@ export const addTraining = async (teamId: string, trainingData: Omit<Training, '
         throw new Error("Invalid date format. Please use YYYY-MM-DD or a valid ISO string.");
       }
     }
-  } else if (typeof trainingData.date === 'object' && trainingData.date instanceof Date) {
+  } else if (trainingData.date instanceof Date) {
     dateString = format(trainingData.date, "yyyy-MM-dd");
   } else {
     console.error("Invalid date type in addTraining:", trainingData.date);
@@ -160,16 +160,16 @@ export const updateTraining = async (teamId: string, trainingId: string, data: P
         console.error(`Date string "${dateValue}" in updateTraining is not a valid ISO string or yyyy-MM-dd format. Date will not be updated. Error: ${e}`);
       }
     }
-  } else if (typeof dateValue === 'object' && dateValue !== null) {
-    if (dateValue instanceof Date) {
+  } else if (dateValue instanceof Date) {
       updateData.date = format(dateValue, "yyyy-MM-dd");
-    } else if ('toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+  } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
       updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
-    } else {
-      console.error(`updateTraining received an unhandled object date type/value. Value:`, dateValue);
-    }
   } else if (dateValue === null) {
-    console.warn(`updateTraining received null for date. Date will not be updated for training: ${trainingId}`);
+      console.warn(`updateTraining received null for date. Date will not be updated for training: ${trainingId}`);
+  } else if (dateValue === undefined) {
+      // Date is not being updated, this is fine.
+  } else {
+      console.error(`updateTraining received an unhandled date type/value for training ${trainingId}. Value:`, dateValue);
   }
   
 
