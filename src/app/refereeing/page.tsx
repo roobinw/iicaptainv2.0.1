@@ -19,8 +19,8 @@ import {
   deleteRefereeingAssignment,
   archiveRefereeingAssignment,
   unarchiveRefereeingAssignment,
+  type EventArchiveFilter, 
 } from "@/services/refereeingService";
-import type { EventArchiveFilter } from "@/services/matchService"; // Corrected import path
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 
@@ -66,13 +66,18 @@ export default function RefereeingPage() {
   }, [user?.role]);
 
 
-  const handleAddAssignment = async (data: Omit<RefereeingAssignment, "id" | "isArchived">) => {
+  const handleAddAssignment = async (data: Omit<RefereeingAssignment, "id" | "isArchived" | "assignedPlayerUids">) => {
     if (!user?.teamId) {
         toast({ title: "Error", description: "Team information is missing.", variant: "destructive"});
         return;
     }
     try {
-      await addRefereeingAssignment(user.teamId, data); 
+      // Ensure assignedPlayerUids is explicitly handled based on form data or defaults
+      const payload: Omit<RefereeingAssignment, "id" | "isArchived"> = {
+        ...data,
+        assignedPlayerUids: (data as any).assignedPlayerUids || [], // Get from form or default
+      };
+      await addRefereeingAssignment(user.teamId, payload); 
       toast({ title: "Assignment Added", description: `Refereeing assignment on ${format(parseISO(data.date), "MMM dd, yyyy")} scheduled.` });
       setAssignmentFilter("active");
       if(assignmentFilter === "active") fetchAssignments(user.teamId, "active");
@@ -87,17 +92,17 @@ export default function RefereeingPage() {
     setIsAddAssignmentDialogOpen(true);
   };
 
-  const handleUpdateAssignment = async (data: Omit<RefereeingAssignment, "id" | "isArchived">) => {
+  const handleUpdateAssignment = async (data: Omit<RefereeingAssignment, "id" | "isArchived" | "assignedPlayerUids">) => {
     if (!editingAssignment || !editingAssignment.id || !user?.teamId) {
         toast({ title: "Error", description: "Cannot update assignment. Missing information.", variant: "destructive"});
         return;
     }
     try {
-      const updatePayload: Partial<Omit<RefereeingAssignment, 'id'>> = { // Ensure 'isArchived' is not part of this direct update
+      const updatePayload: Partial<Omit<RefereeingAssignment, 'id'>> = { 
         date: data.date,
         time: data.time,
         homeTeam: data.homeTeam,
-        assignedPlayerUids: data.assignedPlayerUids,
+        // assignedPlayerUids is handled by AssignPlayersForm
         notes: data.notes,
       };
       await updateRefereeingAssignment(user.teamId, editingAssignment.id, updatePayload);
@@ -247,7 +252,11 @@ export default function RefereeingPage() {
                   assignment={assignment} 
                   onEdit={isAdmin ? handleEditAssignment : undefined} 
                   onDelete={isAdmin ? handleDeleteAssignment : undefined}
-                  onAssignPlayersSuccess={() => fetchAssignments(user.teamId, assignmentFilter)}
+                  onAssignPlayersSuccess={() => {
+                    if (user?.teamId) {
+                      fetchAssignments(user.teamId, assignmentFilter)
+                    }
+                  }}
                   onArchiveToggle={isAdmin ? handleArchiveToggle : undefined}
                 />
               ))}
