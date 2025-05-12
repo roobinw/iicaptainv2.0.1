@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -133,7 +132,7 @@ export default function MessagesPage() {
                     {user?.role === 'admin' && " Why not post the first one?"}
                 </p>
             ) : (
-                <ScrollArea className="h-[calc(100vh-400px)] min-h-[300px] pr-3"> {/* Adjust height as needed */}
+                <ScrollArea className="max-h-[60vh] pr-3"> {/* Changed to max-h for collapsible behavior */}
                 <div className="space-y-4">
                     {messages.map((msg) => (
                     <MessageCard key={msg.id} message={msg} onMessageDeleted={handleMessageDeleted} />
