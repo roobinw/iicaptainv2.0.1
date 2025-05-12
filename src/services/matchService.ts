@@ -59,6 +59,10 @@ const fromFirestoreMatch = (docSnap: any): Match => {
 export const addMatch = async (teamId: string, matchData: Omit<Match, 'id' | 'attendance' | 'isArchived'>): Promise<string> => {
   const firestorePayload = {
     ...matchData, 
+    date: typeof matchData.date === 'string' 
+      ? matchData.date 
+      // Ensure date is formatted correctly if it's a Date object from the form before initial stringification elsewhere
+      : format(matchData.date instanceof Date ? matchData.date : parseISO(matchData.date as unknown as string), "yyyy-MM-dd"),
     attendance: {}, 
     isArchived: false, // Default new matches to not archived
   };
@@ -95,30 +99,34 @@ export const getMatchById = async (teamId: string, matchId: string): Promise<Mat
   return docSnap.exists() ? fromFirestoreMatch(docSnap) : null;
 };
 
-export const updateMatch = async (teamId: string, matchId: string, data: Partial<Omit<Match, 'id'>>): Promise<void> => {
+export const updateMatch = async (teamId: string, matchId: string, data: Partial<Omit<Match, 'id' | 'date'> & { date?: string | Date | Timestamp | null }>): Promise<void> => {
   const matchDocRef = getMatchDocRef(teamId, matchId);
   const updateData: { [key: string]: any } = {};
 
   if (data.hasOwnProperty('date')) {
     const dateValue = data.date;
+
     if (typeof dateValue === 'string') {
         try {
-            const parsed = parseISO(dateValue);
-            updateData.date = format(parsed, "yyyy-MM-dd");
-        } catch (e) {
-            if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-                updateData.date = dateValue;
+            // Check if it's already yyyy-MM-dd or needs full parsing
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue) && !dateValue.includes('T')) {
+                 updateData.date = dateValue;
             } else {
-                console.error(`Date string "${dateValue}" in updateMatch is not valid. Date will not be updated. Error: ${e}`);
+                 const parsed = parseISO(dateValue); 
+                 updateData.date = format(parsed, "yyyy-MM-dd");
             }
+        } catch (e) {
+            console.error(`Date string "${dateValue}" in updateMatch is not valid. Date will not be updated. Error: ${e}`);
         }
-    } else if (dateValue instanceof Date) {
-        updateData.date = format(dateValue, "yyyy-MM-dd");
+    } else if (dateValue && dateValue instanceof Date) { // Added 'dateValue &&' to prevent instanceof on null/undefined
+      updateData.date = format(dateValue, "yyyy-MM-dd");
     } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
-        updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+      updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
     } else if (dateValue === null) {
-        updateData.date = null;
-    } else if (dateValue !== undefined) {
+      updateData.date = null; 
+    } else if (dateValue === undefined) {
+      // If date was explicitly set to undefined, no update to data.date happens.
+    } else { 
         console.error(`updateMatch received an unhandled date type: ${typeof dateValue}. Date will not be updated. Value:`, dateValue);
     }
   }
@@ -163,3 +171,4 @@ export const unarchiveMatch = async (teamId: string, matchId: string): Promise<v
   const matchDocRef = getMatchDocRef(teamId, matchId);
   await updateDoc(matchDocRef, { isArchived: false });
 };
+
