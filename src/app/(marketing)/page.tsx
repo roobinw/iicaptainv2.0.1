@@ -123,25 +123,25 @@ export default function MarketingLandingPage() { // Renamed component for clarit
       {/* Hero Section */}
       <main className="flex-grow">
         <motion.section 
-            variants={sectionVariants} initial="hidden" animate="visible" transition={{delay: 0.2}}
+            variants={sectionVariants} initial="hidden" animate="visible"
             className="py-20 md:py-32 text-center bg-gradient-to-br from-background via-card to-background"
         >
           <div className="container mx-auto px-6">
             
             <motion.h1 
-              initial={{ opacity: 0, y:20 }} animate={{ opacity: 1, y:0 }} transition={{ delay: 0.4, duration: 0.5 }}
+              initial={{ opacity: 0, y:20 }} animate={{ opacity: 1, y:0 }} transition={{ delay: 0.2, duration: 0.5 }}
               className="text-5xl sm:text-6xl md:text-7xl font-extrabold mb-6 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent leading-tight"
             >
               Ultimate Sports Team Management Platform
             </motion.h1>
             <motion.p 
-              initial={{ opacity: 0, y:20 }} animate={{ opacity: 1, y:0 }} transition={{ delay: 0.6, duration: 0.5 }}
+              initial={{ opacity: 0, y:20 }} animate={{ opacity: 1, y:0 }} transition={{ delay: 0.4, duration: 0.5 }}
               className="text-xl sm:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto"
             >
               iiCaptain streamlines your sports team organization. Manage schedules, player rosters, track attendance, and enhance communication, all in one place.
             </motion.p>
             <motion.div 
-              initial={{ opacity: 0, y:20 }} animate={{ opacity: 1, y:0 }} transition={{ delay: 0.8, duration: 0.5 }}
+              initial={{ opacity: 0, y:20 }} animate={{ opacity: 1, y:0 }} transition={{ delay: 0.6, duration: 0.5 }}
               className="space-y-4 sm:space-y-0 sm:flex sm:justify-center sm:space-x-6"
             >
               <Link href="/signup" passHref>
@@ -154,7 +154,7 @@ export default function MarketingLandingPage() { // Renamed component for clarit
               </Link>
             </motion.div>
              <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1, duration: 0.6 }}
+                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.8, duration: 0.6 }}
                 className="mt-16 sm:mt-24 max-w-4xl mx-auto"
              >
                 <Image 
@@ -174,7 +174,7 @@ export default function MarketingLandingPage() { // Renamed component for clarit
         {/* Features Section */}
         <motion.section 
             id="features"
-            variants={sectionVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.3 }} transition={{delay: 0.3}}
+            variants={sectionVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }}
             className="py-20 md:py-28 bg-card/50"
         >
           <div className="container mx-auto px-6">
@@ -214,7 +214,7 @@ export default function MarketingLandingPage() { // Renamed component for clarit
         
         {/* Testimonial / Social Proof (Placeholder) */}
         <motion.section 
-            variants={sectionVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.3 }} transition={{delay: 0.3}}
+            variants={sectionVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }}
             className="py-20 md:py-28 bg-background"
         >
             <div className="container mx-auto px-6 text-center">
@@ -237,7 +237,7 @@ export default function MarketingLandingPage() { // Renamed component for clarit
           variants={sectionVariants}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, amount: 0.3 }}
+          viewport={{ once: true, amount: 0.2 }}
           className="py-20 md:py-28 bg-card/50"
         >
           <div className="container mx-auto px-6">
@@ -288,7 +288,7 @@ export default function MarketingLandingPage() { // Renamed component for clarit
 
          {/* Call to Action Section */}
         <motion.section 
-            variants={sectionVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.3 }} transition={{delay: 0.3}}
+            variants={sectionVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }}
             className="py-24 md:py-36 text-center bg-gradient-to-b from-background to-card"
         >
             <div className="container mx-auto px-6">
@@ -307,7 +307,7 @@ export default function MarketingLandingPage() { // Renamed component for clarit
 
       {/* Footer */}
       <motion.footer 
-        variants={sectionVariants} initial="hidden" animate="visible" transition={{delay: 0.5}}
+        variants={sectionVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}
         className="py-12 bg-background border-t border-border/20"
       >
         <div className="container mx-auto text-center text-muted-foreground">
@@ -329,5 +329,6 @@ export default function MarketingLandingPage() { // Renamed component for clarit
   );
 }
     
+
 
 
