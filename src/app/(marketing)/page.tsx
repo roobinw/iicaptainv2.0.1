@@ -95,9 +95,9 @@ export default function MarketingLandingPage() { // Renamed component for clarit
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
-            <Link href="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
-                <Icons.TeamLogo className="h-8 w-8" />
-                <span>iiCaptain</span>
+            <Link href="/" className="flex items-center gap-2 text-2xl font-bold">
+                <Icons.TeamLogo className="h-8 w-8 text-primary" />
+                <span className="text-foreground">iiCaptain</span>
             </Link>
           </motion.div>
           <motion.nav 
