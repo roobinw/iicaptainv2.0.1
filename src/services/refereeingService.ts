@@ -12,11 +12,10 @@ import {
   orderBy,
   getDoc,
   writeBatch, 
-  type Timestamp,
-  where, // Added for filtering by isArchived
+  Timestamp, // Corrected import type Timestamp
+  where, 
 } from 'firebase/firestore';
 import { format, parseISO } from "date-fns"; 
-// Removed unused import: import type { EventArchiveFilter } from './matchService'; 
 import type { EventArchiveFilter } from '@/services/matchService';
 
 
@@ -57,7 +56,7 @@ const fromFirestoreRefereeingAssignment = (docSnap: any): RefereeingAssignment =
     homeTeam: data.homeTeam, 
     assignedPlayerUids: data.assignedPlayerUids || [], 
     notes: data.notes,
-    isArchived: data.isArchived || false, // Default to false
+    isArchived: data.isArchived || false, 
   } as RefereeingAssignment;
 };
 
@@ -68,7 +67,7 @@ export const addRefereeingAssignment = async (teamId: string, assignmentData: Om
     homeTeam: assignmentData.homeTeam, 
     assignedPlayerUids: assignmentData.assignedPlayerUids || [], 
     notes: assignmentData.notes,
-    isArchived: false, // Default new assignments to not archived
+    isArchived: false, 
   };
   const assignmentsColRef = getRefereeingAssignmentsCollectionRef(teamId);
   const docRef = await addDoc(assignmentsColRef, firestorePayload);
@@ -86,7 +85,7 @@ export const getRefereeingAssignments = async (teamId: string, filter: EventArch
     q = query(assignmentsColRef, where('isArchived', '==', false), ...baseQueryConstraints);
   } else if (filter === "archived") {
     q = query(assignmentsColRef, where('isArchived', '==', true), ...baseQueryConstraints);
-  } else { // 'all'
+  } else { 
     q = query(assignmentsColRef, ...baseQueryConstraints);
   }
   
@@ -105,26 +104,34 @@ export const updateRefereeingAssignment = async (teamId: string, assignmentId: s
   const assignmentDocRef = getRefereeingAssignmentDocRef(teamId, assignmentId);
   const updateData: { [key: string]: any } = { ...data };
   
-  if (data.date && typeof data.date !== 'string') {
-     if (data.date instanceof Date) {
-        console.warn("updateRefereeingAssignment received Date object for date, formatting to yyyy-MM-dd", data.date);
-        updateData.date = format(data.date as unknown as Date, "yyyy-MM-dd"); 
-     } else {
+  if (data.date !== undefined && data.date !== null) {
+    if (typeof data.date === 'string') {
         try {
-          updateData.date = format(parseISO(data.date as unknown as string), "yyyy-MM-dd");
+            const parsed = parseISO(data.date);
+            updateData.date = format(parsed, "yyyy-MM-dd");
         } catch (e) {
-          console.error(`Date string "${String(data.date)}" in updateRefereeingAssignment was not a valid ISO string. Cannot format. Error: ${e}`);
-          delete updateData.date;
+            if (/^\d{4}-\d{2}-\d{2}$/.test(data.date)) {
+                 console.warn(`Date string "${data.date}" in updateRefereeingAssignment is not ISO but matches yyyy-MM-dd. Using as is.`);
+                 updateData.date = data.date;
+            } else {
+                console.error(`Date string "${data.date}" in updateRefereeingAssignment is not a valid ISO string nor yyyy-MM-dd. Date will not be updated. Error: ${e}`);
+                delete updateData.date;
+            }
         }
-     }
-  } else if (data.date && typeof data.date === 'string') {
-    try {
-        updateData.date = format(parseISO(data.date), "yyyy-MM-dd");
-    } catch (e) {
-        console.warn(`Date string "${data.date}" in updateRefereeingAssignment was not in a standard ISO format. Using as is. Error: ${e}`);
-        updateData.date = data.date;
+    } else if (typeof data.date === 'object' && data.date instanceof Date) {
+        console.warn("updateRefereeingAssignment received Date object for date, formatting to yyyy-MM-dd", data.date);
+        updateData.date = format(data.date, "yyyy-MM-dd");
+    } else if (typeof data.date === 'object' && typeof (data.date as any).toDate === 'function') {
+        console.warn("updateRefereeingAssignment received Timestamp-like object for date, formatting to yyyy-MM-dd", data.date);
+        updateData.date = format((data.date as Timestamp).toDate(), "yyyy-MM-dd");
+    } else {
+        console.error(`updateRefereeingAssignment received unhandled date type: ${typeof data.date}. Date will not be updated.`);
+        delete updateData.date;
     }
+  } else if (data.hasOwnProperty('date') && data.date === null) {
+    updateData.date = null;
   }
+
 
   if (data.assignedPlayerUids === undefined && !(data.hasOwnProperty('assignedPlayerUids'))) {
     delete updateData.assignedPlayerUids; 
