@@ -12,12 +12,13 @@ import type { Match, Training, User, RefereeingAssignment, Message } from "@/typ
 import { getMatches } from "@/services/matchService";
 import { getTrainings } from "@/services/trainingService";
 import { getRefereeingAssignments } from "@/services/refereeingService";
-import { getAllUsersByTeam } from "@/services/userService";
-import { getMessages } from "@/services/messageService"; // Import message service
+// import { getAllUsersByTeam } from "@/services/userService"; // No longer directly needed here for player count
+import { getMessages } from "@/services/messageService";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageInputForm } from "@/components/message-input-form"; // Import message input form
-import { MessageCard } from "@/components/message-card"; // Import message card
+// ScrollArea removed for single message display, but kept for consistency if needed later
+// import { ScrollArea } from "@/components/ui/scroll-area"; 
+import { MessageInputForm } from "@/components/message-input-form";
+import { MessageCard } from "@/components/message-card";
 import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
@@ -26,8 +27,8 @@ export default function DashboardPage() {
   const [upcomingTrainings, setUpcomingTrainings] = useState<Training[]>([]);
   const [upcomingRefereeingAssignments, setUpcomingRefereeingAssignments] = useState<RefereeingAssignment[]>([]);
   
-  const [messages, setMessages] = useState<Message[]>([]); // State for messages
-  const [isLoadingMessages, setIsLoadingMessages] = useState(true); // Loading state for messages
+  const [latestMessage, setLatestMessage] = useState<Message | null>(null); 
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   
   const [isLoadingData, setIsLoadingData] = useState(true);
 
@@ -79,10 +80,11 @@ export default function DashboardPage() {
   const fetchTeamMessages = useCallback(async (teamId: string) => {
     setIsLoadingMessages(true);
     try {
-      const fetchedMessages = await getMessages(teamId);
-      setMessages(fetchedMessages);
+      const fetchedMessages = await getMessages(teamId); // Already sorted by createdAt desc
+      setLatestMessage(fetchedMessages.length > 0 ? fetchedMessages[0] : null);
     } catch (error) {
       console.error("Error fetching team messages:", error);
+      setLatestMessage(null);
     } finally {
       setIsLoadingMessages(false);
     }
@@ -108,13 +110,15 @@ export default function DashboardPage() {
 
   const handleMessagePosted = useCallback(() => {
     if (user?.teamId) {
-      fetchTeamMessages(user.teamId);
+      fetchTeamMessages(user.teamId); // Refetch to get the latest message
     }
   }, [user?.teamId, fetchTeamMessages]);
 
-  const handleMessageDeleted = useCallback((messageId: string) => {
-    setMessages(prevMessages => prevMessages.filter(msg => msg.id !== messageId));
-  }, []);
+  const handleMessageDeleted = useCallback(() => { // Only relevant if deleting the displayed message
+    if (user?.teamId) {
+      fetchTeamMessages(user.teamId); // Refetch to get the next latest message or null
+    }
+  }, [user?.teamId, fetchTeamMessages]);
 
 
   if (authIsLoading || isLoadingData || (!user && !currentTeam)) { 
@@ -126,17 +130,18 @@ export default function DashboardPage() {
             <Skeleton className="h-5 w-80" />
           </div>
         </div>
-         {/* Skeleton for Message Board */}
-        <Card className="mt-6">
+        <Card className="shadow-lg">
           <CardHeader>
             <Skeleton className="h-7 w-48 mb-2" />
             <Skeleton className="h-5 w-64" />
           </CardHeader>
           <CardContent className="space-y-4">
             {user?.role === 'admin' && <Skeleton className="h-24 w-full" />}
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" /> {/* Skeleton for single message */}
           </CardContent>
+          <CardFooter className="border-t pt-4">
+            <Skeleton className="h-10 w-full" />
+          </CardFooter>
         </Card>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1,2,3].map(i => (
@@ -181,12 +186,11 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Message Board Section */}
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Icons.MessageSquare className="h-6 w-6 text-primary" /> Team Message Board</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Icons.MessageSquare className="h-6 w-6 text-primary" /> Latest Team Message</CardTitle>
           <CardDescription>
-            {user?.role === 'admin' ? 'Post messages to your team here.' : 'View messages from your team admin.'}
+            {user?.role === 'admin' ? 'Post a new message or view the latest one.' : 'View the latest message from your team admin.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -195,8 +199,7 @@ export default function DashboardPage() {
           )}
           {isLoadingMessages ? (
             <div className="space-y-3 py-2">
-              {[1,2].map(i => (
-                <div key={i} className="flex items-start space-x-3 p-3 border rounded-md bg-card/50">
+                <div className="flex items-start space-x-3 p-3 border rounded-md bg-card/50">
                   <Skeleton className="h-9 w-9 rounded-full" />
                   <div className="flex-1 space-y-1.5">
                     <div className="flex justify-between items-center">
@@ -207,25 +210,20 @@ export default function DashboardPage() {
                     <Skeleton className="h-4 w-3/4" />
                   </div>
                 </div>
-              ))}
             </div>
-          ) : messages.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No messages yet. {user?.role === 'admin' && 'Post the first message!'} </p>
+          ) : latestMessage ? (
+            <MessageCard message={latestMessage} onMessageDeleted={handleMessageDeleted} />
           ) : (
-            <ScrollArea 
-              className={cn(
-                "max-h-[40vh] pr-3",
-                messages.length > 1 ? "h-[300px]" : "h-auto" 
-              )}
-            >
-              <div className="space-y-4">
-                {messages.map((msg) => (
-                  <MessageCard key={msg.id} message={msg} onMessageDeleted={handleMessageDeleted} />
-                ))}
-              </div>
-            </ScrollArea>
+            <p className="text-muted-foreground text-center py-4">No messages yet. {user?.role === 'admin' && 'Post the first message!'} </p>
           )}
         </CardContent>
+        <CardFooter className="border-t pt-4">
+            <Link href="/messages" className="w-full">
+              <Button variant="outline" className="w-full">
+                <Icons.Archive className="mr-2 h-4 w-4" /> View All Messages
+              </Button>
+            </Link>
+        </CardFooter>
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -348,3 +346,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

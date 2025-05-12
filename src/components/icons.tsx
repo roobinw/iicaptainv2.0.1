@@ -26,8 +26,10 @@ import {
   KeyRound, 
   LifeBuoy,
   Gavel, 
-  MessageSquare, // Added for Message Board
-  Send, // Added for Message Input
+  MessageSquare,
+  MessagesSquare, // Added for All Messages page/icon
+  Archive, // Added for View All Messages button
+  Send,
   type LucideProps,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -64,8 +66,10 @@ export const Icons = {
   KeyRound: KeyRound, 
   Support: LifeBuoy,
   Refereeing: Gavel,
-  MessageSquare: MessageSquare, // Added for Message Board
-  Send: Send, // Added for Message Input
+  MessageSquare: MessageSquare, 
+  MessagesSquare: MessagesSquare, // Added for All Messages
+  Archive: Archive, // Added for View All Messages button
+  Send: Send, 
   ClipboardList: ClipboardList, 
   TeamLogo: ({ className, ...props }: TeamLogoProps) => ( 
     <svg
@@ -84,6 +88,7 @@ export const Icons = {
   ),
   CalendarDays: CalendarDays,
 };
+
 
 
 

@@ -14,12 +14,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet"; 
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"; 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Icons } from "@/components/icons";
-import { PanelLeft, LogOut, Settings as SettingsIcon, LifeBuoy } from "lucide-react"; 
+import { PanelLeft, LogOut, Settings as SettingsIcon, LifeBuoy, MessagesSquare } from "lucide-react"; 
 import { useEffect, useState } from "react";
 
 interface NavItem {
@@ -35,6 +35,7 @@ const navItems: NavItem[] = [
   { href: "/trainings", label: "Trainings", icon: "Trainings" },
   { href: "/refereeing", label: "Refereeing", icon: "Refereeing" },
   { href: "/players", label: "Players", icon: "Players" },
+  { href: "/messages", label: "Messages", icon: "MessagesSquare" }, // Added Messages page
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -114,7 +115,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const sidebarNavigation = (isMobileContext = false) => (
     <nav className="grid items-start justify-items-center gap-3 px-2 py-4"> 
       {navItems.map((item) => {
-        if (item.adminOnly && user?.role !== "admin" && item.label === "Refereeing") { // Only hide Refereeing for non-admins
+        if (item.adminOnly && user?.role !== "admin") { 
           return null;
         }
         const IconComponent = Icons[item.icon];
@@ -125,7 +126,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 href={item.href}
                 onClick={() => isMobileContext && setIsMobileSheetOpen(false)} 
                 className={cn(
-                  "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-10 md:w-10", // Adjusted icon size for desktop
+                  "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-10 md:w-10", 
                   pathname.startsWith(item.href) 
                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
                     : "text-sidebar-foreground"
@@ -179,7 +180,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[100px_1fr] lg:grid-cols-[100px_1fr]"> {/* Adjusted sidebar width */}
+    <div className="grid min-h-screen w-full md:grid-cols-[100px_1fr] lg:grid-cols-[100px_1fr]"> 
       <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg sticky top-0 h-screen">
         <div> 
            <div className="flex h-10 items-center justify-center mb-4 mt-2">
@@ -187,7 +188,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 href="/dashboard" 
                 className="text-sidebar-foreground flex justify-center"
             >
-              <Icons.TeamLogo className="mt-[10px] h-10 w-10" /> {/* Adjusted icon size */}
+              <Icons.TeamLogo className="mt-[10px] h-10 w-10" /> 
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
@@ -229,13 +230,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     <span className="sr-only">Toggle navigation menu</span>
                 </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="flex flex-col bg-sidebar p-2 text-sidebar-foreground w-[115px] shadow-xl"> {/* Adjusted width for mobile */}
+                <SheetContent side="left" className="flex flex-col bg-sidebar p-2 text-sidebar-foreground w-[115px] shadow-xl"> 
                  <SheetHeader>
                     <SheetTitle className="sr-only">Navigation Menu</SheetTitle> 
                  </SheetHeader>
                  <div className="flex h-10 items-center justify-center mb-4 mt-2">
                      <Link href="/dashboard" className="flex items-center justify-center" onClick={() => setIsMobileSheetOpen(false)}>
-                        <Icons.TeamLogo className="h-10 w-10 text-sidebar-foreground" /> {/* Adjusted icon size */}
+                        <Icons.TeamLogo className="h-10 w-10 text-sidebar-foreground" /> 
                         <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
                     </Link>
                   </div>
@@ -261,7 +262,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 )}
                 </SheetContent>
             </Sheet>
-             <div className="flex-1 text-center"> {/* Center the team name */}
+             <div className="flex-1 text-center"> 
                 {currentTeam && (
                     <h1 className="text-lg font-semibold text-foreground inline-block">{currentTeam.name}</h1>
                 )}
