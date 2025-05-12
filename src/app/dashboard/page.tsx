@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -17,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageInputForm } from "@/components/message-input-form"; // Import message input form
 import { MessageCard } from "@/components/message-card"; // Import message card
+import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { user, currentTeam, isLoading: authIsLoading } = useAuth();
@@ -210,7 +212,12 @@ export default function DashboardPage() {
           ) : messages.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">No messages yet. {user?.role === 'admin' && 'Post the first message!'} </p>
           ) : (
-            <ScrollArea className="h-[300px] max-h-[40vh] pr-3"> {/* Adjust max-h as needed */}
+            <ScrollArea 
+              className={cn(
+                "max-h-[40vh] pr-3",
+                messages.length > 1 ? "h-[300px]" : "h-auto" 
+              )}
+            >
               <div className="space-y-4">
                 {messages.map((msg) => (
                   <MessageCard key={msg.id} message={msg} onMessageDeleted={handleMessageDeleted} />
