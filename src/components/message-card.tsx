@@ -34,7 +34,7 @@ import {
 interface MessageCardProps {
   message: Message;
   onMessageDeleted: (messageId: string) => void;
-  onMessageArchived?: (messageId: string, isArchived: boolean) => void; // Optional: to update list display immediately
+  onMessageArchived?: (messageId: string, isArchived: boolean) => void;
 }
 
 export function MessageCard({ message, onMessageDeleted, onMessageArchived }: MessageCardProps) {
@@ -86,14 +86,14 @@ export function MessageCard({ message, onMessageDeleted, onMessageArchived }: Me
 
   return (
     <Card className={cn(
-      "shadow-sm hover:shadow-md transition-shadow duration-200",
-      message.isArchived ? "bg-muted/50 opacity-70" : "bg-card/80"
+      "shadow-lg hover:shadow-primary/10 transition-shadow duration-300", // Aligned with EventCardBase
+      message.isArchived ? "opacity-60 bg-muted/30" : "bg-card" // Aligned with EventCardBase
     )}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
             <Avatar className="h-9 w-9">
-                <AvatarImage src={`https://picsum.photos/seed/${message.authorUid}/40/40`} alt={message.authorName} data-ai-hint="author avatar" />
+                <AvatarImage src={`https://picsum.photos/seed/${message.authorUid}/40/40`} alt={message.authorName} data-ai-hint="author avatar"/>
                 <AvatarFallback>{getInitials(message.authorName)}</AvatarFallback>
             </Avatar>
             <div>
@@ -114,7 +114,7 @@ export function MessageCard({ message, onMessageDeleted, onMessageArchived }: Me
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleToggleArchive} className="cursor-pointer">
                   {message.isArchived ? (
-                    <><Icons.Archive className="mr-2 h-4 w-4" /> Unarchive</>
+                    <><Icons.ArchiveX className="mr-2 h-4 w-4" /> Unarchive</> // Changed icon for consistency
                   ) : (
                     <><Icons.Archive className="mr-2 h-4 w-4" /> Archive</>
                   )}
