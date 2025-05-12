@@ -57,12 +57,10 @@ const fromFirestoreMatch = (docSnap: any): Match => {
 };
 
 export const addMatch = async (teamId: string, matchData: Omit<Match, 'id' | 'attendance' | 'isArchived'>): Promise<string> => {
+  // matchData.date is expected to be a "yyyy-MM-dd" string from AddMatchForm
   const firestorePayload = {
     ...matchData, 
-    date: typeof matchData.date === 'string' 
-      ? matchData.date 
-      // Ensure date is formatted correctly if it's a Date object from the form before initial stringification elsewhere
-      : format(matchData.date instanceof Date ? matchData.date : parseISO(matchData.date as unknown as string), "yyyy-MM-dd"),
+    date: matchData.date, // Directly use the string date as AddMatchForm ensures "yyyy-MM-dd" format
     attendance: {}, 
     isArchived: false, // Default new matches to not archived
   };
@@ -118,7 +116,7 @@ export const updateMatch = async (teamId: string, matchId: string, data: Partial
         } catch (e) {
             console.error(`Date string "${dateValue}" in updateMatch is not valid. Date will not be updated. Error: ${e}`);
         }
-    } else if (dateValue && dateValue instanceof Date) { // Added 'dateValue &&' to prevent instanceof on null/undefined
+    } else if (dateValue && typeof dateValue === 'object' && dateValue instanceof Date) { 
       updateData.date = format(dateValue, "yyyy-MM-dd");
     } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
       updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
