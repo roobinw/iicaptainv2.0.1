@@ -16,7 +16,8 @@ import { AttendanceToggler, getAttendanceStatusColor, getAttendanceStatusText, t
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
-import { AssignPlayersForm } from "./assign-players-form";
+import { AssignPlayersForm } from "@/components/assign-players-form";
+import { Badge } from "@/components/ui/badge"; // Added import for Badge
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -35,7 +36,7 @@ interface EventCardBaseProps {
   onEdit?: (item: Match | Training | RefereeingAssignment) => void;
   onDelete?: (itemId: string) => void;
   onAssignPlayersSuccess?: () => void;
-  onArchiveToggle?: () => void; // New prop
+  onArchiveToggle?: (item: Match | Training | RefereeingAssignment) => void; 
 }
 
 export function EventCardBase({
@@ -47,7 +48,7 @@ export function EventCardBase({
   onEdit,
   onDelete,
   onAssignPlayersSuccess,
-  onArchiveToggle, // Destructure new prop
+  onArchiveToggle, 
 }: EventCardBaseProps) {
   const { user: currentUser, currentTeam } = useAuth();
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
@@ -144,7 +145,9 @@ export function EventCardBase({
   }
   
   const cardTitle =
-    eventType === "match" && 'opponent' in item
+    eventType === "match" && 'opponent' in item && currentTeam?.name
+      ? `${currentTeam.name} ${titlePrefix || ""} ${item.opponent}`
+      : eventType === "match" && 'opponent' in item
       ? `${titlePrefix || ""} ${item.opponent}`
       : eventType === "training" && 'location' in item
       ? `${item.location}`
@@ -156,7 +159,7 @@ export function EventCardBase({
   return (
     <Card className={cn(
       "shadow-lg hover:shadow-primary/10 transition-shadow duration-300 flex flex-col h-full w-full",
-      item.isArchived && "opacity-60 bg-muted/30" // Style for archived items
+      item.isArchived && "opacity-60 bg-muted/30" 
       )}>
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start gap-2">
@@ -182,6 +185,11 @@ export function EventCardBase({
                 ) : (
                     <span className="font-semibold text-primary">{presentCount} / {totalMembersForAttendanceCount}</span>
                 )} members present.
+            </div>
+         )}
+         {eventType === "refereeing" && 'assignedPlayerUids' in item && (item as RefereeingAssignment).assignedPlayerUids && (item as RefereeingAssignment).assignedPlayerUids!.length > 0 && (
+            <div className="mt-2 text-sm text-muted-foreground">
+                <span className="font-semibold text-primary">{(item as RefereeingAssignment).assignedPlayerUids!.length}</span> member(s) assigned.
             </div>
          )}
       </CardContent>
@@ -299,7 +307,7 @@ export function EventCardBase({
                             </DropdownMenuItem>
                         )}
                         {onArchiveToggle && (
-                           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); if (onArchiveToggle) onArchiveToggle(); }} className="hover:bg-accent/50 cursor-pointer">
+                           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); if (onArchiveToggle) onArchiveToggle(item); }} className="hover:bg-accent/50 cursor-pointer">
                                 {item.isArchived ? (
                                     <><Icons.ArchiveX className="mr-2 h-4 w-4" /> Unarchive</>
                                 ) : (
@@ -323,3 +331,4 @@ export function EventCardBase({
     </Card>
   );
 }
+
