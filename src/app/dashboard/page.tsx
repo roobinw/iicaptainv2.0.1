@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button";
 import { format, parseISO, isAfter, isEqual } from "date-fns";
 import { useEffect, useState, useCallback } from "react";
 import type { Match, Training, User, RefereeingAssignment, Message } from "@/types";
-import { getMatches, type EventArchiveFilter } from "@/services/matchService"; // Import EventArchiveFilter
-import { getTrainings } from "@/services/trainingService"; // Will use EventArchiveFilter from matchService
-import { getRefereeingAssignments } from "@/services/refereeingService"; // Will use EventArchiveFilter from matchService
+import { getMatches, type EventArchiveFilter } from "@/services/matchService"; 
+import { getTrainings } from "@/services/trainingService"; 
+import { getRefereeingAssignments } from "@/services/refereeingService"; 
 import { getMessages, type MessageArchiveFilter } from "@/services/messageService"; 
 import { Skeleton } from "@/components/ui/skeleton";
 import { MessageCard } from "@/components/message-card";
@@ -39,11 +39,10 @@ export default function DashboardPage() {
       const today = new Date();
       today.setHours(0, 0, 0, 0); 
       
-      // Fetch only active items for dashboard summaries
       const activeFilter = "active" as EventArchiveFilter;
 
       const allMatches = await getMatches(teamId, activeFilter);
-      const allFutureMatches = allMatches // Already filtered by 'active', so no need to filter by isArchived here
+      const allFutureMatches = allMatches
         .filter(match => {
           const matchDate = parseISO(match.date);
           return isAfter(matchDate, today) || isEqual(matchDate, today);
@@ -52,7 +51,7 @@ export default function DashboardPage() {
       setUpcomingMatches(allFutureMatches.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime() || a.time.localeCompare(b.time)).slice(0, 1));
 
       const allTrainings = await getTrainings(teamId, activeFilter);
-      const allFutureTrainings = allTrainings // Already filtered by 'active'
+      const allFutureTrainings = allTrainings
         .filter(training => {
           const trainingDate = parseISO(training.date);
           return isAfter(trainingDate, today) || isEqual(trainingDate, today);
@@ -61,7 +60,7 @@ export default function DashboardPage() {
       setUpcomingTrainings(allFutureTrainings.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime() || a.time.localeCompare(b.time)).slice(0, 1));
 
       const allRefereeingAssignments = await getRefereeingAssignments(teamId, activeFilter);
-      const allFutureRefereeingAssignments = allRefereeingAssignments // Already filtered by 'active'
+      const allFutureRefereeingAssignments = allRefereeingAssignments
         .filter(assignment => {
           const assignmentDate = parseISO(assignment.date);
           return isAfter(assignmentDate, today) || isEqual(assignmentDate, today);
@@ -136,20 +135,7 @@ export default function DashboardPage() {
             <Skeleton className="h-10 w-full" />
           </CardFooter>
         </Card>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1,2,3].map(i => (
-            <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-4 w-4" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-12 mb-1" />
-                <Skeleton className="h-4 w-48" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {/* Skeleton for merged cards */}
         <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
             <Skeleton className="h-72 w-full rounded-lg" />
             <Skeleton className="h-72 w-full rounded-lg" />
@@ -216,45 +202,7 @@ export default function DashboardPage() {
         </CardFooter>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming Matches</CardTitle>
-            <Icons.Matches className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalUpcomingMatchesCount}</div>
-            <p className="text-xs text-muted-foreground">
-              Next: {upcomingMatches.length > 0 ? `vs ${upcomingMatches[0].opponent} on ${format(parseISO(upcomingMatches[0].date), "MMM dd")}` : "None scheduled"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming Trainings</CardTitle>
-            <Icons.Trainings className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalUpcomingTrainingsCount}</div>
-            <p className="text-xs text-muted-foreground">
-               Next: {upcomingTrainings.length > 0 ? `${format(parseISO(upcomingTrainings[0].date), "MMM dd")} at ${upcomingTrainings[0].location}` : "None scheduled"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming Refereeing</CardTitle>
-            <Icons.Refereeing className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalUpcomingRefereeingAssignmentsCount}</div>
-            <p className="text-xs text-muted-foreground">
-              Next: {upcomingRefereeingAssignments.length > 0 ? `${format(parseISO(upcomingRefereeingAssignments[0].date), "MMM dd")} for ${upcomingRefereeingAssignments[0].homeTeam || 'TBD'}` : "None scheduled"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
+      {/* Merged Cards for Matches, Trainings, Refereeing */}
       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
         <Card className="shadow-md flex flex-col">
           <CardHeader>
@@ -262,7 +210,9 @@ export default function DashboardPage() {
                 <Icons.Matches className="h-5 w-5 text-primary" />
                 <span className="truncate min-w-0">Next Match</span>
             </CardTitle>
-            <CardDescription>Quick view of your team&apos;s next game.</CardDescription>
+            <CardDescription>
+              Quick view of your team&apos;s next game. Total upcoming: {totalUpcomingMatchesCount}.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 flex-grow">
             {upcomingMatches.length > 0 ? (
@@ -290,7 +240,9 @@ export default function DashboardPage() {
                 <Icons.Trainings className="h-5 w-5 text-primary" />
                 <span className="truncate min-w-0">Next Training</span>
             </CardTitle>
-            <CardDescription>Your team&apos;s next training session.</CardDescription>
+            <CardDescription>
+              Your team&apos;s next training session. Total upcoming: {totalUpcomingTrainingsCount}.
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex-grow">
              <div className="space-y-4">
@@ -320,7 +272,9 @@ export default function DashboardPage() {
                 <Icons.Refereeing className="h-5 w-5 text-primary" />
                 <span className="truncate min-w-0">Next Refereeing</span>
             </CardTitle>
-            <CardDescription>Upcoming refereeing duties for the team.</CardDescription>
+            <CardDescription>
+              Upcoming refereeing duties. Total upcoming: {totalUpcomingRefereeingAssignmentsCount}.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 flex-grow">
             {upcomingRefereeingAssignments.length > 0 ? (
