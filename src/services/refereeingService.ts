@@ -126,10 +126,14 @@ export const updateRefereeingAssignment = async (
     } catch (e) {
       console.error(`Date string "${dateValue}" in updateRefereeingAssignment is not valid. Date will not be updated. Error: ${e}`);
     }
-  } else if (dateValue instanceof Date) { 
-    updateData.date = format(dateValue, "yyyy-MM-dd");
-  } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') { 
-    updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+  } else if (dateValue && typeof dateValue === 'object') {
+    if (dateValue instanceof Date) {
+        updateData.date = format(dateValue, "yyyy-MM-dd");
+    } else if ('toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') { 
+        updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+    } else {
+        console.error(`updateRefereeingAssignment received an unhandled object date type/value. Value:`, dateValue);
+    }
   } else if (dateValue === null) {
     updateData.date = null; 
   } else if (dateValue === undefined) {
@@ -175,3 +179,4 @@ export const unarchiveRefereeingAssignment = async (teamId: string, assignmentId
   const assignmentDocRef = getRefereeingAssignmentDocRef(teamId, assignmentId);
   await updateDoc(assignmentDocRef, { isArchived: false });
 };
+
