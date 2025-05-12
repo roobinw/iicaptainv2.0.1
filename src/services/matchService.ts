@@ -14,7 +14,7 @@ import {
   orderBy,
   type Timestamp, 
   getDoc,
-  // writeBatch // Removed as updateMatchesOrder is removed
+  where, // Added for filtering by isArchived
 } from 'firebase/firestore';
 import { format, parseISO } from 'date-fns';
 
@@ -52,25 +52,38 @@ const fromFirestoreMatch = (docSnap: any): Match => {
     id: docSnap.id,
     ...data,
     attendance: data.attendance || {}, 
+    isArchived: data.isArchived || false, // Default to false
   } as Match;
 };
 
-export const addMatch = async (teamId: string, matchData: Omit<Match, 'id' | 'attendance'>): Promise<string> => {
+export const addMatch = async (teamId: string, matchData: Omit<Match, 'id' | 'attendance' | 'isArchived'>): Promise<string> => {
   const firestorePayload = {
     ...matchData, 
     attendance: {}, 
-    // order: (await getMatches(teamId)).length, // Order field removed
+    isArchived: false, // Default new matches to not archived
   };
   const matchesColRef = getMatchesCollectionRef(teamId);
   const docRef = await addDoc(matchesColRef, firestorePayload);
   return docRef.id;
 };
 
-export const getMatches = async (teamId: string): Promise<Match[]> => {
+export type EventArchiveFilter = "all" | "active" | "archived";
+
+export const getMatches = async (teamId: string, filter: EventArchiveFilter = "active"): Promise<Match[]> => {
   if (!teamId) return [];
   const matchesColRef = getMatchesCollectionRef(teamId);
-  // Sort by date ascending (soonest first), then by time ascending
-  const q = query(matchesColRef, orderBy('date', 'asc'), orderBy('time', 'asc'));
+  
+  let q;
+  const baseQueryConstraints = [orderBy('date', 'asc'), orderBy('time', 'asc')];
+
+  if (filter === "active") {
+    q = query(matchesColRef, where('isArchived', '==', false), ...baseQueryConstraints);
+  } else if (filter === "archived") {
+    q = query(matchesColRef, where('isArchived', '==', true), ...baseQueryConstraints);
+  } else { // 'all'
+    q = query(matchesColRef, ...baseQueryConstraints);
+  }
+  
   const matchSnapshot = await getDocs(q);
   return matchSnapshot.docs.map(fromFirestoreMatch);
 };
@@ -86,18 +99,15 @@ export const updateMatch = async (teamId: string, matchId: string, data: Partial
   const matchDocRef = getMatchDocRef(teamId, matchId);
   const updateData: any = { ...data };
 
-  // Ensure date is correctly formatted if it's a Date object
   if (data.date && typeof data.date !== 'string') {
     console.warn("updateMatch received non-string date, formatting to yyyy-MM-dd", data.date);
     updateData.date = format(parseISO(data.date), "yyyy-MM-dd");
   } else if (data.date && typeof data.date === 'string') {
-    // Attempt to parse and reformat to ensure consistency, 
-    // but catch errors if it's already in a non-standard string format not parseable by parseISO
     try {
         updateData.date = format(parseISO(data.date), "yyyy-MM-dd");
     } catch (e) {
         console.warn(`Date string "${data.date}" in updateMatch was not in a standard ISO format. Using as is. Error: ${e}`);
-        updateData.date = data.date; // Use as is if parsing fails, assuming it's already yyyy-MM-dd
+        updateData.date = data.date; 
     }
   }
   
@@ -122,6 +132,12 @@ export const updateMatchAttendance = async (
   });
 };
 
-// updateMatchesOrder function removed as DND is removed
-// export const updateMatchesOrder = async (teamId: string, orderedMatches: Array<{ id: string; order: number }>): Promise<void> => { ... }
+export const archiveMatch = async (teamId: string, matchId: string): Promise<void> => {
+  const matchDocRef = getMatchDocRef(teamId, matchId);
+  await updateDoc(matchDocRef, { isArchived: true });
+};
 
+export const unarchiveMatch = async (teamId: string, matchId: string): Promise<void> => {
+  const matchDocRef = getMatchDocRef(teamId, matchId);
+  await updateDoc(matchDocRef, { isArchived: false });
+};

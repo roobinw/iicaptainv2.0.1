@@ -14,10 +14,12 @@ import {
   orderBy,
   Timestamp, 
   getDoc,
-  writeBatch
+  writeBatch,
+  where, // Added for filtering by isArchived
 } from 'firebase/firestore';
 import { format, parseISO } from 'date-fns';
 import type { SingleTrainingFormInput } from '@/components/bulk-add-training-form';
+import type { EventArchiveFilter } from './matchService'; // Reuse filter type
 
 
 const getTrainingsCollectionRef = (teamId: string) => {
@@ -55,16 +57,16 @@ const fromFirestoreTraining = (docSnap: any): Training => {
     ...data,
     date: data.date instanceof Timestamp ? format(data.date.toDate(), "yyyy-MM-dd") : data.date,
     attendance: data.attendance || {}, 
+    isArchived: data.isArchived || false, // Default to false
   } as Training;
 };
 
-export const addTraining = async (teamId: string, trainingData: Omit<Training, 'id' | 'attendance'>): Promise<string> => {
-  // const currentTrainings = await getTrainings(teamId); // Not needed for order anymore
+export const addTraining = async (teamId: string, trainingData: Omit<Training, 'id' | 'attendance' | 'isArchived'>): Promise<string> => {
   const firestorePayload = {
     ...trainingData,
     date: trainingData.date, 
     attendance: {}, 
-    // order: currentTrainings.length, // Order field removed
+    isArchived: false, // Default new trainings to not archived
   };
   const trainingsColRef = getTrainingsCollectionRef(teamId);
   const docRef = await addDoc(trainingsColRef, firestorePayload);
@@ -78,14 +80,13 @@ export const bulkAddTrainings = async (teamId: string, trainingsData: SingleTrai
 
   const trainingsColRef = getTrainingsCollectionRef(teamId);
   const batch = writeBatch(db);
-  // const currentTrainingsCount = (await getDocs(query(trainingsColRef))).size; // Not needed for order
 
-  trainingsData.forEach((training, index) => {
+  trainingsData.forEach((training) => {
     const newDocRef = doc(trainingsColRef); 
     const firestorePayload = {
       ...training, 
       attendance: {},
-      // order: currentTrainingsCount + index, // Order field removed
+      isArchived: false, // Default new trainings to not archived
     };
     batch.set(newDocRef, firestorePayload);
   });
@@ -94,11 +95,21 @@ export const bulkAddTrainings = async (teamId: string, trainingsData: SingleTrai
 };
 
 
-export const getTrainings = async (teamId: string): Promise<Training[]> => {
+export const getTrainings = async (teamId: string, filter: EventArchiveFilter = "active"): Promise<Training[]> => {
   if (!teamId) return [];
   const trainingsColRef = getTrainingsCollectionRef(teamId);
-  // Sort by date ascending (soonest first), then by time ascending
-  const q = query(trainingsColRef, orderBy('date', 'asc'), orderBy('time', 'asc'));
+  
+  let q;
+  const baseQueryConstraints = [orderBy('date', 'asc'), orderBy('time', 'asc')];
+
+  if (filter === "active") {
+    q = query(trainingsColRef, where('isArchived', '==', false), ...baseQueryConstraints);
+  } else if (filter === "archived") {
+    q = query(trainingsColRef, where('isArchived', '==', true), ...baseQueryConstraints);
+  } else { // 'all'
+    q = query(trainingsColRef, ...baseQueryConstraints);
+  }
+
   const trainingSnapshot = await getDocs(q);
   return trainingSnapshot.docs.map(fromFirestoreTraining);
 };
@@ -115,8 +126,21 @@ export const updateTraining = async (teamId: string, trainingId: string, data: P
   const updateData: any = { ...data };
 
   if (data.date && typeof data.date !== 'string') {
-    console.warn("updateTraining received non-string date, formatting to yyyy-MM-dd", data.date);
-    updateData.date = format(parseISO(data.date), "yyyy-MM-dd");
+    // Check if it's a Date object before formatting
+    if (data.date instanceof Date) {
+      console.warn("updateTraining received Date object for date, formatting to yyyy-MM-dd", data.date);
+      updateData.date = format(data.date, "yyyy-MM-dd");
+    } else {
+      // If it's not a string and not a Date object, try parsing as ISO (might be from server like Timestamp.toDate().toISOString())
+      try {
+        updateData.date = format(parseISO(data.date as unknown as string), "yyyy-MM-dd");
+      } catch (e) {
+        console.error(`Date string "${data.date}" in updateTraining was not a valid ISO string. Cannot format. Error: ${e}`);
+        // Decide how to handle: either throw error, or use as is if you trust the format, or skip update for date.
+        // For now, let's skip updating date if format is unrecognized to prevent data corruption.
+        delete updateData.date; 
+      }
+    }
   } else if (data.date && typeof data.date === 'string') {
      try {
         updateData.date = format(parseISO(data.date), "yyyy-MM-dd");
@@ -147,6 +171,12 @@ export const updateTrainingAttendance = async (
   });
 };
 
-// updateTrainingsOrder function removed as DND is removed
-// export const updateTrainingsOrder = async (teamId: string, orderedTrainings: Array<{ id: string; order: number }>): Promise<void> => { ... };
+export const archiveTraining = async (teamId: string, trainingId: string): Promise<void> => {
+  const trainingDocRef = getTrainingDocRef(teamId, trainingId);
+  await updateDoc(trainingDocRef, { isArchived: true });
+};
 
+export const unarchiveTraining = async (teamId: string, trainingId: string): Promise<void> => {
+  const trainingDocRef = getTrainingDocRef(teamId, trainingId);
+  await updateDoc(trainingDocRef, { isArchived: false });
+};

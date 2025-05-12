@@ -26,6 +26,7 @@ export interface Match {
   opponent: string;
   location?: string; 
   attendance: Record<string, "present" | "absent" | "excused" | "unknown">; // User's Firebase UID: status
+  isArchived?: boolean; // New field
 }
 
 export interface Training {
@@ -35,6 +36,7 @@ export interface Training {
   location: string;
   description?: string;
   attendance: Record<string, "present" | "absent" | "excused" | "unknown">; // User's Firebase UID: status
+  isArchived?: boolean; // New field
 }
 
 export interface Ticket {
@@ -57,6 +59,7 @@ export interface RefereeingAssignment {
   homeTeam?: string; // Name of the home team for the match being refereed
   assignedPlayerUids?: string[]; // Array of User UIDs - now optional
   notes?: string;
+  isArchived?: boolean; // New field
 }
 
 export interface Message {
@@ -68,6 +71,7 @@ export interface Message {
   teamId: string; // To identify which team this message belongs to (useful for collection group queries if needed)
   isArchived?: boolean; // Added for archiving functionality, defaults to false
 }
+
 
 
 

@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from "react";
@@ -15,11 +16,12 @@ import { AttendanceToggler, getAttendanceStatusColor, getAttendanceStatusText, t
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
-import { AssignPlayersForm } from "@/components/assign-players-form";
+import { AssignPlayersForm } from "./assign-players-form";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu";
 
@@ -33,6 +35,7 @@ interface EventCardBaseProps {
   onEdit?: (item: Match | Training | RefereeingAssignment) => void;
   onDelete?: (itemId: string) => void;
   onAssignPlayersSuccess?: () => void;
+  onArchiveToggle?: () => void; // New prop
 }
 
 export function EventCardBase({
@@ -44,6 +47,7 @@ export function EventCardBase({
   onEdit,
   onDelete,
   onAssignPlayersSuccess,
+  onArchiveToggle, // Destructure new prop
 }: EventCardBaseProps) {
   const { user: currentUser, currentTeam } = useAuth();
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
@@ -123,36 +127,37 @@ export function EventCardBase({
   const totalMembersForAttendanceCount = memberList.length > 0 ? memberList.length : Object.keys(currentAttendance).length;
 
   let eventName: string;
-  let eventDateForDialog: string = ""; // Initialize to prevent uninitialized access
+  let eventDateForDialog: string = ""; 
   
-  // Determine eventName and eventDateForDialog based on eventType
   if (eventType === "match" && 'opponent' in item && 'date' in item) {
     eventName = (item as Match).opponent;
     eventDateForDialog = (item as Match).date;
   } else if (eventType === "training" && 'location' in item && 'date' in item) {
-    eventName = (item as Training).location; // Main identifier for training
+    eventName = (item as Training).location; 
     eventDateForDialog = (item as Training).date;
   } else if (eventType === "refereeing" && 'date' in item) {
-    eventName = `Assignment`; // Main identifier for refereeing
+    eventName = `Assignment`; 
     eventDateForDialog = (item as RefereeingAssignment).date;
   } else {
-    eventName = "Event"; // Fallback
-    eventDateForDialog = item.date; // Assuming date is always present
+    eventName = "Event"; 
+    eventDateForDialog = item.date; 
   }
   
-  // Construct the card title based on eventType
   const cardTitle =
-    eventType === "match"
-      ? `${titlePrefix || ""} ${eventName}` // For matches, prefix with team name vs opponent
-      : eventType === "training"
-      ? `${eventName}` // For trainings, use location as title
-      : eventType === "refereeing"
-      ? `${eventName} - ${format(parseISO(eventDateForDialog), "MMM dd")}` // For refereeing, "Assignment - Date"
-      : `${eventName}`; // Fallback
+    eventType === "match" && 'opponent' in item
+      ? `${titlePrefix || ""} ${item.opponent}`
+      : eventType === "training" && 'location' in item
+      ? `${item.location}`
+      : eventType === "refereeing" && 'date' in item
+      ? `Assignment - ${format(parseISO(item.date), "MMM dd")}`
+      : `Event`;
 
 
   return (
-    <Card className="shadow-lg hover:shadow-primary/10 transition-shadow duration-300 flex flex-col h-full w-full">
+    <Card className={cn(
+      "shadow-lg hover:shadow-primary/10 transition-shadow duration-300 flex flex-col h-full w-full",
+      item.isArchived && "opacity-60 bg-muted/30" // Style for archived items
+      )}>
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start gap-2">
           <div className="flex-1 min-w-0">
@@ -161,6 +166,7 @@ export function EventCardBase({
               <span className="truncate min-w-0">
                  {cardTitle}
               </span>
+              {item.isArchived && <Badge variant="outline" className="ml-auto text-xs">Archived</Badge>}
             </CardTitle>
             <CardDescription className="mt-1 text-xs sm:text-sm">
                 {renderDetails(item)}
@@ -191,7 +197,7 @@ export function EventCardBase({
                 className="w-[95vw] max-w-[400px] sm:max-w-md md:max-w-lg"
                 onInteractOutside={(e) => {
                 const target = e.target as HTMLElement;
-                if (target.closest('.attendance-toggler-button')) {
+                if (target.closest('.attendance-toggler-button') || target.closest('[role="menuitemradio"]')) {
                     e.preventDefault();
                 }
                 }}
@@ -277,7 +283,7 @@ export function EventCardBase({
             </DialogContent>
           </Dialog>
         )}
-        {isAdmin && (onEdit || onDelete) && (
+        {isAdmin && (onEdit || onDelete || onArchiveToggle) && (
             <div className="ml-auto flex-shrink-0"> 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -292,10 +298,22 @@ export function EventCardBase({
                                 <Icons.Edit className="mr-2 h-4 w-4" /> Edit {eventType}
                             </DropdownMenuItem>
                         )}
+                        {onArchiveToggle && (
+                           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); if (onArchiveToggle) onArchiveToggle(); }} className="hover:bg-accent/50 cursor-pointer">
+                                {item.isArchived ? (
+                                    <><Icons.ArchiveX className="mr-2 h-4 w-4" /> Unarchive</>
+                                ) : (
+                                    <><Icons.Archive className="mr-2 h-4 w-4" /> Archive</>
+                                )}
+                            </DropdownMenuItem>
+                        )}
                         {onDelete && (
+                            <>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(item.id);}} className="text-destructive hover:bg-destructive/10 focus:bg-destructive/10 focus:text-destructive cursor-pointer">
                                 <Icons.Delete className="mr-2 h-4 w-4" /> Delete {eventType}
                             </DropdownMenuItem>
+                            </>
                         )}
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -305,4 +323,3 @@ export function EventCardBase({
     </Card>
   );
 }
-

@@ -1,21 +1,18 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"; // Added Tabs
 import { Icons } from "@/components/icons";
 import { MatchCard } from "@/components/match-card";
 import { AddMatchForm } from "@/components/add-match-form";
 import type { Match } from "@/types";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-// DND related imports removed
-// import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
-// import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-// import { SortableItem } from '@/components/sortable-item';
-import { addMatch, getMatches, updateMatch, deleteMatch } from "@/services/matchService"; // updateMatchesOrder removed
+import { addMatch, getMatches, updateMatch, deleteMatch, archiveMatch, unarchiveMatch, type EventArchiveFilter } from "@/services/matchService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 
@@ -26,15 +23,12 @@ export default function MatchesPage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isAddMatchDialogOpen, setIsAddMatchDialogOpen] = useState(false);
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
-  const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
+  const [matchFilter, setMatchFilter] = useState<EventArchiveFilter>("active");
 
-  // DND sensors removed
-  // const sensors = useSensors(...);
-
-  const fetchMatches = async (teamId: string) => {
+  const fetchMatches = useCallback(async (teamId: string, filter: EventArchiveFilter) => {
     setIsLoadingData(true);
     try {
-      const fetchedMatches = await getMatches(teamId); // Will be sorted by date/time from service
+      const fetchedMatches = await getMatches(teamId, filter);
       setMatches(fetchedMatches);
     } catch (error) {
       console.error("Error fetching matches:", error);
@@ -42,16 +36,16 @@ export default function MatchesPage() {
     } finally {
       setIsLoadingData(false);
     }
-  };
+  }, [toast]);
   
   useEffect(() => {
     if (!authLoading && user && user.teamId && currentTeam) {
-        fetchMatches(user.teamId);
+        fetchMatches(user.teamId, matchFilter);
     } else if (!authLoading && (!user || !user.teamId || !currentTeam)) {
       setMatches([]);
       setIsLoadingData(false);
     }
-  }, [authLoading, user, currentTeam, forceUpdateCounter]);
+  }, [authLoading, user, currentTeam, matchFilter, fetchMatches]);
 
 
   useEffect(() => {
@@ -63,7 +57,7 @@ export default function MatchesPage() {
   }, [user?.role]);
 
 
-  const handleAddMatch = async (data: Omit<Match, "id" | "attendance">) => {
+  const handleAddMatch = async (data: Omit<Match, "id" | "attendance" | "isArchived">) => {
     if (!user?.teamId) {
         toast({ title: "Error", description: "Team information is missing.", variant: "destructive"});
         return;
@@ -71,7 +65,8 @@ export default function MatchesPage() {
     try {
       await addMatch(user.teamId, data);
       toast({ title: "Match Added", description: `Match against ${data.opponent} scheduled.` });
-      setForceUpdateCounter(prev => prev + 1); 
+      setMatchFilter("active"); // Switch to active to see the new match
+      if (matchFilter === "active") fetchMatches(user.teamId, "active"); // Refetch if already on active
       setIsAddMatchDialogOpen(false);
     } catch (error: any) {
       toast({ title: "Error adding match", description: error.message || "Could not add match.", variant: "destructive" });
@@ -83,7 +78,7 @@ export default function MatchesPage() {
     setIsAddMatchDialogOpen(true);
   };
 
-  const handleUpdateMatch = async (data: Omit<Match, "id" | "attendance">) => {
+  const handleUpdateMatch = async (data: Omit<Match, "id" | "attendance" | "isArchived">) => {
     if (!editingMatch || !editingMatch.id || !user?.teamId) {
         toast({ title: "Error", description: "Cannot update match. Missing information.", variant: "destructive"});
         return;
@@ -91,7 +86,7 @@ export default function MatchesPage() {
     try {
       await updateMatch(user.teamId, editingMatch.id, data as Partial<Omit<Match, 'id'>>);
       toast({ title: "Match Updated", description: `Match against ${data.opponent} updated.` });
-      setForceUpdateCounter(prev => prev + 1);
+      fetchMatches(user.teamId, matchFilter); // Refetch current filter
       setIsAddMatchDialogOpen(false);
       setEditingMatch(null);
     } catch (error: any) {
@@ -104,22 +99,35 @@ export default function MatchesPage() {
          toast({ title: "Error", description: "Team information is missing.", variant: "destructive"});
         return;
     }
-    if (!window.confirm("Are you sure you want to delete this match?")) return;
+    if (!window.confirm("Are you sure you want to delete this match? This action cannot be undone.")) return;
     try {
       await deleteMatch(user.teamId, matchId);
       toast({ title: "Match Deleted", description: "The match has been removed.", variant: "destructive" });
-      setForceUpdateCounter(prev => prev + 1);
+      setMatches(prev => prev.filter(m => m.id !== matchId)); // Optimistic UI update
     } catch (error: any) {
       toast({ title: "Error deleting match", description: error.message || "Could not delete match.", variant: "destructive" });
     }
   };
 
-  // handleDragEnd function removed
-  // async function handleDragEnd(event: DragEndEvent) { ... }
+  const handleArchiveToggle = async (match: Match) => {
+    if (!user?.teamId) return;
+    try {
+      if (match.isArchived) {
+        await unarchiveMatch(user.teamId, match.id);
+        toast({ title: "Match Unarchived" });
+      } else {
+        await archiveMatch(user.teamId, match.id);
+        toast({ title: "Match Archived" });
+      }
+      fetchMatches(user.teamId, matchFilter); // Refetch current filter
+    } catch (error: any) {
+      toast({ title: "Error", description: `Could not ${match.isArchived ? 'unarchive' : 'archive'} match.`, variant: "destructive"});
+    }
+  };
   
   const isAdmin = user?.role === "admin";
 
-  if (authLoading || isLoadingData) {
+  if (authLoading || isLoadingData && matches.length === 0) { // Show skeleton only if data is loading and no matches are present yet
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -127,6 +135,7 @@ export default function MatchesPage() {
             {isAdmin && <Skeleton className="h-10 w-32" />}
         </div>
         <Skeleton className="h-5 w-3/4" />
+        <Skeleton className="h-10 w-full mb-4" /> {/* Skeleton for Tabs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1,2,3].map(i => <Skeleton key={i} className="h-60 w-full rounded-lg" />)}
         </div>
@@ -183,43 +192,55 @@ export default function MatchesPage() {
         )}
       </div>
 
-      {matches.length === 0 ? (
-         <Card className="col-span-full">
-            <CardHeader>
-                <CardTitle>No Matches Yet</CardTitle>
-                <CardDescription>
-                There are no matches scheduled for your team. {isAdmin && "Click 'Add Match' to get started."}
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <Icons.Matches className="w-16 h-16 text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">
-                        It looks a bit empty here.
-                    </p>
-                    {isAdmin && (
-                        <Button className="mt-4" onClick={() => { setEditingMatch(null); setIsAddMatchDialogOpen(true);}}>
-                            <Icons.Add className="mr-2 h-4 w-4" /> Add First Match
-                        </Button>
-                    )}
-                </div>
-            </CardContent>
-        </Card>
-      ) : (
-        // DndContext and SortableContext removed
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {matches.map((match) => (
-            // SortableItem removed, directly rendering MatchCard
-            <MatchCard 
-              key={match.id}
-              match={match} 
-              onEdit={isAdmin ? handleEditMatch : undefined} 
-              onDelete={isAdmin ? handleDeleteMatch : undefined}
-              // dndListeners removed
-            />
-          ))}
-        </div>
-      )}
+      <Tabs value={matchFilter} onValueChange={(value) => setMatchFilter(value as EventArchiveFilter)} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="active">Active</TabsTrigger>
+          <TabsTrigger value="archived">Archived</TabsTrigger>
+          <TabsTrigger value="all">All</TabsTrigger>
+        </TabsList>
+        <TabsContent value={matchFilter} className="mt-4">
+          {isLoadingData ? (
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1,2,3].map(i => <Skeleton key={i} className="h-60 w-full rounded-lg" />)}
+            </div>
+          ) : matches.length === 0 ? (
+            <Card className="col-span-full">
+                <CardHeader>
+                    <CardTitle>No Matches Found</CardTitle>
+                    <CardDescription>
+                    There are no {matchFilter !== "all" ? matchFilter : ""} matches for your team. 
+                    {isAdmin && matchFilter === "active" && " Click 'Add Match' to get started."}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <Icons.Matches className="w-16 h-16 text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground">
+                            It looks a bit empty here.
+                        </p>
+                        {isAdmin && matchFilter === "active" && (
+                            <Button className="mt-4" onClick={() => { setEditingMatch(null); setIsAddMatchDialogOpen(true);}}>
+                                <Icons.Add className="mr-2 h-4 w-4" /> Add First Match
+                            </Button>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {matches.map((match) => (
+                <MatchCard 
+                  key={match.id}
+                  match={match} 
+                  onEdit={isAdmin ? handleEditMatch : undefined} 
+                  onDelete={isAdmin ? handleDeleteMatch : undefined}
+                  onArchiveToggle={isAdmin ? handleArchiveToggle : undefined}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

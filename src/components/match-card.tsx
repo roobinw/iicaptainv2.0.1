@@ -12,10 +12,10 @@ interface MatchCardProps {
   match: Match;
   onEdit?: (match: Match) => void;
   onDelete?: (matchId: string) => void;
-  // dndListeners?: any; // Removed
+  onArchiveToggle?: (match: Match) => void; // New prop
 }
 
-export function MatchCard({ match, onEdit, onDelete }: MatchCardProps) { // dndListeners removed from props
+export function MatchCard({ match, onEdit, onDelete, onArchiveToggle }: MatchCardProps) { 
   const { currentTeam } = useAuth();
   return (
     <EventCardBase
@@ -42,7 +42,7 @@ export function MatchCard({ match, onEdit, onDelete }: MatchCardProps) { // dndL
       }}
       onEdit={onEdit ? (item) => onEdit(item as Match) : undefined}
       onDelete={onDelete}
-      // dndListeners={dndListeners} // Removed
+      onArchiveToggle={onArchiveToggle ? () => onArchiveToggle(match) : undefined} // Pass to EventCardBase
     />
   );
 }

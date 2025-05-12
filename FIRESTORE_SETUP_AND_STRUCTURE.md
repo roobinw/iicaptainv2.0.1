@@ -45,6 +45,8 @@ This is a top-level collection where each document represents a unique team.
             *   Keys: Player Firebase Auth UIDs (String).
             *   Values: (String) "present", "absent", "excused", or "unknown".
             *   Example: `{"firebaseUserUid1": "present", "firebaseUserUid2": "absent"}`
+        *   `isArchived`: (Boolean) `true` if the match is archived, `false` otherwise. Defaults to `false`. (NEW)
+
 
 *   **Subcollection of `teams/{teamId}`: `trainings`**
     *   Stores all training sessions for a specific team.
@@ -55,6 +57,7 @@ This is a top-level collection where each document represents a unique team.
         *   `location`: (String) Location of the training session.
         *   `description`: (String, optional) Additional details about the training.
         *   `attendance`: (Map) Stores player attendance (same structure as in `matches`).
+        *   `isArchived`: (Boolean) `true` if the training is archived, `false` otherwise. Defaults to `false`. (NEW)
 
 *   **Subcollection of `teams/{teamId}`: `refereeingAssignments`**
     *   Stores all refereeing assignments for a specific team.
@@ -65,6 +68,7 @@ This is a top-level collection where each document represents a unique team.
         *   `homeTeam`: (String, optional) The name of the home team for the match being refereed.
         *   `assignedPlayerUids`: (Array of Strings) Firebase Auth UIDs of the players assigned to referee.
         *   `notes`: (String, optional) Additional details or instructions for the assignment.
+        *   `isArchived`: (Boolean) `true` if the assignment is archived, `false` otherwise. Defaults to `false`. (NEW)
 
 *   **Subcollection of `teams/{teamId}`: `messages`**
     *   Stores all team messages for the dashboard message board.
@@ -75,7 +79,7 @@ This is a top-level collection where each document represents a unique team.
         *   `authorName`: (String) Name of the admin at the time of posting.
         *   `createdAt`: (Timestamp) Server timestamp indicating when the message was created.
         *   `teamId`: (String) The ID of the team this message belongs to (matches parent `teamId`).
-        *   `isArchived`: (Boolean) `true` if the message is archived, `false` otherwise. Defaults to `false`. (NEW)
+        *   `isArchived`: (Boolean) `true` if the message is archived, `false` otherwise. Defaults to `false`.
 
 ### Collection: `users`
 
@@ -129,7 +133,22 @@ This is a top-level collection where each document represents a support ticket.
   "attendance": {
     "playerFirebaseUidXyz": "present",
     "playerFirebaseUidPqr": "excused"
-  }
+  },
+  "isArchived": false
+}
+```
+
+**Example `trainings` subcollection document (`/teams/uniqueTeamId123/trainings/trainingId789`):**
+```json
+{
+  "date": "2023-11-06",
+  "time": "19:00",
+  "location": "Main Training Field",
+  "description": "Tactical drills and fitness.",
+  "attendance": {
+    "playerFirebaseUidXyz": "present"
+  },
+  "isArchived": false
 }
 ```
 
@@ -140,7 +159,8 @@ This is a top-level collection where each document represents a support ticket.
   "time": "10:00",
   "homeTeam": "The Bears",
   "assignedPlayerUids": ["playerFirebaseUidMno", "playerFirebaseUidJkl"],
-  "notes": "Remember to bring whistles and cards. Arrive 30 mins early."
+  "notes": "Remember to bring whistles and cards. Arrive 30 mins early.",
+  "isArchived": false
 }
 ```
 
@@ -207,8 +227,8 @@ This is a top-level collection where each document represents a support ticket.
     *   Admins can then add other player profiles to their team via the "Players" page in the app. This:
         1. Creates a new Firebase Authentication account for the player using an email and password provided by the admin.
         2. Creates a `users` document for that player (using the new player's Firebase Auth UID as the document ID and the `uid` field), with `role: "player"` and the admin's `teamId`.
-    *   Matches, Trainings, and Refereeing Assignments are added by team admins through the app into their respective team's subcollections.
-    *   Messages are added by team admins via the dashboard message board.
+    *   Matches, Trainings, and Refereeing Assignments are added by team admins through the app into their respective team's subcollections. They default to `isArchived: false`.
+    *   Messages are added by team admins via the dashboard message board. They default to `isArchived: false`.
     *   Support tickets are created by any authenticated user via the "Support" page.
 
 *   **Firestore Security Rules (VERY IMPORTANT):**
@@ -334,24 +354,70 @@ This is a top-level collection where each document represents a support ticket.
         match /teams/{teamId}/matches/{matchId} {
           // Any member of this team can read matches.
           allow read: if isUserTeamMember(teamId);
-          // Only an admin of this team can create, update, or delete matches.
-          allow create, update, delete: if isUserTeamAdmin(teamId);
+          // Only an admin of this team can create or delete matches.
+          // When creating, ensure isArchived is set to false.
+          allow create: if isUserTeamAdmin(teamId) && request.resource.data.isArchived == false;
+          // Only an admin can update match details. isArchived can be changed.
+          // All other fields should be immutable on update if only archiving/unarchiving.
+          allow update: if isUserTeamAdmin(teamId) &&
+                           ( // Case 1: Archiving/Unarchiving
+                             request.resource.data.isArchived != resource.data.isArchived &&
+                             request.resource.data.date == resource.data.date &&
+                             request.resource.data.time == resource.data.time &&
+                             request.resource.data.opponent == resource.data.opponent &&
+                             request.resource.data.location == resource.data.location &&
+                             request.resource.data.attendance == resource.data.attendance
+                           ) ||
+                           ( // Case 2: Updating other details (isArchived might or might not change)
+                             request.resource.data.isArchived == resource.data.isArchived || request.resource.data.isArchived != resource.data.isArchived
+                           );
+          allow delete: if isUserTeamAdmin(teamId);
         }
 
         // Trainings subcollection (nested under a specific team)
         match /teams/{teamId}/trainings/{trainingId} {
           // Any member of this team can read trainings.
           allow read: if isUserTeamMember(teamId);
-          // Only an admin of this team can create, update, or delete trainings.
-          allow create, update, delete: if isUserTeamAdmin(teamId);
+          // Only an admin of this team can create or delete trainings.
+          // When creating, ensure isArchived is set to false.
+          allow create: if isUserTeamAdmin(teamId) && request.resource.data.isArchived == false;
+           // Only an admin can update training details. isArchived can be changed.
+          allow update: if isUserTeamAdmin(teamId) &&
+                           ( // Case 1: Archiving/Unarchiving
+                             request.resource.data.isArchived != resource.data.isArchived &&
+                             request.resource.data.date == resource.data.date &&
+                             request.resource.data.time == resource.data.time &&
+                             request.resource.data.location == resource.data.location &&
+                             request.resource.data.description == resource.data.description &&
+                             request.resource.data.attendance == resource.data.attendance
+                           ) ||
+                           ( // Case 2: Updating other details
+                             request.resource.data.isArchived == resource.data.isArchived || request.resource.data.isArchived != resource.data.isArchived
+                           );
+          allow delete: if isUserTeamAdmin(teamId);
         }
 
         // Refereeing Assignments subcollection (nested under a specific team)
         match /teams/{teamId}/refereeingAssignments/{assignmentId} {
           // Any member of this team can read refereeing assignments.
           allow read: if isUserTeamMember(teamId);
-          // Only an admin of this team can create, update, or delete assignments.
-          allow create, update, delete: if isUserTeamAdmin(teamId);
+          // Only an admin of this team can create or delete assignments.
+          // When creating, ensure isArchived is set to false.
+          allow create: if isUserTeamAdmin(teamId) && request.resource.data.isArchived == false;
+          // Only an admin can update assignment details. isArchived can be changed.
+          allow update: if isUserTeamAdmin(teamId) &&
+                           ( // Case 1: Archiving/Unarchiving
+                             request.resource.data.isArchived != resource.data.isArchived &&
+                             request.resource.data.date == resource.data.date &&
+                             request.resource.data.time == resource.data.time &&
+                             request.resource.data.homeTeam == resource.data.homeTeam &&
+                             request.resource.data.assignedPlayerUids == resource.data.assignedPlayerUids &&
+                             request.resource.data.notes == resource.data.notes
+                           ) ||
+                           ( // Case 2: Updating other details
+                             request.resource.data.isArchived == resource.data.isArchived || request.resource.data.isArchived != resource.data.isArchived
+                           );
+          allow delete: if isUserTeamAdmin(teamId);
         }
 
         // Messages subcollection (nested under a specific team)
@@ -431,10 +497,25 @@ You can create these indexes in the Firebase console:
         2.  `time` (Ascending)
     *   **Query scope:** Collection group
 
+*   **Collection Group:** `matches` (NEW - For filtering archived matches)
+    *   **Fields:**
+        1.  `isArchived` (Ascending)
+        2.  `date` (Ascending)
+        3.  `time` (Ascending)
+    *   **Query scope:** Collection group
+
+
 *   **Collection Group:** `trainings`
     *   **Fields:**
         1.  `date` (Ascending)
         2.  `time` (Ascending)
+    *   **Query scope:** Collection group
+
+*   **Collection Group:** `trainings` (NEW - For filtering archived trainings)
+    *   **Fields:**
+        1.  `isArchived` (Ascending)
+        2.  `date` (Ascending)
+        3.  `time` (Ascending)
     *   **Query scope:** Collection group
 
 *   **Collection Group:** `refereeingAssignments`
@@ -443,12 +524,19 @@ You can create these indexes in the Firebase console:
         2.  `time` (Ascending)
     *   **Query scope:** Collection group
 
+*   **Collection Group:** `refereeingAssignments` (NEW - For filtering archived assignments)
+    *   **Fields:**
+        1.  `isArchived` (Ascending)
+        2.  `date` (Ascending)
+        3.  `time` (Ascending)
+    *   **Query scope:** Collection group
+
 *   **Collection Group:** `messages`
     *   **Fields:**
         1.  `createdAt` (Descending)
     *   **Query scope:** Collection group
 
-*   **Collection Group:** `messages` (NEW - For filtering archived messages)
+*   **Collection Group:** `messages` (For filtering archived messages)
     *   **Fields:**
         1.  `isArchived` (Ascending)
         2.  `createdAt` (Descending)
@@ -477,4 +565,5 @@ You can create these indexes in the Firebase console:
 **Note on Index Creation Time:** Composite indexes can take a few minutes to build, especially if you already have data in your collections. Firestore will indicate the status of index creation in the console.
 
 By following this structure, implementing robust security rules, and creating the necessary indexes, your iiCaptain application will have a solid foundation for managing team data securely and efficiently for multiple teams.
+
 

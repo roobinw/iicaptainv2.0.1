@@ -16,9 +16,10 @@ interface RefereeingAssignmentCardProps {
   onEdit?: (assignment: RefereeingAssignment) => void;
   onDelete?: (assignmentId: string) => void;
   onAssignPlayersSuccess?: () => void;
+  onArchiveToggle?: (assignment: RefereeingAssignment) => void; // New prop
 }
 
-export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, onAssignPlayersSuccess }: RefereeingAssignmentCardProps) {
+export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, onAssignPlayersSuccess, onArchiveToggle }: RefereeingAssignmentCardProps) {
   const { user: currentUser, currentTeam } = useAuth();
   const [assignedPlayersDetails, setAssignedPlayersDetails] = useState<User[]>([]);
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
@@ -50,7 +51,7 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, onAssig
         item={assignment as unknown as Match | Training | RefereeingAssignment} 
         eventType="refereeing"
         icon={<Icons.Refereeing className="h-5 w-5 text-primary" />}
-        titlePrefix={currentTeam?.name || "Team"} 
+        // titlePrefix is not used for refereeing, title is constructed differently
         renderDetails={() => ( 
             <>
                 <div className="text-xs sm:text-sm space-y-0.5 mt-1">
@@ -96,8 +97,7 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, onAssig
         onEdit={onEdit ? () => onEdit(assignment) : undefined}
         onDelete={onDelete ? () => onDelete(assignment.id) : undefined}
         onAssignPlayersSuccess={onAssignPlayersSuccess}
+        onArchiveToggle={onArchiveToggle ? () => onArchiveToggle(assignment) : undefined} // Pass to EventCardBase
     />
   );
 }
-
-

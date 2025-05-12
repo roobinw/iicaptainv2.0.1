@@ -12,9 +12,11 @@ import {
   orderBy,
   getDoc,
   writeBatch, 
-  type Timestamp
+  type Timestamp,
+  where, // Added for filtering by isArchived
 } from 'firebase/firestore';
 import { format, parseISO } from "date-fns"; 
+import type { EventArchiveFilter } from './matchService'; // Reuse filter type
 
 const getRefereeingAssignmentsCollectionRef = (teamId: string) => {
   if (!db) {
@@ -50,29 +52,42 @@ const fromFirestoreRefereeingAssignment = (docSnap: any): RefereeingAssignment =
     id: docSnap.id,
     date: data.date,
     time: data.time,
-    homeTeam: data.homeTeam, // Added homeTeam
+    homeTeam: data.homeTeam, 
     assignedPlayerUids: data.assignedPlayerUids || [], 
     notes: data.notes,
+    isArchived: data.isArchived || false, // Default to false
   } as RefereeingAssignment;
 };
 
-export const addRefereeingAssignment = async (teamId: string, assignmentData: Omit<RefereeingAssignment, 'id' | 'assignedPlayerUids'> & { assignedPlayerUids?: string[] }): Promise<string> => {
+export const addRefereeingAssignment = async (teamId: string, assignmentData: Omit<RefereeingAssignment, 'id' | 'assignedPlayerUids' | 'isArchived'> & { assignedPlayerUids?: string[] }): Promise<string> => {
   const firestorePayload = {
     date: assignmentData.date, 
     time: assignmentData.time,
-    homeTeam: assignmentData.homeTeam, // Added homeTeam
+    homeTeam: assignmentData.homeTeam, 
     assignedPlayerUids: assignmentData.assignedPlayerUids || [], 
     notes: assignmentData.notes,
+    isArchived: false, // Default new assignments to not archived
   };
   const assignmentsColRef = getRefereeingAssignmentsCollectionRef(teamId);
   const docRef = await addDoc(assignmentsColRef, firestorePayload);
   return docRef.id;
 };
 
-export const getRefereeingAssignments = async (teamId: string): Promise<RefereeingAssignment[]> => {
+export const getRefereeingAssignments = async (teamId: string, filter: EventArchiveFilter = "active"): Promise<RefereeingAssignment[]> => {
   if (!teamId) return [];
   const assignmentsColRef = getRefereeingAssignmentsCollectionRef(teamId);
-  const q = query(assignmentsColRef, orderBy('date', 'asc'), orderBy('time', 'asc'));
+  
+  let q;
+  const baseQueryConstraints = [orderBy('date', 'asc'), orderBy('time', 'asc')];
+
+  if (filter === "active") {
+    q = query(assignmentsColRef, where('isArchived', '==', false), ...baseQueryConstraints);
+  } else if (filter === "archived") {
+    q = query(assignmentsColRef, where('isArchived', '==', true), ...baseQueryConstraints);
+  } else { // 'all'
+    q = query(assignmentsColRef, ...baseQueryConstraints);
+  }
+  
   const assignmentSnapshot = await getDocs(q);
   return assignmentSnapshot.docs.map(fromFirestoreRefereeingAssignment);
 };
@@ -89,8 +104,17 @@ export const updateRefereeingAssignment = async (teamId: string, assignmentId: s
   const updateData: { [key: string]: any } = { ...data };
   
   if (data.date && typeof data.date !== 'string') {
-     console.warn("updateRefereeingAssignment received non-string date, formatting to yyyy-MM-dd", data.date);
-     updateData.date = format(data.date as unknown as Date, "yyyy-MM-dd"); 
+     if (data.date instanceof Date) {
+        console.warn("updateRefereeingAssignment received Date object for date, formatting to yyyy-MM-dd", data.date);
+        updateData.date = format(data.date as unknown as Date, "yyyy-MM-dd"); 
+     } else {
+        try {
+          updateData.date = format(parseISO(data.date as unknown as string), "yyyy-MM-dd");
+        } catch (e) {
+          console.error(`Date string "${data.date}" in updateRefereeingAssignment was not a valid ISO string. Cannot format. Error: ${e}`);
+          delete updateData.date;
+        }
+     }
   } else if (data.date && typeof data.date === 'string') {
     try {
         updateData.date = format(parseISO(data.date), "yyyy-MM-dd");
@@ -106,13 +130,11 @@ export const updateRefereeingAssignment = async (teamId: string, assignmentId: s
      updateData.assignedPlayerUids = []; 
   }
   
-  // Handle homeTeam update
   if (data.homeTeam !== undefined) {
     updateData.homeTeam = data.homeTeam;
   } else if (data.hasOwnProperty('homeTeam') && data.homeTeam === null) {
-    updateData.homeTeam = null; // Or field delete if preferred for nulls
+    updateData.homeTeam = null; 
   }
-
 
   await updateDoc(assignmentDocRef, updateData);
 };
@@ -122,4 +144,12 @@ export const deleteRefereeingAssignment = async (teamId: string, assignmentId: s
   await deleteDoc(assignmentDocRef);
 };
 
+export const archiveRefereeingAssignment = async (teamId: string, assignmentId: string): Promise<void> => {
+  const assignmentDocRef = getRefereeingAssignmentDocRef(teamId, assignmentId);
+  await updateDoc(assignmentDocRef, { isArchived: true });
+};
 
+export const unarchiveRefereeingAssignment = async (teamId: string, assignmentId: string): Promise<void> => {
+  const assignmentDocRef = getRefereeingAssignmentDocRef(teamId, assignmentId);
+  await updateDoc(assignmentDocRef, { isArchived: false });
+};

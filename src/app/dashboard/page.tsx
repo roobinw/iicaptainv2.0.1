@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button";
 import { format, parseISO, isAfter, isEqual } from "date-fns";
 import { useEffect, useState, useCallback } from "react";
 import type { Match, Training, User, RefereeingAssignment, Message } from "@/types";
-import { getMatches } from "@/services/matchService";
-import { getTrainings } from "@/services/trainingService";
-import { getRefereeingAssignments } from "@/services/refereeingService";
-import { getMessages, type MessageArchiveFilter } from "@/services/messageService"; // Import MessageArchiveFilter
+import { getMatches, type EventArchiveFilter } from "@/services/matchService"; // Import EventArchiveFilter
+import { getTrainings } from "@/services/trainingService"; // Will use EventArchiveFilter from matchService
+import { getRefereeingAssignments } from "@/services/refereeingService"; // Will use EventArchiveFilter from matchService
+import { getMessages, type MessageArchiveFilter } from "@/services/messageService"; 
 import { Skeleton } from "@/components/ui/skeleton";
 import { MessageCard } from "@/components/message-card";
 import { cn } from "@/lib/utils";
@@ -39,8 +39,11 @@ export default function DashboardPage() {
       const today = new Date();
       today.setHours(0, 0, 0, 0); 
       
-      const allMatches = await getMatches(teamId);
-      const allFutureMatches = allMatches
+      // Fetch only active items for dashboard summaries
+      const activeFilter = "active" as EventArchiveFilter;
+
+      const allMatches = await getMatches(teamId, activeFilter);
+      const allFutureMatches = allMatches // Already filtered by 'active', so no need to filter by isArchived here
         .filter(match => {
           const matchDate = parseISO(match.date);
           return isAfter(matchDate, today) || isEqual(matchDate, today);
@@ -48,8 +51,8 @@ export default function DashboardPage() {
       setTotalUpcomingMatchesCount(allFutureMatches.length);
       setUpcomingMatches(allFutureMatches.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime() || a.time.localeCompare(b.time)).slice(0, 1));
 
-      const allTrainings = await getTrainings(teamId);
-      const allFutureTrainings = allTrainings
+      const allTrainings = await getTrainings(teamId, activeFilter);
+      const allFutureTrainings = allTrainings // Already filtered by 'active'
         .filter(training => {
           const trainingDate = parseISO(training.date);
           return isAfter(trainingDate, today) || isEqual(trainingDate, today);
@@ -57,8 +60,8 @@ export default function DashboardPage() {
       setTotalUpcomingTrainingsCount(allFutureTrainings.length);
       setUpcomingTrainings(allFutureTrainings.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime() || a.time.localeCompare(b.time)).slice(0, 1));
 
-      const allRefereeingAssignments = await getRefereeingAssignments(teamId);
-      const allFutureRefereeingAssignments = allRefereeingAssignments
+      const allRefereeingAssignments = await getRefereeingAssignments(teamId, activeFilter);
+      const allFutureRefereeingAssignments = allRefereeingAssignments // Already filtered by 'active'
         .filter(assignment => {
           const assignmentDate = parseISO(assignment.date);
           return isAfter(assignmentDate, today) || isEqual(assignmentDate, today);
@@ -76,7 +79,6 @@ export default function DashboardPage() {
   const fetchTeamMessages = useCallback(async (teamId: string) => {
     setIsLoadingMessages(true);
     try {
-      // Fetch only active (non-archived) messages for the dashboard
       const fetchedMessages = await getMessages(teamId, "active" as MessageArchiveFilter); 
       setLatestMessage(fetchedMessages.length > 0 ? fetchedMessages[0] : null);
     } catch (error) {
@@ -107,7 +109,6 @@ export default function DashboardPage() {
 
 
   const handleMessageDeletedOrArchived = useCallback(() => {
-    // If a message is deleted or archived (which might be the latest one), refetch messages.
     if (user?.teamId) {
       fetchTeamMessages(user.teamId);
     }
@@ -248,7 +249,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{totalUpcomingRefereeingAssignmentsCount}</div>
             <p className="text-xs text-muted-foreground">
-              Next: {upcomingRefereeingAssignments.length > 0 ? `${format(parseISO(upcomingRefereeingAssignments[0].date), "MMM dd")} at ${upcomingRefereeingAssignments[0].time}` : "None scheduled"}
+              Next: {upcomingRefereeingAssignments.length > 0 ? `${format(parseISO(upcomingRefereeingAssignments[0].date), "MMM dd")} for ${upcomingRefereeingAssignments[0].homeTeam || 'TBD'}` : "None scheduled"}
             </p>
           </CardContent>
         </Card>
@@ -273,7 +274,7 @@ export default function DashboardPage() {
                 {upcomingMatches[0].location && <p className="text-sm text-muted-foreground">Location: {upcomingMatches[0].location}</p>}
               </div>
             ) : (
-              <p className="text-muted-foreground">No upcoming matches scheduled.</p>
+              <p className="text-muted-foreground">No upcoming active matches scheduled.</p>
             )}
           </CardContent>
           <CardFooter className="mt-auto border-t pt-4">
@@ -302,7 +303,7 @@ export default function DashboardPage() {
                       {upcomingTrainings[0].description && <p className="text-xs text-muted-foreground mt-1">{upcomingTrainings[0].description}</p>}
                     </div>
                 ) : (
-                  <p className="text-muted-foreground">No upcoming trainings scheduled.</p>
+                  <p className="text-muted-foreground">No upcoming active trainings scheduled.</p>
                 )}
               </div>
           </CardContent>
@@ -331,7 +332,7 @@ export default function DashboardPage() {
                   {upcomingRefereeingAssignments[0].notes && <p className="text-xs text-muted-foreground mt-1">Notes: {upcomingRefereeingAssignments[0].notes}</p>}
                 </div>
             ) : (
-              <p className="text-muted-foreground">No upcoming refereeing assignments.</p>
+              <p className="text-muted-foreground">No upcoming active refereeing assignments.</p>
             )}
           </CardContent>
           <CardFooter className="mt-auto border-t pt-4">
@@ -344,4 +345,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
