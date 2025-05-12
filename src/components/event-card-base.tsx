@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { AssignPlayersForm } from "@/components/assign-players-form";
-import { Badge } from "@/components/ui/badge"; // Added import for Badge
+import { Badge } from "@/components/ui/badge";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -36,7 +36,7 @@ interface EventCardBaseProps {
   onEdit?: (item: Match | Training | RefereeingAssignment) => void;
   onDelete?: (itemId: string) => void;
   onAssignPlayersSuccess?: () => void;
-  onArchiveToggle?: (item: Match | Training | RefereeingAssignment) => void; 
+  onArchiveToggle?: (item: Match | Training | RefereeingAssignment) => void;
 }
 
 export function EventCardBase({
@@ -48,9 +48,9 @@ export function EventCardBase({
   onEdit,
   onDelete,
   onAssignPlayersSuccess,
-  onArchiveToggle, 
+  onArchiveToggle,
 }: EventCardBaseProps) {
-  const { user: currentUser, currentTeam } = useAuth();
+  const { user: currentUser } = useAuth(); // Removed currentTeam as it's not used directly here for title
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
   const [isAssignPlayersDialogOpen, setIsAssignPlayersDialogOpen] = useState(false);
   const [memberList, setMemberList] = useState<User[]>([]);
@@ -127,30 +127,30 @@ export function EventCardBase({
   const presentCount = Object.values(currentAttendance).filter(status => status === 'present').length;
   const totalMembersForAttendanceCount = memberList.length > 0 ? memberList.length : Object.keys(currentAttendance).length;
 
-  let eventName: string;
-  let eventDateForDialog: string = ""; 
-  
+  let eventNameForDialog: string;
+  let eventDateForDialog: string = "";
+
   if (eventType === "match" && 'opponent' in item && 'date' in item) {
-    eventName = (item as Match).opponent;
+    eventNameForDialog = (item as Match).opponent;
     eventDateForDialog = (item as Match).date;
   } else if (eventType === "training" && 'location' in item && 'date' in item) {
-    eventName = (item as Training).location; 
+    eventNameForDialog = (item as Training).location;
     eventDateForDialog = (item as Training).date;
   } else if (eventType === "refereeing" && 'date' in item) {
-    eventName = `Assignment`; 
+    eventNameForDialog = `Assignment`;
     eventDateForDialog = (item as RefereeingAssignment).date;
   } else {
-    eventName = "Event"; 
-    eventDateForDialog = item.date; 
+    eventNameForDialog = "Event";
+    eventDateForDialog = item.date;
   }
-  
+
   const cardTitle =
-    eventType === "match" && 'opponent' in item && currentTeam?.name
-      ? `${currentTeam.name} ${titlePrefix || ""} ${item.opponent}`
-      : eventType === "match" && 'opponent' in item
-      ? `${titlePrefix || ""} ${item.opponent}`
+    eventType === "match" && 'opponent' in item
+      ? `${titlePrefix || ""} ${item.opponent}` // Simplified for matches
       : eventType === "training" && 'location' in item
       ? `${item.location}`
+      : eventType === "refereeing" && 'date' in item && 'homeTeam' in item
+      ? `Assignment - ${item.homeTeam || 'TBD'}`
       : eventType === "refereeing" && 'date' in item
       ? `Assignment - ${format(parseISO(item.date), "MMM dd")}`
       : `Event`;
@@ -159,7 +159,7 @@ export function EventCardBase({
   return (
     <Card className={cn(
       "shadow-lg hover:shadow-primary/10 transition-shadow duration-300 flex flex-col h-full w-full",
-      item.isArchived && "opacity-60 bg-muted/30" 
+      item.isArchived && "opacity-60 bg-muted/30"
       )}>
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start gap-2">
@@ -169,7 +169,7 @@ export function EventCardBase({
               <span className="truncate min-w-0">
                  {cardTitle}
               </span>
-              {item.isArchived && <Badge variant="outline" className="ml-auto text-xs">Archived</Badge>}
+              {item.isArchived && <Badge variant="outline" className="ml-auto text-xs shrink-0">Archived</Badge>}
             </CardTitle>
             <CardDescription className="mt-1 text-xs sm:text-sm">
                 {renderDetails(item)}
@@ -193,7 +193,7 @@ export function EventCardBase({
             </div>
          )}
       </CardContent>
-      <CardFooter className="border-t pt-3 flex items-center gap-2">
+      <CardFooter className="border-t pt-3 flex items-center justify-start gap-2 flex-wrap">
         {(eventType === "match" || eventType === "training") && (
             <Dialog open={isAttendanceDialogOpen} onOpenChange={setIsAttendanceDialogOpen}>
             <DialogTrigger asChild>
@@ -213,7 +213,7 @@ export function EventCardBase({
                 <DialogHeader>
                 <DialogTitle>Manage Attendance</DialogTitle>
                 <DialogDescription>
-                    Update attendance for {eventName} on {format(parseISO(eventDateForDialog), "MMM dd, yyyy")}.
+                    Update attendance for {eventNameForDialog} on {format(parseISO(eventDateForDialog), "MMM dd, yyyy")}.
                 </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="h-[300px] md:h-[400px] pr-4">
@@ -275,7 +275,7 @@ export function EventCardBase({
               <DialogHeader>
                 <DialogTitle>Assign Members</DialogTitle>
                 <DialogDescription>
-                  Assign members to refereeing duty for {eventName} on {format(parseISO(eventDateForDialog), "MMM dd, yyyy")}.
+                  Assign members to refereeing duty for {eventNameForDialog} on {format(parseISO(eventDateForDialog), "MMM dd, yyyy")}.
                 </DialogDescription>
               </DialogHeader>
               <AssignPlayersForm
@@ -292,7 +292,7 @@ export function EventCardBase({
           </Dialog>
         )}
         {isAdmin && (onEdit || onDelete || onArchiveToggle) && (
-            <div className="ml-auto flex-shrink-0"> 
+            <div className="ml-auto flex-shrink-0">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent/50">
@@ -303,7 +303,7 @@ export function EventCardBase({
                     <DropdownMenuContent align="end" className="bg-card text-card-foreground border-border shadow-xl">
                         {onEdit && (
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(item);}} className="hover:bg-accent/50 cursor-pointer">
-                                <Icons.Edit className="mr-2 h-4 w-4" /> Edit {eventType}
+                                <Icons.Edit className="mr-2 h-4 w-4" /> Edit
                             </DropdownMenuItem>
                         )}
                         {onArchiveToggle && (
@@ -319,7 +319,7 @@ export function EventCardBase({
                             <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(item.id);}} className="text-destructive hover:bg-destructive/10 focus:bg-destructive/10 focus:text-destructive cursor-pointer">
-                                <Icons.Delete className="mr-2 h-4 w-4" /> Delete {eventType}
+                                <Icons.Delete className="mr-2 h-4 w-4" /> Delete
                             </DropdownMenuItem>
                             </>
                         )}
@@ -331,4 +331,3 @@ export function EventCardBase({
     </Card>
   );
 }
-
