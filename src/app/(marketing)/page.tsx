@@ -234,10 +234,11 @@ export default function MarketingLandingPage() { // Renamed component for clarit
 
         {/* About Me Section */}
         <motion.section
-          variants={sectionVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
+          variants={sectionVariants} // Use existing variants
+          initial="hidden" // Start hidden
+          animate="visible" // Animate to visible state immediately
+          // whileInView="visible" // Commented out to force visibility for debugging
+          // viewport={{ once: true, amount: 0.2 }} // Not needed if not using whileInView
           className="py-20 md:py-28 bg-card/50"
         >
           <div className="container mx-auto px-6">
@@ -250,8 +251,9 @@ export default function MarketingLandingPage() { // Renamed component for clarit
               <motion.div
                 className="mb-8 md:mb-0 md:w-1/3 flex justify-center"
                 initial={{ opacity: 0, x: -50 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, amount: 0.5 }}
+                animate={{ opacity: 1, x: 0 }} // Animate directly
+                // whileInView={{ opacity: 1, x: 0 }}
+                // viewport={{ once: true, amount: 0.5 }}
                 transition={{ duration: 0.7, ease: "easeOut" }}
               >
                 <Image
@@ -267,8 +269,9 @@ export default function MarketingLandingPage() { // Renamed component for clarit
               <motion.div
                 className="md:w-2/3 text-center md:text-left"
                 initial={{ opacity: 0, x: 50 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, amount: 0.5 }}
+                animate={{ opacity: 1, x: 0 }} // Animate directly
+                // whileInView={{ opacity: 1, x: 0 }}
+                // viewport={{ once: true, amount: 0.5 }}
                 transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
               >
                 <p className="text-lg text-muted-foreground mb-4 leading-relaxed">
@@ -329,6 +332,4 @@ export default function MarketingLandingPage() { // Renamed component for clarit
   );
 }
     
-
-
 
