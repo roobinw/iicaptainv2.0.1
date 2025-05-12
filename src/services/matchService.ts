@@ -1,4 +1,5 @@
 
+
 // 'use server'; // Removed to run client-side
 
 import { db } from '@/lib/firebase';
@@ -56,11 +57,16 @@ const fromFirestoreMatch = (docSnap: any): Match => {
   } as Match;
 };
 
-export const addMatch = async (teamId: string, matchData: Omit<Match, 'id' | 'attendance' | 'isArchived'>): Promise<string> => {
-  // matchData.date is expected to be a "yyyy-MM-dd" string from AddMatchForm
+export const addMatch = async (teamId: string, matchData: Omit<Match, 'id' | 'attendance' | 'isArchived' | 'date'> & { date: string | Date }): Promise<string> => {
+  // Ensure date is a string in "yyyy-MM-dd" format
+  const dateString = typeof matchData.date === 'string' 
+      ? matchData.date 
+      // Ensure date is formatted correctly if it's a Date object from the form
+      : format(matchData.date, "yyyy-MM-dd");
+
   const firestorePayload = {
     ...matchData, 
-    date: matchData.date, // Directly use the string date as AddMatchForm ensures "yyyy-MM-dd" format
+    date: dateString,
     attendance: {}, 
     isArchived: false, // Default new matches to not archived
   };
@@ -116,9 +122,9 @@ export const updateMatch = async (teamId: string, matchId: string, data: Partial
         } catch (e) {
             console.error(`Date string "${dateValue}" in updateMatch is not valid. Date will not be updated. Error: ${e}`);
         }
-    } else if (dateValue && typeof dateValue === 'object' && dateValue instanceof Date) { 
+    } else if (typeof dateValue === 'object' && dateValue !== null && dateValue instanceof Date) { 
       updateData.date = format(dateValue, "yyyy-MM-dd");
-    } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+    } else if (dateValue && typeof dateValue === 'object' && dateValue !== null && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
       updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
     } else if (dateValue === null) {
       updateData.date = null; 

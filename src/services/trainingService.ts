@@ -1,4 +1,5 @@
 
+
 // 'use server'; // Removed to run client-side
 
 import { db } from '@/lib/firebase';
@@ -56,16 +57,21 @@ const fromFirestoreTraining = (docSnap: any): Training => {
   return {
     id: docSnap.id,
     ...data,
-    date: data.date instanceof Timestamp ? format(data.date.toDate(), "yyyy-MM-dd") : data.date,
+    // Ensure date is a string; if it's a Timestamp, convert it.
+    date: data.date && typeof data.date.toDate === 'function' ? format(data.date.toDate(), "yyyy-MM-dd") : data.date,
     attendance: data.attendance || {}, 
     isArchived: data.isArchived || false, // Default to false
   } as Training;
 };
 
-export const addTraining = async (teamId: string, trainingData: Omit<Training, 'id' | 'attendance' | 'isArchived'>): Promise<string> => {
+export const addTraining = async (teamId: string, trainingData: Omit<Training, 'id' | 'attendance' | 'isArchived' | 'date'> & { date: string | Date }): Promise<string> => {
+  const dateString = typeof trainingData.date === 'string'
+    ? trainingData.date
+    : format(trainingData.date, "yyyy-MM-dd");
+
   const firestorePayload = {
     ...trainingData,
-    date: trainingData.date, 
+    date: dateString, 
     attendance: {}, 
     isArchived: false, // Default new trainings to not archived
   };
@@ -122,7 +128,7 @@ export const getTrainingById = async (teamId: string, trainingId: string): Promi
   return docSnap.exists() ? fromFirestoreTraining(docSnap) : null;
 };
 
-export const updateTraining = async (teamId: string, trainingId: string, data: Partial<Omit<Training, 'id'>>): Promise<void> => {
+export const updateTraining = async (teamId: string, trainingId: string, data: Partial<Omit<Training, 'id' | 'date'> & { date?: string | Date | Timestamp | null }>): Promise<void> => {
   const trainingDocRef = getTrainingDocRef(teamId, trainingId);
   const updateData: { [key: string]: any } = {};
 
@@ -130,18 +136,18 @@ export const updateTraining = async (teamId: string, trainingId: string, data: P
     const dateValue = data.date;
     if (typeof dateValue === 'string') {
         try {
-            const parsed = parseISO(dateValue);
-            updateData.date = format(parsed, "yyyy-MM-dd");
-        } catch (e) {
-            if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-                updateData.date = dateValue;
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue) && !dateValue.includes('T')) {
+                 updateData.date = dateValue;
             } else {
-                console.error(`Date string "${dateValue}" in updateTraining is not valid. Date will not be updated. Error: ${e}`);
+                 const parsed = parseISO(dateValue);
+                 updateData.date = format(parsed, "yyyy-MM-dd");
             }
+        } catch (e) {
+            console.error(`Date string "${dateValue}" in updateTraining is not valid. Date will not be updated. Error: ${e}`);
         }
-    } else if (dateValue instanceof Date) {
+    } else if (typeof dateValue === 'object' && dateValue !== null && dateValue instanceof Date) {
         updateData.date = format(dateValue, "yyyy-MM-dd");
-    } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+    } else if (dateValue && typeof dateValue === 'object' && dateValue !== null && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
         updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
     } else if (dateValue === null) {
         updateData.date = null;

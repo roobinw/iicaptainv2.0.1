@@ -1,4 +1,5 @@
 
+
 import { db } from '@/lib/firebase';
 import type { RefereeingAssignment } from '@/types';
 import {
@@ -61,10 +62,14 @@ const fromFirestoreRefereeingAssignment = (docSnap: any): RefereeingAssignment =
   } as RefereeingAssignment;
 };
 
-export const addRefereeingAssignment = async (teamId: string, assignmentData: Omit<RefereeingAssignment, 'id' | 'isArchived' | 'homeTeam'> & { homeTeam?: string }): Promise<string> => {
+export const addRefereeingAssignment = async (teamId: string, assignmentData: Omit<RefereeingAssignment, 'id' | 'isArchived' | 'homeTeam' | 'date'> & { homeTeam?: string, date: string | Date }): Promise<string> => {
+  const dateString = typeof assignmentData.date === 'string'
+    ? assignmentData.date
+    : format(assignmentData.date, "yyyy-MM-dd");
+
   const firestorePayload = {
-    date: assignmentData.date, 
-    time: assignmentData.time,
+    ...assignmentData,
+    date: dateString, 
     homeTeam: assignmentData.homeTeam || "", 
     assignedPlayerUids: assignmentData.assignedPlayerUids || [], 
     notes: assignmentData.notes,
@@ -115,18 +120,18 @@ export const updateRefereeingAssignment = async (
 
     if (typeof dateValue === 'string') {
         try {
-            const parsed = parseISO(dateValue); 
-            updateData.date = format(parsed, "yyyy-MM-dd");
-        } catch (e) {
-            if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) { 
+             if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue) && !dateValue.includes('T')) {
                  updateData.date = dateValue; 
             } else {
-                console.error(`Date string "${dateValue}" in updateRefereeingAssignment is not valid. Date will not be updated. Error: ${e}`);
+                const parsed = parseISO(dateValue); 
+                updateData.date = format(parsed, "yyyy-MM-dd");
             }
+        } catch (e) {
+            console.error(`Date string "${dateValue}" in updateRefereeingAssignment is not valid. Date will not be updated. Error: ${e}`);
         }
-    } else if (dateValue instanceof Date) { 
+    } else if (typeof dateValue === 'object' && dateValue !== null && dateValue instanceof Date) { 
         updateData.date = format(dateValue, "yyyy-MM-dd");
-    } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+    } else if (dateValue && typeof dateValue === 'object' && dateValue !== null && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
         updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
     } else if (dateValue === null) {
         updateData.date = null; 
