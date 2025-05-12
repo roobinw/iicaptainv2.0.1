@@ -132,28 +132,29 @@ export const updateTraining = async (teamId: string, trainingId: string, data: P
   const trainingDocRef = getTrainingDocRef(teamId, trainingId);
   const updateData: { [key: string]: any } = {};
 
-  if (data.hasOwnProperty('date')) {
-    const dateValue = data.date;
-    if (typeof dateValue === 'string') {
-        try {
-            if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue) && !dateValue.includes('T')) {
-                 updateData.date = dateValue;
-            } else {
-                 const parsed = parseISO(dateValue);
-                 updateData.date = format(parsed, "yyyy-MM-dd");
-            }
-        } catch (e) {
-            console.error(`Date string "${dateValue}" in updateTraining is not valid. Date will not be updated. Error: ${e}`);
-        }
-    } else if (typeof dateValue === 'object' && dateValue !== null && dateValue instanceof Date) {
-        updateData.date = format(dateValue, "yyyy-MM-dd");
-    } else if (dateValue && typeof dateValue === 'object' && dateValue !== null && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
-        updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
-    } else if (dateValue === null) {
-        updateData.date = null;
-    } else if (dateValue !== undefined) {
-        console.error(`updateTraining received an unhandled date type: ${typeof dateValue}. Date will not be updated. Value:`, dateValue);
+  const dateValue = data.date;
+
+  if (typeof dateValue === 'string') {
+    try {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue) && !dateValue.includes('T')) {
+        updateData.date = dateValue;
+      } else {
+        const parsed = parseISO(dateValue);
+        updateData.date = format(parsed, "yyyy-MM-dd");
+      }
+    } catch (e) {
+      console.error(`Date string "${dateValue}" in updateTraining is not valid. Date will not be updated. Error: ${e}`);
     }
+  } else if (dateValue instanceof Date) {
+    updateData.date = format(dateValue, "yyyy-MM-dd");
+  } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+    updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+  } else if (dateValue === null) {
+    updateData.date = null;
+  } else if (dateValue === undefined) {
+    // Date is undefined, do nothing
+  } else {
+    console.error(`updateTraining received an unhandled date type/value. Type: ${typeof dateValue}, Value:`, dateValue);
   }
 
   for (const key in data) {
@@ -196,5 +197,4 @@ export const unarchiveTraining = async (teamId: string, trainingId: string): Pro
   const trainingDocRef = getTrainingDocRef(teamId, trainingId);
   await updateDoc(trainingDocRef, { isArchived: false });
 };
-
 

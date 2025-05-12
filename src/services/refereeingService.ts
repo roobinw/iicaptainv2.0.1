@@ -62,7 +62,7 @@ const fromFirestoreRefereeingAssignment = (docSnap: any): RefereeingAssignment =
   } as RefereeingAssignment;
 };
 
-export const addRefereeingAssignment = async (teamId: string, assignmentData: Omit<RefereeingAssignment, 'id' | 'isArchived' | 'homeTeam' | 'date'> & { homeTeam?: string, date: string | Date }): Promise<string> => {
+export const addRefereeingAssignment = async (teamId: string, assignmentData: Omit<RefereeingAssignment, 'id' | 'isArchived' | 'date'> & { date: string | Date }): Promise<string> => {
   const dateString = typeof assignmentData.date === 'string'
     ? assignmentData.date
     : format(assignmentData.date, "yyyy-MM-dd");
@@ -115,51 +115,42 @@ export const updateRefereeingAssignment = async (
   const updateData: { [key: string]: any } = {};
 
   // Handle 'date' field specifically
-  if (data.hasOwnProperty('date')) {
-    const dateValue = data.date;
+  const dateValue = data.date;
 
-    if (typeof dateValue === 'string') {
-        try {
-             if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue) && !dateValue.includes('T')) {
-                 updateData.date = dateValue; 
-            } else {
-                const parsed = parseISO(dateValue); 
-                updateData.date = format(parsed, "yyyy-MM-dd");
-            }
-        } catch (e) {
-            console.error(`Date string "${dateValue}" in updateRefereeingAssignment is not valid. Date will not be updated. Error: ${e}`);
-        }
-    } else if (typeof dateValue === 'object' && dateValue !== null && dateValue instanceof Date) { 
-        updateData.date = format(dateValue, "yyyy-MM-dd");
-    } else if (dateValue && typeof dateValue === 'object' && dateValue !== null && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
-        updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
-    } else if (dateValue === null) {
-        updateData.date = null; 
-    } else if (dateValue !== undefined) { 
-        console.error(`updateRefereeingAssignment received an unhandled date type: ${typeof dateValue}. Date will not be updated. Value:`, dateValue);
+  if (typeof dateValue === 'string') {
+    try {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue) && !dateValue.includes('T')) {
+        updateData.date = dateValue; 
+      } else {
+        const parsed = parseISO(dateValue); 
+        updateData.date = format(parsed, "yyyy-MM-dd");
+      }
+    } catch (e) {
+      console.error(`Date string "${dateValue}" in updateRefereeingAssignment is not valid. Date will not be updated. Error: ${e}`);
     }
+  } else if (dateValue instanceof Date) { 
+    updateData.date = format(dateValue, "yyyy-MM-dd");
+  } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+    updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+  } else if (dateValue === null) {
+    updateData.date = null; 
+  } else if (dateValue === undefined) {
+    // Date is undefined, do nothing for updateData.date
+  } else {
+    console.error(`updateRefereeingAssignment received an unhandled date type/value. Type: ${typeof dateValue}, Value:`, dateValue);
   }
 
   // Copy other properties from data to updateData, excluding 'date'
   for (const key in data) {
     if (key !== 'date' && data.hasOwnProperty(key)) {
-      (updateData as any)[key] = (data as any)[key];
-    }
-  }
-  
-  if (data.hasOwnProperty('assignedPlayerUids')) {
-    if (data.assignedPlayerUids === null) {
-       updateData.assignedPlayerUids = []; 
-    } else {
-       updateData.assignedPlayerUids = data.assignedPlayerUids;
-    }
-  }
-
-  if (data.hasOwnProperty('homeTeam')) {
-    if (data.homeTeam === null || data.homeTeam === undefined) { // Allow setting to empty string if explicitly passed or null/undefined
-      updateData.homeTeam = ""; 
-    } else {
-      updateData.homeTeam = data.homeTeam;
+      // Ensure correct type for assignment
+      if (key === 'assignedPlayerUids' && data.assignedPlayerUids === null) {
+        (updateData as any)[key] = [];
+      } else if (key === 'homeTeam' && (data.homeTeam === null || data.homeTeam === undefined)) {
+        (updateData as any)[key] = "";
+      } else {
+        (updateData as any)[key] = (data as any)[key];
+      }
     }
   }
   

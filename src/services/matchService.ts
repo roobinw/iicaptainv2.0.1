@@ -107,33 +107,31 @@ export const updateMatch = async (teamId: string, matchId: string, data: Partial
   const matchDocRef = getMatchDocRef(teamId, matchId);
   const updateData: { [key: string]: any } = {};
 
-  if (data.hasOwnProperty('date')) {
-    const dateValue = data.date;
+  const dateValue = data.date;
 
-    if (typeof dateValue === 'string') {
-        try {
-            // Check if it's already yyyy-MM-dd or needs full parsing
-            if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue) && !dateValue.includes('T')) {
-                 updateData.date = dateValue;
-            } else {
-                 const parsed = parseISO(dateValue); 
-                 updateData.date = format(parsed, "yyyy-MM-dd");
-            }
-        } catch (e) {
-            console.error(`Date string "${dateValue}" in updateMatch is not valid. Date will not be updated. Error: ${e}`);
-        }
-    } else if (typeof dateValue === 'object' && dateValue !== null && dateValue instanceof Date) { 
-      updateData.date = format(dateValue, "yyyy-MM-dd");
-    } else if (dateValue && typeof dateValue === 'object' && dateValue !== null && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
-      updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
-    } else if (dateValue === null) {
-      updateData.date = null; 
-    } else if (dateValue === undefined) {
-      // If date was explicitly set to undefined, no update to data.date happens.
-    } else { 
-        console.error(`updateMatch received an unhandled date type: ${typeof dateValue}. Date will not be updated. Value:`, dateValue);
+  if (typeof dateValue === 'string') {
+    try {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue) && !dateValue.includes('T')) {
+        updateData.date = dateValue;
+      } else {
+        const parsed = parseISO(dateValue);
+        updateData.date = format(parsed, "yyyy-MM-dd");
+      }
+    } catch (e) {
+      console.error(`Date string "${dateValue}" in updateMatch is not valid. Date will not be updated. Error: ${e}`);
     }
+  } else if (dateValue instanceof Date) {
+    updateData.date = format(dateValue, "yyyy-MM-dd");
+  } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+    updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+  } else if (dateValue === null) {
+    updateData.date = null;
+  } else if (dateValue === undefined) {
+    // Date is undefined, do nothing
+  } else {
+    console.error(`updateMatch received an unhandled date type/value. Type: ${typeof dateValue}, Value:`, dateValue);
   }
+  
 
   for (const key in data) {
     if (key !== 'date' && data.hasOwnProperty(key)) {
