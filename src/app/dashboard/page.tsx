@@ -15,9 +15,7 @@ import { getRefereeingAssignments } from "@/services/refereeingService";
 // import { getAllUsersByTeam } from "@/services/userService"; // No longer directly needed here for player count
 import { getMessages } from "@/services/messageService";
 import { Skeleton } from "@/components/ui/skeleton";
-// ScrollArea removed for single message display, but kept for consistency if needed later
-// import { ScrollArea } from "@/components/ui/scroll-area"; 
-import { MessageInputForm } from "@/components/message-input-form";
+// MessageInputForm removed
 import { MessageCard } from "@/components/message-card";
 import { cn } from "@/lib/utils";
 
@@ -108,17 +106,17 @@ export default function DashboardPage() {
 
   }, [user, currentTeam, authIsLoading, fetchDashboardData, fetchTeamMessages]);
 
-  const handleMessagePosted = useCallback(() => {
-    if (user?.teamId) {
-      fetchTeamMessages(user.teamId); // Refetch to get the latest message
-    }
-  }, [user?.teamId, fetchTeamMessages]);
+  // handleMessagePosted is no longer needed on dashboard
+  // const handleMessagePosted = useCallback(() => { ... });
 
-  const handleMessageDeleted = useCallback(() => { // Only relevant if deleting the displayed message
-    if (user?.teamId) {
-      fetchTeamMessages(user.teamId); // Refetch to get the next latest message or null
+  const handleMessageDeleted = useCallback(() => { // Refetches if the deleted message was the one displayed
+    if (user?.teamId && latestMessage) {
+      // Check if the deleted message ID matches the current latestMessage ID
+      // This logic might need to be more robust if deletion happens elsewhere
+      // For now, assume if a delete happens and this component is aware, it should refetch
+      fetchTeamMessages(user.teamId);
     }
-  }, [user?.teamId, fetchTeamMessages]);
+  }, [user?.teamId, fetchTeamMessages, latestMessage]);
 
 
   if (authIsLoading || isLoadingData || (!user && !currentTeam)) { 
@@ -136,7 +134,7 @@ export default function DashboardPage() {
             <Skeleton className="h-5 w-64" />
           </CardHeader>
           <CardContent className="space-y-4">
-            {user?.role === 'admin' && <Skeleton className="h-24 w-full" />}
+            {/* Skeleton for MessageInputForm removed */}
             <Skeleton className="h-16 w-full" /> {/* Skeleton for single message */}
           </CardContent>
           <CardFooter className="border-t pt-4">
@@ -190,13 +188,11 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Icons.MessageSquare className="h-6 w-6 text-primary" /> Latest Team Message</CardTitle>
           <CardDescription>
-            {user?.role === 'admin' ? 'Post a new message or view the latest one.' : 'View the latest message from your team admin.'}
+            View the latest message from your team admin. New messages can be posted on the Messages page.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {user?.role === 'admin' && (
-            <MessageInputForm onMessagePosted={handleMessagePosted} />
-          )}
+          {/* MessageInputForm removed from here */}
           {isLoadingMessages ? (
             <div className="space-y-3 py-2">
                 <div className="flex items-start space-x-3 p-3 border rounded-md bg-card/50">
@@ -214,7 +210,7 @@ export default function DashboardPage() {
           ) : latestMessage ? (
             <MessageCard message={latestMessage} onMessageDeleted={handleMessageDeleted} />
           ) : (
-            <p className="text-muted-foreground text-center py-4">No messages yet. {user?.role === 'admin' && 'Post the first message!'} </p>
+            <p className="text-muted-foreground text-center py-4">No messages yet. {user?.role === 'admin' && 'Visit the Messages page to post the first message!'} </p>
           )}
         </CardContent>
         <CardFooter className="border-t pt-4">
@@ -268,7 +264,10 @@ export default function DashboardPage() {
       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
         <Card className="shadow-md flex flex-col">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Icons.Matches className="h-5 w-5 text-primary" /> Next Match</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Icons.Matches className="h-5 w-5 text-primary" />
+                <span className="truncate min-w-0">Next Match</span>
+            </CardTitle>
             <CardDescription>Quick view of your team&apos;s next game.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 flex-grow">
@@ -293,7 +292,10 @@ export default function DashboardPage() {
 
         <Card className="shadow-md flex flex-col">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Icons.Trainings className="h-5 w-5 text-primary" /> Next Training</CardTitle>
+             <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Icons.Trainings className="h-5 w-5 text-primary" />
+                <span className="truncate min-w-0">Next Training</span>
+            </CardTitle>
             <CardDescription>Your team&apos;s next training session.</CardDescription>
           </CardHeader>
           <CardContent className="flex-grow">
@@ -320,7 +322,10 @@ export default function DashboardPage() {
 
         <Card className="shadow-md flex flex-col">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Icons.Refereeing className="h-5 w-5 text-primary" /> Next Refereeing</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Icons.Refereeing className="h-5 w-5 text-primary" />
+                <span className="truncate min-w-0">Next Refereeing</span>
+            </CardTitle>
             <CardDescription>Upcoming refereeing duties for the team.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 flex-grow">
