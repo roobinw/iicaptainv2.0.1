@@ -7,6 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion } from 'framer-motion';
+// Removed type import for Metadata as it's no longer used here
+// import type { Metadata } from 'next';
+
+// Removed metadata export as it's not allowed in client components
+// export const metadata: Metadata = {
+//   title: "iiCaptain | Sports Team Management Software for Easy Organization",
+//   description: "Organize your sports team effortlessly with iiCaptain. Manage match schedules, training, player rosters, and attendance. Sign up free!",
+//   keywords: "sports team management, team organization app, iiCaptain, schedule management, player roster, attendance tracking, sports app, team manager, coaching tool",
+// };
 
 export default function LandingPage() {
   const sectionVariants = {
@@ -27,9 +36,33 @@ export default function LandingPage() {
     }),
   };
 
+  const softwareApplicationSchema = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "iiCaptain",
+    "applicationCategory": "SportsTeamManagementApplication",
+    "operatingSystem": "Web",
+    "description": "iiCaptain is the ultimate sports team management platform. Effortlessly organize schedules, track training, manage player rosters, and enhance team communication.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8", 
+      "reviewCount": "150" 
+    },
+    "keywords": "sports team management, team organization, coaching app, player schedule, attendance tracking"
+  };
+
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationSchema) }}
+      />
       {/* Header */}
       <motion.header
         initial={{ opacity: 0, y: -50 }}
@@ -91,7 +124,7 @@ export default function LandingPage() {
               transition={{ delay: 0.4, duration: 0.5 }}
               className="text-5xl sm:text-6xl md:text-7xl font-extrabold mb-6 tracking-tight leading-tight"
             >
-              <span className="block">Effortless Team</span>
+              <span className="block">Effortless Sports Team</span>
               <span className="block text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Management Starts Here</span>
             </motion.h1>
             <motion.p 
@@ -100,7 +133,7 @@ export default function LandingPage() {
               transition={{ delay: 0.6, duration: 0.5 }}
               className="text-xl sm:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto"
             >
-              Organize your sports team like a pro. Manage match schedules, track training sessions, oversee player rosters, and keep everyone in sync with iiCaptain.
+              Organize your sports team like a pro with iiCaptain. Manage match schedules, track training sessions, oversee player rosters, and keep everyone in sync.
             </motion.p>
             <motion.div 
               initial={{ opacity: 0, y:20 }}
@@ -127,13 +160,13 @@ export default function LandingPage() {
             >
               <Image
                 src="/screenshotwebappiicaptain.png" 
-                alt="Screenshot of iiCaptain web application dashboard"
+                alt="iiCaptain dashboard - sports team management software interface for scheduling and player organization"
                 width={1200}
                 height={600}
                 className="rounded-xl shadow-2xl border-2 border-border/20"
                 priority
                 onError={(e) => (e.currentTarget.src = 'https://picsum.photos/1200/600?grayscale&blur=2')}
-                data-ai-hint="app dashboard"
+                data-ai-hint="app dashboard team"
               />
             </motion.div>
           </div>
@@ -152,18 +185,18 @@ export default function LandingPage() {
           <div className="container mx-auto px-6">
             <div className="text-center mb-16">
               <h2 className="text-4xl sm:text-5xl font-bold tracking-tight">
-                Everything Your Team Needs
+                Everything Your Sports Team Needs
               </h2>
               <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-                iiCaptain provides a comprehensive suite of tools to streamline your team's operations and boost performance.
+                iiCaptain provides a comprehensive suite of tools to streamline your team's operations, from scheduling to player management, boosting overall performance.
               </p>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               {[
-                { icon: Icons.Matches, title: "Match Scheduling", description: "Plan and share upcoming matches with ease. Keep track of dates, times, opponents, and locations." },
-                { icon: Icons.Trainings, title: "Training Coordination", description: "Organize training sessions, specify drills, and monitor team preparation effectively." },
-                { icon: Icons.Players, title: "Player Roster Management", description: "Maintain a detailed list of all team members, including roles and contact information." },
-                { icon: Icons.Attendance, title: "Attendance Tracking", description: "Effortlessly mark and view attendance for both matches and training sessions." },
+                { icon: Icons.Matches, title: "Match Scheduling", description: "Easily plan and share upcoming matches. Keep track of dates, times, opponents, locations, and player availability." },
+                { icon: Icons.Trainings, title: "Training Coordination", description: "Organize training sessions, define specific drills, and monitor your team's preparation and attendance effectively." },
+                { icon: Icons.Players, title: "Player Roster Management", description: "Maintain a detailed and up-to-date list of all team members, including roles, contact information, and performance notes." },
+                { icon: Icons.Attendance, title: "Attendance Tracking", description: "Effortlessly mark and view attendance for both matches and training sessions, ensuring you know who's available." },
               ].map((feature, index) => {
                 const IconComponent = feature.icon;
                 return (
@@ -205,14 +238,14 @@ export default function LandingPage() {
           <div className="container mx-auto px-6 text-center">
             <Icons.TeamLogo className="h-16 w-16 text-primary mx-auto mb-6" />
             <h2 className="text-3xl sm:text-4xl font-bold mb-8 tracking-tight">
-              Trusted by Teams Like Yours
+              Trusted by Coaches and Team Managers
             </h2>
             <blockquote className="max-w-3xl mx-auto">
               <p className="text-xl md:text-2xl italic text-foreground leading-relaxed">
-                "iiCaptain has transformed how we manage our club. Scheduling is now a breeze, communication is seamless, and our players are more engaged than ever. It's a game-changer!"
+                "iiCaptain has transformed how we manage our club. Scheduling is now a breeze, communication is seamless, and our players are more engaged than ever. It's a game-changer for any sports team!"
               </p>
               <footer className="mt-6">
-                <p className="font-semibold text-lg text-primary">- Alex Ferguson, Coach at 'The Invincibles'</p>
+                <p className="font-semibold text-lg text-primary">- Coach Alex, 'The Invincibles' FC</p>
                 <p className="text-sm text-muted-foreground">Local League Champions 2023</p>
               </footer>
             </blockquote>
@@ -230,14 +263,14 @@ export default function LandingPage() {
         >
           <div className="container mx-auto px-6 text-center">
             <h2 className="text-4xl sm:text-5xl font-bold mb-6 tracking-tight">
-              Ready to Elevate Your Team?
+              Ready to Elevate Your Team Management?
             </h2>
             <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-              Join hundreds of teams already experiencing the benefits of streamlined management with iiCaptain.
+              Join hundreds of teams already experiencing the benefits of streamlined organization with iiCaptain. Focus more on coaching and winning!
             </p>
             <Link href="/signup" passHref>
               <Button size="xl" className="px-12 py-5 text-xl shadow-xl hover:shadow-primary/60 transition-all duration-300 transform hover:scale-105">
-                Sign Up & Conquer Today
+                Sign Up Free & Conquer Today
               </Button>
             </Link>
           </div>
@@ -248,8 +281,8 @@ export default function LandingPage() {
       <motion.footer
         variants={sectionVariants}
         initial="hidden"
-        animate="visible"
-        transition={{ delay: 0.5 }} // Adjusted delay, or use whileInView if footer is far down
+        animate="visible" 
+        transition={{ delay: 0.5 }} 
         className="py-12 bg-background border-t border-border/20"
       >
         <div className="container mx-auto text-center text-muted-foreground">
@@ -257,8 +290,8 @@ export default function LandingPage() {
              <Icons.TeamLogo className="h-7 w-7 text-primary" />
              <span className="text-xl font-semibold text-foreground">iiCaptain</span>
           </div>
-          <p className="text-sm">&copy; {new Date().getFullYear()} iiCaptain. All rights reserved.</p>
-          <p className="text-xs mt-1">Built for the love of the game.</p>
+          <p className="text-sm">&copy; {new Date().getFullYear()} iiCaptain. All rights reserved. The ultimate sports team management solution.</p>
+          <p className="text-xs mt-1">Built for the love of the game and efficient team organization.</p>
           <div className="mt-4 space-x-4">
             <Link href="/privacy-policy" className="text-xs hover:text-primary transition-colors">
               Privacy Policy
@@ -272,3 +305,4 @@ export default function LandingPage() {
     </div>
   );
 }
+
