@@ -191,3 +191,4 @@ export const unarchiveTraining = async (teamId: string, trainingId: string): Pro
   await updateDoc(trainingDocRef, { isArchived: false });
 };
 
+

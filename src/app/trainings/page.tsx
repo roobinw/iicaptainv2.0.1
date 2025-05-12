@@ -13,7 +13,8 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"; // Added Tabs
-import { addTraining, getTrainings, updateTraining, deleteTraining, bulkAddTrainings, archiveTraining, unarchiveTraining, type EventArchiveFilter } from "@/services/trainingService";
+import { addTraining, getTrainings, updateTraining, deleteTraining, bulkAddTrainings, archiveTraining, unarchiveTraining } from "@/services/trainingService";
+import type { EventArchiveFilter } from "@/services/matchService"; // Corrected import path
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 
@@ -308,3 +309,4 @@ export default function TrainingsPage() {
     </div>
   );
 }
+
