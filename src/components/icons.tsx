@@ -12,7 +12,7 @@ import {
   MoreHorizontal,
   Settings,
   UserCircle,
-  ClipboardList, // Ensure ClipboardList is imported
+  ClipboardList, 
   AlertCircle,
   CheckCircle2,
   XCircle,
@@ -26,6 +26,8 @@ import {
   KeyRound, 
   LifeBuoy,
   Gavel, 
+  MessageSquare, // Added for Message Board
+  Send, // Added for Message Input
   type LucideProps,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -49,7 +51,7 @@ export const Icons = {
   MoreHorizontal: MoreHorizontal,
   Settings: Settings,
   User: UserCircle,
-  Attendance: ClipboardList, // This was already here
+  Attendance: ClipboardList, 
   AlertCircle: AlertCircle,
   CheckCircle2: CheckCircle2,
   XCircle: XCircle,
@@ -62,7 +64,9 @@ export const Icons = {
   KeyRound: KeyRound, 
   Support: LifeBuoy,
   Refereeing: Gavel,
-  ClipboardList: ClipboardList, // Explicitly ensure it's available if needed elsewhere
+  MessageSquare: MessageSquare, // Added for Message Board
+  Send: Send, // Added for Message Input
+  ClipboardList: ClipboardList, 
   TeamLogo: ({ className, ...props }: TeamLogoProps) => ( 
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -80,5 +84,6 @@ export const Icons = {
   ),
   CalendarDays: CalendarDays,
 };
+
 
 

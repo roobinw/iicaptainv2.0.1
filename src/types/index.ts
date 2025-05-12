@@ -59,5 +59,15 @@ export interface RefereeingAssignment {
   notes?: string;
 }
 
+export interface Message {
+  id: string;
+  content: string;
+  authorUid: string;
+  authorName: string;
+  createdAt: string; // ISO string from serverTimestamp
+  teamId: string; // To identify which team this message belongs to (useful for collection group queries if needed)
+}
+
+
 
 

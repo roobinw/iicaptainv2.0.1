@@ -7,21 +7,27 @@ import { Icons } from "@/components/icons";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { format, parseISO, isAfter, isEqual } from "date-fns";
-import { useEffect, useState } from "react";
-import type { Match, Training, User, RefereeingAssignment } from "@/types";
+import { useEffect, useState, useCallback } from "react";
+import type { Match, Training, User, RefereeingAssignment, Message } from "@/types";
 import { getMatches } from "@/services/matchService";
 import { getTrainings } from "@/services/trainingService";
 import { getRefereeingAssignments } from "@/services/refereeingService";
 import { getAllUsersByTeam } from "@/services/userService";
+import { getMessages } from "@/services/messageService"; // Import message service
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { MessageInputForm } from "@/components/message-input-form"; // Import message input form
+import { MessageCard } from "@/components/message-card"; // Import message card
 
 export default function DashboardPage() {
   const { user, currentTeam, isLoading: authIsLoading } = useAuth();
   const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([]);
   const [upcomingTrainings, setUpcomingTrainings] = useState<Training[]>([]);
   const [upcomingRefereeingAssignments, setUpcomingRefereeingAssignments] = useState<RefereeingAssignment[]>([]);
-  const [totalTeamMembers, setTotalTeamMembers] = useState(0);
+  
+  const [messages, setMessages] = useState<Message[]>([]); // State for messages
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true); // Loading state for messages
+  
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   const [totalUpcomingMatchesCount, setTotalUpcomingMatchesCount] = useState(0);
@@ -29,68 +35,92 @@ export default function DashboardPage() {
   const [totalUpcomingRefereeingAssignmentsCount, setTotalUpcomingRefereeingAssignmentsCount] = useState(0);
 
 
+  const fetchDashboardData = useCallback(async (teamId: string) => {
+    setIsLoadingData(true);
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); 
+      
+      const allMatches = await getMatches(teamId);
+      const allFutureMatches = allMatches
+        .filter(match => {
+          const matchDate = parseISO(match.date);
+          return isAfter(matchDate, today) || isEqual(matchDate, today);
+        });
+      setTotalUpcomingMatchesCount(allFutureMatches.length);
+      setUpcomingMatches(allFutureMatches.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime() || a.time.localeCompare(b.time)).slice(0, 1));
+
+      const allTrainings = await getTrainings(teamId);
+      const allFutureTrainings = allTrainings
+        .filter(training => {
+          const trainingDate = parseISO(training.date);
+          return isAfter(trainingDate, today) || isEqual(trainingDate, today);
+        });
+      setTotalUpcomingTrainingsCount(allFutureTrainings.length);
+      setUpcomingTrainings(allFutureTrainings.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime() || a.time.localeCompare(b.time)).slice(0, 1));
+
+      const allRefereeingAssignments = await getRefereeingAssignments(teamId);
+      const allFutureRefereeingAssignments = allRefereeingAssignments
+        .filter(assignment => {
+          const assignmentDate = parseISO(assignment.date);
+          return isAfter(assignmentDate, today) || isEqual(assignmentDate, today);
+        });
+      setTotalUpcomingRefereeingAssignmentsCount(allFutureRefereeingAssignments.length);
+      setUpcomingRefereeingAssignments(allFutureRefereeingAssignments.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime() || a.time.localeCompare(b.time)).slice(0, 1));
+      
+    } catch (error) {
+      console.error("Error fetching dashboard event data:", error);
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, []);
+
+  const fetchTeamMessages = useCallback(async (teamId: string) => {
+    setIsLoadingMessages(true);
+    try {
+      const fetchedMessages = await getMessages(teamId);
+      setMessages(fetchedMessages);
+    } catch (error) {
+      console.error("Error fetching team messages:", error);
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (authIsLoading || !user || !user.teamId || !currentTeam) {
       if (!authIsLoading && (!user || !user.teamId || !currentTeam )) {
         setIsLoadingData(false); 
+        setIsLoadingMessages(false);
       } else {
         setIsLoadingData(true);
+        setIsLoadingMessages(true);
       }
       return;
     }
     
     const teamId = user.teamId;
+    fetchDashboardData(teamId);
+    fetchTeamMessages(teamId);
 
-    const fetchData = async () => {
-      setIsLoadingData(true);
-      try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); 
-        
-        const allMatches = await getMatches(teamId);
-        const allFutureMatches = allMatches
-          .filter(match => {
-            const matchDate = parseISO(match.date);
-            return isAfter(matchDate, today) || isEqual(matchDate, today);
-          });
-        setTotalUpcomingMatchesCount(allFutureMatches.length);
-        // Display only the next match on the dashboard card
-        setUpcomingMatches(allFutureMatches.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime() || a.time.localeCompare(b.time)).slice(0, 1));
+  }, [user, currentTeam, authIsLoading, fetchDashboardData, fetchTeamMessages]);
 
-        const allTrainings = await getTrainings(teamId);
-        const allFutureTrainings = allTrainings
-          .filter(training => {
-            const trainingDate = parseISO(training.date);
-            return isAfter(trainingDate, today) || isEqual(trainingDate, today);
-          });
-        setTotalUpcomingTrainingsCount(allFutureTrainings.length);
-        // Display only the next training session on the dashboard card
-        setUpcomingTrainings(allFutureTrainings.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime() || a.time.localeCompare(b.time)).slice(0, 1));
+  const handleMessagePosted = useCallback(() => {
+    if (user?.teamId) {
+      fetchTeamMessages(user.teamId);
+    }
+  }, [user?.teamId, fetchTeamMessages]);
 
-        const allRefereeingAssignments = await getRefereeingAssignments(teamId);
-        const allFutureRefereeingAssignments = allRefereeingAssignments
-          .filter(assignment => {
-            const assignmentDate = parseISO(assignment.date);
-            return isAfter(assignmentDate, today) || isEqual(assignmentDate, today);
-          });
-        setTotalUpcomingRefereeingAssignmentsCount(allFutureRefereeingAssignments.length);
-        // Display only the next refereeing assignment on the dashboard card
-        setUpcomingRefereeingAssignments(allFutureRefereeingAssignments.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime() || a.time.localeCompare(b.time)).slice(0, 1));
-        
-        const teamMembers = await getAllUsersByTeam(teamId);
-        setTotalTeamMembers(teamMembers.length);
+  const handleMessageDeleted = useCallback((messageId: string) => {
+    setMessages(prevMessages => prevMessages.filter(msg => msg.id !== messageId));
+    // Optionally re-fetch all messages if order might change or for consistency
+    // if (user?.teamId) {
+    //   fetchTeamMessages(user.teamId);
+    // }
+  }, []);
 
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
-        setIsLoadingData(false);
-      }
-    };
 
-    fetchData();
-  }, [user, currentTeam, authIsLoading]);
-
-  if (authIsLoading || isLoadingData) {
+  if (authIsLoading || isLoadingData || (!user && !currentTeam)) { // Check user and currentTeam here for initial load
     return (
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -118,6 +148,18 @@ export default function DashboardPage() {
             <Skeleton className="h-72 w-full rounded-lg" />
             <Skeleton className="h-72 w-full rounded-lg" />
         </div>
+         {/* Skeleton for Message Board */}
+        <Card className="mt-6">
+          <CardHeader>
+            <Skeleton className="h-7 w-48 mb-2" />
+            <Skeleton className="h-5 w-64" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {user?.role === 'admin' && <Skeleton className="h-24 w-full" />}
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -259,9 +301,48 @@ export default function DashboardPage() {
           </CardFooter>
         </Card>
       </div>
+
+      {/* Message Board Section */}
+      <Card className="mt-6 shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Icons.MessageSquare className="h-6 w-6 text-primary" /> Team Message Board</CardTitle>
+          <CardDescription>
+            {user?.role === 'admin' ? 'Post messages to your team here.' : 'View messages from your team admin.'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {user?.role === 'admin' && (
+            <MessageInputForm onMessagePosted={handleMessagePosted} />
+          )}
+          {isLoadingMessages ? (
+            <div className="space-y-3 py-2">
+              {[1,2].map(i => (
+                <div key={i} className="flex items-start space-x-3 p-3 border rounded-md bg-card/50">
+                  <Skeleton className="h-9 w-9 rounded-full" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : messages.length === 0 ? (
+            <p className="text-muted-foreground text-center py-4">No messages yet. {user?.role === 'admin' && 'Post the first message!'} </p>
+          ) : (
+            <ScrollArea className="h-[300px] max-h-[40vh] pr-3"> {/* Adjust max-h as needed */}
+              <div className="space-y-4">
+                {messages.map((msg) => (
+                  <MessageCard key={msg.id} message={msg} onMessageDeleted={handleMessageDeleted} />
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
-
-
-    
