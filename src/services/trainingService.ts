@@ -1,4 +1,5 @@
 
+
 // 'use server'; // Removed to run client-side
 
 import { db } from '@/lib/firebase';
@@ -20,6 +21,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import type { SingleTrainingFormInput } from '@/components/bulk-add-training-form';
 import type { EventArchiveFilter } from './matchService'; // Reuse filter type
+export type { EventArchiveFilter }; // Re-export the type
 
 
 const getTrainingsCollectionRef = (teamId: string) => {
@@ -125,29 +127,11 @@ export const updateTraining = async (teamId: string, trainingId: string, data: P
   const trainingDocRef = getTrainingDocRef(teamId, trainingId);
   const updateData: any = { ...data };
 
-  if (data.date && typeof data.date !== 'string') {
-    // Check if it's a Date object before formatting
-    if (data.date instanceof Date) {
-      console.warn("updateTraining received Date object for date, formatting to yyyy-MM-dd", data.date);
-      updateData.date = format(data.date, "yyyy-MM-dd");
-    } else {
-      // If it's not a string and not a Date object, try parsing as ISO (might be from server like Timestamp.toDate().toISOString())
-      try {
-        updateData.date = format(parseISO(data.date as unknown as string), "yyyy-MM-dd");
-      } catch (e) {
-        console.error(`Date string "${data.date}" in updateTraining was not a valid ISO string. Cannot format. Error: ${e}`);
-        // Decide how to handle: either throw error, or use as is if you trust the format, or skip update for date.
-        // For now, let's skip updating date if format is unrecognized to prevent data corruption.
-        delete updateData.date; 
-      }
-    }
-  } else if (data.date && typeof data.date === 'string') {
-     try {
-        updateData.date = format(parseISO(data.date), "yyyy-MM-dd");
-    } catch (e) {
-        console.warn(`Date string "${data.date}" in updateTraining was not in a standard ISO format. Using as is. Error: ${e}`);
-        updateData.date = data.date;
-    }
+  if (data.date && typeof data.date === 'string') { 
+     updateData.date = data.date;
+  } else if (data.date && data.date instanceof Date) { 
+     console.warn("updateTraining received Date object for date, expected string. Formatting anyway.");
+     updateData.date = format(data.date, "yyyy-MM-dd");
   }
   
   await updateDoc(trainingDocRef, updateData);
@@ -180,3 +164,4 @@ export const unarchiveTraining = async (teamId: string, trainingId: string): Pro
   const trainingDocRef = getTrainingDocRef(teamId, trainingId);
   await updateDoc(trainingDocRef, { isArchived: false });
 };
+
