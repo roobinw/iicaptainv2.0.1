@@ -12,6 +12,7 @@ import {
   serverTimestamp,
   Timestamp,
   where,
+  updateDoc, // Added for archiving
 } from 'firebase/firestore';
 import { format } from 'date-fns';
 
@@ -24,7 +25,6 @@ const getMessagesCollectionRef = (teamId: string) => {
     console.error("Team ID is required for message operations.");
     throw new Error("Team ID is required for message operations.");
   }
-  // This creates a reference to the subcollection `messages` under a specific team
   return collection(db, 'teams', teamId, 'messages');
 };
 
@@ -53,6 +53,7 @@ const fromFirestoreMessage = (docSnap: any): Message => {
     authorName: data.authorName,
     createdAt: data.createdAt instanceof Timestamp ? format(data.createdAt.toDate(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : data.createdAt,
     teamId: data.teamId,
+    isArchived: data.isArchived || false, // Default to false if not present
   } as Message;
 };
 
@@ -66,29 +67,45 @@ export const addMessage = async (
     content,
     authorUid,
     authorName,
-    teamId, // Store teamId for potential collection group queries if ever needed
+    teamId,
     createdAt: serverTimestamp(),
+    isArchived: false, // Default new messages to not archived
   };
   const messagesColRef = getMessagesCollectionRef(teamId);
   const docRef = await addDoc(messagesColRef, firestorePayload);
   return docRef.id;
 };
 
-export const getMessages = async (teamId: string): Promise<Message[]> => {
+export type MessageArchiveFilter = "all" | "active" | "archived";
+
+export const getMessages = async (teamId: string, filter: MessageArchiveFilter = "active"): Promise<Message[]> => {
   if (!teamId) return [];
   const messagesColRef = getMessagesCollectionRef(teamId);
-  const q = query(messagesColRef, orderBy('createdAt', 'desc'));
+  
+  let q;
+  if (filter === "active") {
+    q = query(messagesColRef, where('isArchived', '==', false), orderBy('createdAt', 'desc'));
+  } else if (filter === "archived") {
+    q = query(messagesColRef, where('isArchived', '==', true), orderBy('createdAt', 'desc'));
+  } else { // 'all'
+    q = query(messagesColRef, orderBy('createdAt', 'desc'));
+  }
+  
   const messageSnapshot = await getDocs(q);
   return messageSnapshot.docs.map(fromFirestoreMessage);
+};
+
+export const archiveMessage = async (teamId: string, messageId: string): Promise<void> => {
+  const messageDocRef = getMessageDocRef(teamId, messageId);
+  await updateDoc(messageDocRef, { isArchived: true });
+};
+
+export const unarchiveMessage = async (teamId: string, messageId: string): Promise<void> => {
+  const messageDocRef = getMessageDocRef(teamId, messageId);
+  await updateDoc(messageDocRef, { isArchived: false });
 };
 
 export const deleteMessage = async (teamId: string, messageId: string): Promise<void> => {
   const messageDocRef = getMessageDocRef(teamId, messageId);
   await deleteDoc(messageDocRef);
 };
-
-// updateMessage (e.g., for pinning) can be added later if needed
-// export const updateMessage = async (teamId: string, messageId: string, data: Partial<Message>): Promise<void> => {
-//   const messageDocRef = getMessageDocRef(teamId, messageId);
-//   await updateDoc(messageDocRef, data);
-// };

@@ -27,14 +27,14 @@ import {
   LifeBuoy,
   Gavel, 
   MessageSquare,
-  MessagesSquare, // Added for All Messages page/icon
-  Archive, // Added for View All Messages button
+  MessagesSquare, 
+  Archive, 
+  ArchiveX, // Added for Unarchive
   Send,
   type LucideProps,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Define a type for props that TeamLogo might accept, including className
 interface TeamLogoProps extends Omit<LucideProps, 'className'> {
   className?: string;
 }
@@ -67,8 +67,9 @@ export const Icons = {
   Support: LifeBuoy,
   Refereeing: Gavel,
   MessageSquare: MessageSquare, 
-  MessagesSquare: MessagesSquare, // Added for All Messages
-  Archive: Archive, // Added for View All Messages button
+  MessagesSquare: MessagesSquare, 
+  Archive: Archive, 
+  ArchiveX: ArchiveX, // Added for Unarchive
   Send: Send, 
   ClipboardList: ClipboardList, 
   TeamLogo: ({ className, ...props }: TeamLogoProps) => ( 
@@ -88,6 +89,7 @@ export const Icons = {
   ),
   CalendarDays: CalendarDays,
 };
+
 
 
 

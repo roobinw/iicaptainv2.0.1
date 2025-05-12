@@ -12,10 +12,8 @@ import type { Match, Training, User, RefereeingAssignment, Message } from "@/typ
 import { getMatches } from "@/services/matchService";
 import { getTrainings } from "@/services/trainingService";
 import { getRefereeingAssignments } from "@/services/refereeingService";
-// import { getAllUsersByTeam } from "@/services/userService"; // No longer directly needed here for player count
-import { getMessages } from "@/services/messageService";
+import { getMessages, type MessageArchiveFilter } from "@/services/messageService"; // Import MessageArchiveFilter
 import { Skeleton } from "@/components/ui/skeleton";
-// MessageInputForm removed
 import { MessageCard } from "@/components/message-card";
 import { cn } from "@/lib/utils";
 
@@ -78,7 +76,8 @@ export default function DashboardPage() {
   const fetchTeamMessages = useCallback(async (teamId: string) => {
     setIsLoadingMessages(true);
     try {
-      const fetchedMessages = await getMessages(teamId); // Already sorted by createdAt desc
+      // Fetch only active (non-archived) messages for the dashboard
+      const fetchedMessages = await getMessages(teamId, "active" as MessageArchiveFilter); 
       setLatestMessage(fetchedMessages.length > 0 ? fetchedMessages[0] : null);
     } catch (error) {
       console.error("Error fetching team messages:", error);
@@ -106,17 +105,13 @@ export default function DashboardPage() {
 
   }, [user, currentTeam, authIsLoading, fetchDashboardData, fetchTeamMessages]);
 
-  // handleMessagePosted is no longer needed on dashboard
-  // const handleMessagePosted = useCallback(() => { ... });
 
-  const handleMessageDeleted = useCallback(() => { // Refetches if the deleted message was the one displayed
-    if (user?.teamId && latestMessage) {
-      // Check if the deleted message ID matches the current latestMessage ID
-      // This logic might need to be more robust if deletion happens elsewhere
-      // For now, assume if a delete happens and this component is aware, it should refetch
+  const handleMessageDeletedOrArchived = useCallback(() => {
+    // If a message is deleted or archived (which might be the latest one), refetch messages.
+    if (user?.teamId) {
       fetchTeamMessages(user.teamId);
     }
-  }, [user?.teamId, fetchTeamMessages, latestMessage]);
+  }, [user?.teamId, fetchTeamMessages]);
 
 
   if (authIsLoading || isLoadingData || (!user && !currentTeam)) { 
@@ -134,8 +129,7 @@ export default function DashboardPage() {
             <Skeleton className="h-5 w-64" />
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Skeleton for MessageInputForm removed */}
-            <Skeleton className="h-16 w-full" /> {/* Skeleton for single message */}
+            <Skeleton className="h-16 w-full" /> 
           </CardContent>
           <CardFooter className="border-t pt-4">
             <Skeleton className="h-10 w-full" />
@@ -188,11 +182,10 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Icons.MessageSquare className="h-6 w-6 text-primary" /> Latest Team Message</CardTitle>
           <CardDescription>
-            View the latest message from your team admin. New messages can be posted on the Messages page.
+            View the latest active message. All messages can be viewed on the Messages page.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* MessageInputForm removed from here */}
           {isLoadingMessages ? (
             <div className="space-y-3 py-2">
                 <div className="flex items-start space-x-3 p-3 border rounded-md bg-card/50">
@@ -208,9 +201,9 @@ export default function DashboardPage() {
                 </div>
             </div>
           ) : latestMessage ? (
-            <MessageCard message={latestMessage} onMessageDeleted={handleMessageDeleted} />
+            <MessageCard message={latestMessage} onMessageDeleted={handleMessageDeletedOrArchived} onMessageArchived={handleMessageDeletedOrArchived}/>
           ) : (
-            <p className="text-muted-foreground text-center py-4">No messages yet. {user?.role === 'admin' && 'Visit the Messages page to post the first message!'} </p>
+            <p className="text-muted-foreground text-center py-4">No active messages. {user?.role === 'admin' && 'Visit the Messages page to post or manage messages.'} </p>
           )}
         </CardContent>
         <CardFooter className="border-t pt-4">

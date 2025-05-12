@@ -66,7 +66,9 @@ export interface Message {
   authorName: string;
   createdAt: string; // ISO string from serverTimestamp
   teamId: string; // To identify which team this message belongs to (useful for collection group queries if needed)
+  isArchived?: boolean; // Added for archiving functionality, defaults to false
 }
+
 
 
 
