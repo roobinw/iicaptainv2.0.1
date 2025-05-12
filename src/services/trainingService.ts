@@ -19,9 +19,8 @@ import {
 } from 'firebase/firestore';
 import { format, parseISO } from 'date-fns';
 import type { SingleTrainingFormInput } from '@/components/bulk-add-training-form';
-
-// Define EventArchiveFilter directly in this file
-export type EventArchiveFilter = "all" | "active" | "archived";
+// Import EventArchiveFilter from matchService
+import type { EventArchiveFilter } from '@/services/matchService';
 
 
 const getTrainingsCollectionRef = (teamId: string) => {
@@ -125,19 +124,43 @@ export const getTrainingById = async (teamId: string, trainingId: string): Promi
 
 export const updateTraining = async (teamId: string, trainingId: string, data: Partial<Omit<Training, 'id'>>): Promise<void> => {
   const trainingDocRef = getTrainingDocRef(teamId, trainingId);
-  const updateData: any = { ...data };
+  const updateData: { [key: string]: any } = {};
 
-  if (data.date && typeof data.date === 'string') { 
-     updateData.date = data.date;
-  } else if (data.date && typeof data.date === 'object' && 'toDate' in data.date) { // Check if it's a Firestore Timestamp-like object
-     console.warn("updateTraining received Timestamp-like object for date, formatting to yyyy-MM-dd.");
-     updateData.date = format((data.date as Timestamp).toDate(), "yyyy-MM-dd");
-  } else if (data.date && data.date instanceof Date) { 
-     console.warn("updateTraining received Date object for date, expected string. Formatting anyway.");
-     updateData.date = format(data.date, "yyyy-MM-dd");
+  if (data.hasOwnProperty('date')) {
+    const dateValue = data.date;
+    if (typeof dateValue === 'string') {
+        try {
+            const parsed = parseISO(dateValue);
+            updateData.date = format(parsed, "yyyy-MM-dd");
+        } catch (e) {
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+                updateData.date = dateValue;
+            } else {
+                console.error(`Date string "${dateValue}" in updateTraining is not valid. Date will not be updated. Error: ${e}`);
+            }
+        }
+    } else if (dateValue instanceof Date) {
+        updateData.date = format(dateValue, "yyyy-MM-dd");
+    } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+        updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+    } else if (dateValue === null) {
+        updateData.date = null;
+    } else if (dateValue !== undefined) {
+        console.error(`updateTraining received an unhandled date type: ${typeof dateValue}. Date will not be updated. Value:`, dateValue);
+    }
+  }
+
+  for (const key in data) {
+    if (key !== 'date' && data.hasOwnProperty(key)) {
+      (updateData as any)[key] = (data as any)[key];
+    }
   }
   
-  await updateDoc(trainingDocRef, updateData);
+  if (Object.keys(updateData).length > 0) {
+    await updateDoc(trainingDocRef, updateData);
+  } else {
+    console.warn("updateTraining called with no effective changes for training:", trainingId);
+  }
 };
 
 export const deleteTraining = async (teamId: string, trainingId: string): Promise<void> => {

@@ -97,21 +97,43 @@ export const getMatchById = async (teamId: string, matchId: string): Promise<Mat
 
 export const updateMatch = async (teamId: string, matchId: string, data: Partial<Omit<Match, 'id'>>): Promise<void> => {
   const matchDocRef = getMatchDocRef(teamId, matchId);
-  const updateData: any = { ...data };
+  const updateData: { [key: string]: any } = {};
 
-  if (data.date && typeof data.date !== 'string') {
-    console.warn("updateMatch received non-string date, formatting to yyyy-MM-dd", data.date);
-    updateData.date = format(parseISO(data.date), "yyyy-MM-dd");
-  } else if (data.date && typeof data.date === 'string') {
-    try {
-        updateData.date = format(parseISO(data.date), "yyyy-MM-dd");
-    } catch (e) {
-        console.warn(`Date string "${data.date}" in updateMatch was not in a standard ISO format. Using as is. Error: ${e}`);
-        updateData.date = data.date; 
+  if (data.hasOwnProperty('date')) {
+    const dateValue = data.date;
+    if (typeof dateValue === 'string') {
+        try {
+            const parsed = parseISO(dateValue);
+            updateData.date = format(parsed, "yyyy-MM-dd");
+        } catch (e) {
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+                updateData.date = dateValue;
+            } else {
+                console.error(`Date string "${dateValue}" in updateMatch is not valid. Date will not be updated. Error: ${e}`);
+            }
+        }
+    } else if (dateValue instanceof Date) {
+        updateData.date = format(dateValue, "yyyy-MM-dd");
+    } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+        updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+    } else if (dateValue === null) {
+        updateData.date = null;
+    } else if (dateValue !== undefined) {
+        console.error(`updateMatch received an unhandled date type: ${typeof dateValue}. Date will not be updated. Value:`, dateValue);
     }
   }
-  
-  await updateDoc(matchDocRef, updateData);
+
+  for (const key in data) {
+    if (key !== 'date' && data.hasOwnProperty(key)) {
+      (updateData as any)[key] = (data as any)[key];
+    }
+  }
+
+  if (Object.keys(updateData).length > 0) {
+    await updateDoc(matchDocRef, updateData);
+  } else {
+    console.warn("updateMatch called with no effective changes for match:", matchId);
+  }
 };
 
 export const deleteMatch = async (teamId: string, matchId: string): Promise<void> => {

@@ -16,6 +16,7 @@ import {
   where, 
 } from 'firebase/firestore';
 import { format, parseISO } from "date-fns"; 
+// EventArchiveFilter is now imported from matchService to avoid local declaration issues
 import type { EventArchiveFilter } from '@/services/matchService';
 
 
@@ -106,55 +107,62 @@ export const updateRefereeingAssignment = async (
   data: Partial<Omit<RefereeingAssignment, 'id'> & { date?: string | Date | Timestamp | null }>
 ): Promise<void> => {
   const assignmentDocRef = getRefereeingAssignmentDocRef(teamId, assignmentId);
-  const updateData: { [key: string]: any } = { ...data }; 
-  
-  if (data.date !== undefined && data.date !== null) {
-    if (typeof data.date === 'string') {
+  const updateData: { [key: string]: any } = {};
+
+  // Handle 'date' field specifically
+  if (data.hasOwnProperty('date')) {
+    const dateValue = data.date;
+
+    if (typeof dateValue === 'string') {
         try {
-            const parsed = parseISO(data.date); 
+            const parsed = parseISO(dateValue); 
             updateData.date = format(parsed, "yyyy-MM-dd");
         } catch (e) {
-            if (/^\d{4}-\d{2}-\d{2}$/.test(data.date)) {
-                 console.warn(`Date string "${data.date}" in updateRefereeingAssignment is not ISO but matches yyyy-MM-dd. Using as is.`);
-                 updateData.date = data.date; 
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) { 
+                 updateData.date = dateValue; 
             } else {
-                console.error(`Date string "${data.date}" in updateRefereeingAssignment is not a valid ISO string nor yyyy-MM-dd. Date will not be updated. Error: ${e}`);
-                delete updateData.date; 
+                console.error(`Date string "${dateValue}" in updateRefereeingAssignment is not valid. Date will not be updated. Error: ${e}`);
             }
         }
-    } else if (typeof data.date === 'object' && data.date !== null) { // Explicitly check for object and not null
-        if (data.date instanceof Date) { // Check for Date object
-            console.warn("updateRefereeingAssignment received Date object for date, formatting to yyyy-MM-dd", data.date);
-            updateData.date = format(data.date, "yyyy-MM-dd");
-        } else if ('toDate' in data.date && typeof (data.date as any).toDate === 'function') { // Check for Firestore Timestamp-like object
-            console.warn("updateRefereeingAssignment received Timestamp-like object for date, formatting to yyyy-MM-dd", data.date);
-            updateData.date = format((data.date as Timestamp).toDate(), "yyyy-MM-dd");
-        } else {
-             console.error(`updateRefereeingAssignment received an unexpected object for date. Date will not be updated. Value:`, data.date);
-             delete updateData.date;
-        }
-    } else {
-        console.error(`updateRefereeingAssignment received unhandled date type: ${typeof data.date}. Date will not be updated.`);
-        delete updateData.date;
+    } else if (dateValue instanceof Date) { 
+        updateData.date = format(dateValue, "yyyy-MM-dd");
+    } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+        updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+    } else if (dateValue === null) {
+        updateData.date = null; 
+    } else if (dateValue !== undefined) { 
+        console.error(`updateRefereeingAssignment received an unhandled date type: ${typeof dateValue}. Date will not be updated. Value:`, dateValue);
     }
-  } else if (data.hasOwnProperty('date') && data.date === null) {
-    updateData.date = null; 
   }
 
-
-  if (data.assignedPlayerUids === undefined && !(data.hasOwnProperty('assignedPlayerUids'))) {
-    delete updateData.assignedPlayerUids; 
-  } else if (data.assignedPlayerUids === null) {
-     updateData.assignedPlayerUids = []; 
+  // Copy other properties from data to updateData, excluding 'date'
+  for (const key in data) {
+    if (key !== 'date' && data.hasOwnProperty(key)) {
+      (updateData as any)[key] = (data as any)[key];
+    }
   }
   
-  if (data.homeTeam !== undefined) {
-    updateData.homeTeam = data.homeTeam;
-  } else if (data.hasOwnProperty('homeTeam') && data.homeTeam === null) {
-    updateData.homeTeam = null; 
+  if (data.hasOwnProperty('assignedPlayerUids')) {
+    if (data.assignedPlayerUids === null) {
+       updateData.assignedPlayerUids = []; 
+    } else {
+       updateData.assignedPlayerUids = data.assignedPlayerUids;
+    }
   }
 
-  await updateDoc(assignmentDocRef, updateData);
+  if (data.hasOwnProperty('homeTeam')) {
+    if (data.homeTeam === null || data.homeTeam === undefined) { // Allow setting to empty string if explicitly passed or null/undefined
+      updateData.homeTeam = ""; 
+    } else {
+      updateData.homeTeam = data.homeTeam;
+    }
+  }
+  
+  if (Object.keys(updateData).length > 0) {
+    await updateDoc(assignmentDocRef, updateData);
+  } else {
+    console.warn("updateRefereeingAssignment called with no effective changes for assignment:", assignmentId);
+  }
 };
 
 export const deleteRefereeingAssignment = async (teamId: string, assignmentId: string): Promise<void> => {
