@@ -19,8 +19,8 @@ import {
   deleteRefereeingAssignment,
   archiveRefereeingAssignment,
   unarchiveRefereeingAssignment,
-  type EventArchiveFilter, 
 } from "@/services/refereeingService";
+import type { EventArchiveFilter } from "@/services/matchService"; // Corrected import path
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 
