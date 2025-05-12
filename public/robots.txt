@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard/ # Adjust if dashboard sub-pages should be disallowed
+# Disallow: /settings/ # Example: if settings are private
+# Disallow: /onboarding/ # Example: if onboarding steps are not for indexing
+
+Sitemap: https://YOUR_APP_DOMAIN.com/sitemap.xml # TODO: Replace YOUR_APP_DOMAIN.com with your actual domain

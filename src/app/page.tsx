@@ -10,12 +10,8 @@ import { motion } from 'framer-motion';
 // Removed type import for Metadata as it's no longer used here
 // import type { Metadata } from 'next';
 
-// Removed metadata export as it's not allowed in client components
-// export const metadata: Metadata = {
-//   title: "iiCaptain | Sports Team Management Software for Easy Organization",
-//   description: "Organize your sports team effortlessly with iiCaptain. Manage match schedules, training, player rosters, and attendance. Sign up free!",
-//   keywords: "sports team management, team organization app, iiCaptain, schedule management, player roster, attendance tracking, sports app, team manager, coaching tool",
-// };
+// Metadata export removed as this is a client component.
+// Metadata for the main landing page is now defined in src/app/layout.tsx
 
 export default function LandingPage() {
   const sectionVariants = {
@@ -166,7 +162,7 @@ export default function LandingPage() {
                 className="rounded-xl shadow-2xl border-2 border-border/20"
                 priority
                 onError={(e) => (e.currentTarget.src = 'https://picsum.photos/1200/600?grayscale&blur=2')}
-                data-ai-hint="app dashboard team"
+                data-ai-hint="app dashboard soccer"
               />
             </motion.div>
           </div>
@@ -299,6 +295,10 @@ export default function LandingPage() {
             <Link href="/terms-of-service" className="text-xs hover:text-primary transition-colors">
               Terms of Service
             </Link>
+            {/* Placeholder for Social Media Links */}
+            <Link href="#" className="text-xs hover:text-primary transition-colors">Facebook</Link>
+            <Link href="#" className="text-xs hover:text-primary transition-colors">Twitter</Link>
+            <Link href="#" className="text-xs hover:text-primary transition-colors">Instagram</Link>
           </div>
         </div>
       </motion.footer>

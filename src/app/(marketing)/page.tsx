@@ -10,16 +10,10 @@ import { Icons } from "@/components/icons";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion } from 'framer-motion';
-import type { Metadata } from 'next';
+// import type { Metadata } from 'next'; // Metadata type import removed
 
-// Note: Metadata export here might conflict if this page is not the primary entry for '/'.
-// If src/app/page.tsx is the true landing page, metadata should be there.
-// For now, assuming this acts as a distinct marketing page if needed, or that Next.js handles merging.
-export const metadata: Metadata = {
-  title: "iiCaptain: Premier Sports Team Management & Organization Tool",
-  description: "Discover iiCaptain - the leading sports team management software. Streamline scheduling, player rosters, attendance, and communication. Try for free!",
-};
-
+// Metadata export removed as this is a client component.
+// Metadata for this page is now defined in src/app/(marketing)/layout.tsx
 
 export default function MarketingLandingPage() { // Renamed component for clarity if it's distinct
   const { user, isLoading } = useAuth();

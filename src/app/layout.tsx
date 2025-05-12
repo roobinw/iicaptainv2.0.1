@@ -17,8 +17,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "iiCaptain",
-  description: "Manage your sports team with ease using iiCaptain.",
+  title: "iiCaptain | Sports Team Management Software for Easy Organization",
+  description: "Organize your sports team effortlessly with iiCaptain. Manage match schedules, training, player rosters, and attendance. Sign up free!",
+  keywords: "sports team management, team organization app, iiCaptain, schedule management, player roster, attendance tracking, sports app, team manager, coaching tool",
 };
 
 export default function RootLayout({
