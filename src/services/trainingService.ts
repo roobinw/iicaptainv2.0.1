@@ -1,5 +1,4 @@
 
-
 // 'use server'; // Removed to run client-side
 
 import { db } from '@/lib/firebase';
@@ -20,8 +19,9 @@ import {
 } from 'firebase/firestore';
 import { format, parseISO } from 'date-fns';
 import type { SingleTrainingFormInput } from '@/components/bulk-add-training-form';
-import type { EventArchiveFilter } from './matchService'; // Reuse filter type
-export type { EventArchiveFilter }; // Re-export the type
+
+// Define EventArchiveFilter directly in this file
+export type EventArchiveFilter = "all" | "active" | "archived";
 
 
 const getTrainingsCollectionRef = (teamId: string) => {
@@ -129,6 +129,9 @@ export const updateTraining = async (teamId: string, trainingId: string, data: P
 
   if (data.date && typeof data.date === 'string') { 
      updateData.date = data.date;
+  } else if (data.date && typeof data.date === 'object' && 'toDate' in data.date) { // Check if it's a Firestore Timestamp-like object
+     console.warn("updateTraining received Timestamp-like object for date, formatting to yyyy-MM-dd.");
+     updateData.date = format((data.date as Timestamp).toDate(), "yyyy-MM-dd");
   } else if (data.date && data.date instanceof Date) { 
      console.warn("updateTraining received Date object for date, expected string. Formatting anyway.");
      updateData.date = format(data.date, "yyyy-MM-dd");
