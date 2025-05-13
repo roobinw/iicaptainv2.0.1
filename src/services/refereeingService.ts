@@ -65,12 +65,10 @@ export const addRefereeingAssignment = async (teamId: string, assignmentData: Om
   let dateString: string;
   if (typeof assignmentData.date === 'string') {
      try {
-      // If it's a string, try to parse it as ISO first, then format.
-      // If parseISO fails, check if it's already "yyyy-MM-dd"
       dateString = format(parseISO(assignmentData.date), "yyyy-MM-dd");
     } catch (e) {
       if (/^\d{4}-\d{2}-\d{2}$/.test(assignmentData.date)) {
-        dateString = assignmentData.date; // Already in correct format
+        dateString = assignmentData.date; 
       } else {
         console.error("Invalid date string format in addRefereeingAssignment:", assignmentData.date);
         throw new Error("Invalid date format. Please use YYYY-MM-DD or a valid ISO string.");
@@ -134,49 +132,34 @@ export const updateRefereeingAssignment = async (
 
   if (typeof dateValue === 'string') {
     try {
-      // Attempt to parse as ISO string first, then check for yyyy-MM-dd format
       const parsedDate = parseISO(dateValue); 
       updateData.date = format(parsedDate, "yyyy-MM-dd");
     } catch (e) {
-      // If parseISO fails, check if it's already in "yyyy-MM-dd" format
       if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
         updateData.date = dateValue;
       } else {
-        // If not a valid ISO string and not yyyy-MM-dd, log error. Date won't be updated.
         console.error(`Date string "${dateValue}" in updateRefereeingAssignment is not a valid ISO string or yyyy-MM-dd format. Date will not be updated. Error: ${e}`);
       }
     }
-  } else if (typeof dateValue === 'object' && dateValue !== null) {
-    // Now we know dateValue is an object and not null
-    if (dateValue instanceof Date) { // This check is now safe
-        updateData.date = format(dateValue, "yyyy-MM-dd");
-    } else if ('toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') { // Check for Firestore Timestamp-like object
-        updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
-    } else {
-        // This case means dateValue is an object but not a Date or Timestamp
-        console.error(`updateRefereeingAssignment received an unhandled object type for date. Value:`, dateValue);
-    }
+  } else if (dateValue instanceof Date) { 
+    updateData.date = format(dateValue, "yyyy-MM-dd");
+  } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') { 
+    updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
   } else if (dateValue === null) {
-      // If date is explicitly set to null, we might want to remove it or handle as per requirements.
-      // For now, we log and don't update, unless business logic dictates otherwise (e.g., setting to null in Firestore).
-      console.warn(`updateRefereeingAssignment received null for date. Date will not be updated for assignment: ${assignmentId}. If removal is intended, handle explicitly.`);
+    console.warn(`updateRefereeingAssignment received null for date. Date will not be updated for assignment: ${assignmentId}.`);
   } else if (dateValue === undefined) {
-      // Date is not being updated, this is fine, do nothing for the date field.
+    // Date is not being updated, this is fine.
   } else {
-      // This case handles any other unexpected types for dateValue
-      console.error(`updateRefereeingAssignment received an unhandled type for date. Value:`, dateValue, `Type: ${typeof dateValue}`);
+    console.error(`updateRefereeingAssignment received an unhandled type/value for date. Value:`, dateValue, `Type: ${typeof dateValue}`);
   }
 
-
-  // Populate other fields for update, excluding 'date' as it's handled above
   for (const key in data) {
     if (key !== 'date' && Object.prototype.hasOwnProperty.call(data, key)) {
       const K = key as keyof typeof data;
-      // Handle potential null values for optional fields if necessary
       if (K === 'assignedPlayerUids' && (data as any)[K] === null) {
-        updateData[K] = []; // Default to empty array if null
+        updateData[K] = [];
       } else if ((K === 'homeTeam' || K === 'notes') && ((data as any)[K] === null || (data as any)[K] === undefined)) {
-        updateData[K] = ""; // Default to empty string if null/undefined
+        updateData[K] = ""; 
       }
       else {
         updateData[K] = data[K];
