@@ -1,4 +1,3 @@
-
 import { db } from '@/lib/firebase';
 import type { RefereeingAssignment } from '@/types';
 import {
@@ -64,14 +63,23 @@ const fromFirestoreRefereeingAssignment = (docSnap: any): RefereeingAssignment =
 export const addRefereeingAssignment = async (teamId: string, assignmentData: Omit<RefereeingAssignment, 'id' | 'isArchived' | 'date'> & { date: string | Date }): Promise<string> => {
   let dateString: string;
   if (typeof assignmentData.date === 'string') {
-    const parsedDate = parseISO(assignmentData.date);
-    if (isValid(parsedDate)) {
-      dateString = format(parsedDate, "yyyy-MM-dd");
-    } else if (/^\d{4}-\d{2}-\d{2}$/.test(assignmentData.date)) {
-      dateString = assignmentData.date; 
-    } else {
-      console.error("Invalid date string format in addRefereeingAssignment:", assignmentData.date);
-      throw new Error("Invalid date format. Please use YYYY-MM-DD or a valid ISO string.");
+    // Check if it's already yyyy-MM-dd
+    if (/^\d{4}-\d{2}-\d{2}$/.test(assignmentData.date)) {
+        const parsed = parseISO(assignmentData.date); // Check validity
+        if (isValid(parsed)) {
+            dateString = assignmentData.date;
+        } else {
+            console.error("Invalid date string format (not yyyy-MM-dd or not a valid date):", assignmentData.date);
+            throw new Error("Invalid date format. Please use YYYY-MM-DD.");
+        }
+    } else { // Assume ISO string if not yyyy-MM-dd
+        const parsedDate = parseISO(assignmentData.date);
+        if (isValid(parsedDate)) {
+            dateString = format(parsedDate, "yyyy-MM-dd");
+        } else {
+            console.error("Invalid date string format (not ISO or yyyy-MM-dd):", assignmentData.date);
+            throw new Error("Invalid date format. Please use YYYY-MM-DD or a valid ISO string.");
+        }
     }
   } else if (assignmentData.date instanceof Date) {
     dateString = format(assignmentData.date, "yyyy-MM-dd");
@@ -127,44 +135,55 @@ export const updateRefereeingAssignment = async (
   const assignmentDocRef = getRefereeingAssignmentDocRef(teamId, assignmentId);
   const updateData: { [key: string]: any } = {};
 
-  // Handle date separately due to complex type possibilities
   const dateValue = data.date;
 
-  if (dateValue !== undefined) { // Only process date if it's explicitly in the update data
+  if (dateValue !== undefined) { 
     if (typeof dateValue === 'string') {
       try {
-        const parsedDate = parseISO(dateValue);
-        if (isValid(parsedDate)) {
-          updateData.date = format(parsedDate, "yyyy-MM-dd");
-        } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-          updateData.date = dateValue; // Already in correct format
-        } else {
-          console.error(`Date string "${dateValue}" in updateRefereeingAssignment is not a valid ISO or yyyy-MM-dd format. Date will not be updated.`);
+        // Check if it's already yyyy-MM-dd
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+            const parsed = parseISO(dateValue); // Check validity
+            if (isValid(parsed)) {
+                 updateData.date = dateValue;
+            } else {
+                 console.error(`Date string "${dateValue}" in updateRefereeingAssignment is not a valid date. Date will not be updated.`);
+            }
+        } else { // Assume ISO string if not yyyy-MM-dd
+            const parsedDate = parseISO(dateValue);
+            if (isValid(parsedDate)) {
+                updateData.date = format(parsedDate, "yyyy-MM-dd");
+            } else {
+                console.error(`Date string "${dateValue}" in updateRefereeingAssignment is not a valid ISO string or yyyy-MM-dd format. Date will not be updated.`);
+            }
         }
       } catch (e) {
         console.error(`Error parsing date string "${dateValue}" in updateRefereeingAssignment. Date will not be updated. Error: ${e}`);
       }
-    } else if (dateValue instanceof Date) {
-      updateData.date = format(dateValue, "yyyy-MM-dd");
-    } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
-      updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
     } else if (dateValue === null) {
       console.warn(`updateRefereeingAssignment received null for date. Date will not be updated for assignment: ${assignmentId}.`);
-      // To allow clearing the date, explicitly set to null or handle as per schema:
-      // updateData.date = null; 
+    } else if (typeof dateValue === 'object') {
+        // Check if it's a Date object
+        if (dateValue instanceof Date) {
+            updateData.date = format(dateValue, "yyyy-MM-dd");
+        } 
+        // Check if it's a Firestore Timestamp (duck-typing)
+        else if ('toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+            updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+        } else {
+            console.error(`updateRefereeingAssignment received an unhandled object type for date. Value:`, dateValue);
+        }
     } else {
       console.error(`updateRefereeingAssignment received an unhandled date type/value for assignment ${assignmentId}. Value:`, dateValue, `Type: ${typeof dateValue}`);
     }
   }
-
-  // Handle other fields
+  
   for (const key in data) {
     if (key !== 'date' && Object.prototype.hasOwnProperty.call(data, key)) {
       const K = key as keyof typeof data;
       if (K === 'assignedPlayerUids' && (data as any)[K] === null) {
-        updateData[K] = []; // Ensure empty array if null
+        updateData[K] = []; 
       } else if ((K === 'homeTeam' || K === 'notes') && ((data as any)[K] === null || (data as any)[K] === undefined)) {
-        updateData[K] = ""; // Ensure empty string if null/undefined
+        updateData[K] = ""; 
       } else {
         updateData[K] = data[K];
       }
@@ -192,4 +211,3 @@ export const unarchiveRefereeingAssignment = async (teamId: string, assignmentId
   const assignmentDocRef = getRefereeingAssignmentDocRef(teamId, assignmentId);
   await updateDoc(assignmentDocRef, { isArchived: false });
 };
-

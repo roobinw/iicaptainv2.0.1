@@ -1,5 +1,3 @@
-
-
 // 'use server'; // Removed to run client-side
 
 import { db } from '@/lib/firebase';
@@ -56,8 +54,8 @@ const fromFirestoreTraining = (docSnap: any): Training => {
   const data = docSnap.data();
   let dateString = data.date;
   // Check if data.date is a Firestore Timestamp and convert
-  if (data.date && typeof data.date.toDate === 'function') { 
-    dateString = format(data.date.toDate(), "yyyy-MM-dd");
+  if (data.date && typeof data.date === 'object' && 'toDate' in data.date && typeof data.date.toDate === 'function') { 
+    dateString = format((data.date as Timestamp).toDate(), "yyyy-MM-dd");
   } else if (data.date instanceof Date) { // Should not happen if data comes direct from Firestore
     dateString = format(data.date, "yyyy-MM-dd");
   }
@@ -75,14 +73,23 @@ const fromFirestoreTraining = (docSnap: any): Training => {
 export const addTraining = async (teamId: string, trainingData: Omit<Training, 'id' | 'attendance' | 'isArchived' | 'date'> & { date: string | Date }): Promise<string> => {
   let dateString: string;
   if (typeof trainingData.date === 'string') {
-    const parsedDate = parseISO(trainingData.date);
-    if (isValid(parsedDate)) {
-      dateString = format(parsedDate, "yyyy-MM-dd");
-    } else if (/^\d{4}-\d{2}-\d{2}$/.test(trainingData.date)) {
-      dateString = trainingData.date;
-    } else {
-      console.error("Invalid date string format in addTraining:", trainingData.date);
-      throw new Error("Invalid date format. Please use YYYY-MM-DD or a valid ISO string.");
+     // Check if it's already yyyy-MM-dd
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trainingData.date)) {
+        const parsed = parseISO(trainingData.date); // Check validity
+        if (isValid(parsed)) {
+            dateString = trainingData.date;
+        } else {
+            console.error("Invalid date string format (not yyyy-MM-dd or not a valid date):", trainingData.date);
+            throw new Error("Invalid date format. Please use YYYY-MM-DD.");
+        }
+    } else { // Assume ISO string if not yyyy-MM-dd
+        const parsedDate = parseISO(trainingData.date);
+        if (isValid(parsedDate)) {
+            dateString = format(parsedDate, "yyyy-MM-dd");
+        } else {
+            console.error("Invalid date string format (not ISO or yyyy-MM-dd):", trainingData.date);
+            throw new Error("Invalid date format. Please use YYYY-MM-DD or a valid ISO string.");
+        }
     }
   } else if (trainingData.date instanceof Date) {
     dateString = format(trainingData.date, "yyyy-MM-dd");
@@ -159,23 +166,38 @@ export const updateTraining = async (teamId: string, trainingId: string, data: P
   if (dateValue !== undefined) {
     if (typeof dateValue === 'string') {
       try {
-        const parsedDate = parseISO(dateValue);
-        if (isValid(parsedDate)) {
-          updateData.date = format(parsedDate, "yyyy-MM-dd");
-        } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-          updateData.date = dateValue;
-        } else {
-          console.error(`Date string "${dateValue}" in updateTraining is not a valid ISO string or yyyy-MM-dd format. Date will not be updated.`);
+         // Check if it's already yyyy-MM-dd
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+            const parsed = parseISO(dateValue); // Check validity
+            if (isValid(parsed)) {
+                 updateData.date = dateValue;
+            } else {
+                console.error(`Date string "${dateValue}" in updateTraining is not a valid date. Date will not be updated.`);
+            }
+        } else { // Assume ISO string if not yyyy-MM-dd
+            const parsedDate = parseISO(dateValue);
+            if (isValid(parsedDate)) {
+                updateData.date = format(parsedDate, "yyyy-MM-dd");
+            } else {
+                console.error(`Date string "${dateValue}" in updateTraining is not a valid ISO string or yyyy-MM-dd format. Date will not be updated.`);
+            }
         }
       } catch (e) {
         console.error(`Error parsing date string "${dateValue}" in updateTraining. Date will not be updated. Error: ${e}`);
       }
-    } else if (dateValue instanceof Date) {
-      updateData.date = format(dateValue, "yyyy-MM-dd");
-    } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
-      updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
     } else if (dateValue === null) {
       console.warn(`updateTraining received null for date. Date will not be updated for training: ${trainingId}.`);
+    } else if (typeof dateValue === 'object') {
+        // Check if it's a Date object
+        if (dateValue instanceof Date) {
+            updateData.date = format(dateValue, "yyyy-MM-dd");
+        } 
+        // Check if it's a Firestore Timestamp (duck-typing)
+        else if ('toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+            updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+        } else {
+            console.error(`updateTraining received an unhandled object type for date. Value:`, dateValue);
+        }
     } else {
       console.error(`updateTraining received an unhandled date type/value for training ${trainingId}. Value:`, dateValue, `Type: ${typeof dateValue}`);
     }
@@ -221,4 +243,3 @@ export const unarchiveTraining = async (teamId: string, trainingId: string): Pro
   const trainingDocRef = getTrainingDocRef(teamId, trainingId);
   await updateDoc(trainingDocRef, { isArchived: false });
 };
-
