@@ -59,7 +59,7 @@ export const addMatch = async (teamId: string, matchData: Omit<Match, 'id' | 'at
   let dateString: string;
   if (typeof matchData.date === 'string') {
     if (/^\d{4}-\d{2}-\d{2}$/.test(matchData.date)) {
-        const parsed = parseISO(matchData.date); 
+        const parsed = parseISO(matchData.date + "T00:00:00Z"); 
         if (isValid(parsed)) {
             dateString = matchData.date;
         } else {
@@ -129,27 +129,31 @@ export const updateMatch = async (teamId: string, matchId: string, data: Partial
 
   if (dateValue !== undefined && dateValue !== null) {
     if (typeof dateValue === 'string') {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-        const parsed = parseISO(dateValue);
-        if (isValid(parsed)) {
-          updateData.date = dateValue;
+      try {
+        let parsedDate;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+          parsedDate = parseISO(dateValue + "T00:00:00Z");
         } else {
-          console.error(`Date string "${dateValue}" in updateMatch is not a valid date. Date will not be updated.`);
+          parsedDate = parseISO(dateValue);
         }
-      } else {
-        const parsedDate = parseISO(dateValue);
         if (isValid(parsedDate)) {
           updateData.date = format(parsedDate, "yyyy-MM-dd");
         } else {
-          console.error(`Date string "${dateValue}" in updateMatch is not a valid ISO string or yyyy-MM-dd format. Date will not be updated.`);
+          console.error(`Date string "${dateValue}" in updateMatch is not a valid date format. MatchId: ${matchId}. Date will not be updated.`);
         }
+      } catch (e) {
+        console.error(`Error parsing date string "${dateValue}" in updateMatch. MatchId: ${matchId}. Date will not be updated. Error: ${e}`);
       }
-    } else if (dateValue instanceof Date) {
-      updateData.date = format(dateValue, "yyyy-MM-dd");
-    } else if (typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
-      updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+    } else if (typeof dateValue === 'object') {
+        if (dateValue instanceof Date) {
+            updateData.date = format(dateValue, "yyyy-MM-dd");
+        } else if ('toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+            updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+        } else {
+            console.error(`updateMatch received an unhandled object type for date. MatchId: ${matchId}, Value:`, dateValue);
+        }
     } else {
-      console.error(`updateMatch received an unhandled date type/value for match ${matchId}. Value:`, dateValue, `Type: ${typeof dateValue}`);
+      console.error(`updateMatch received an unexpected non-object, non-string date type. MatchId: ${matchId}, Value:`, dateValue, `Type: ${typeof dateValue}`);
     }
   }
   
@@ -193,3 +197,4 @@ export const unarchiveMatch = async (teamId: string, matchId: string): Promise<v
   const matchDocRef = getMatchDocRef(teamId, matchId);
   await updateDoc(matchDocRef, { isArchived: false });
 };
+

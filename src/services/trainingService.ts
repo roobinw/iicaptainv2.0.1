@@ -82,7 +82,7 @@ export const addTraining = async (teamId: string, trainingData: Omit<Training, '
   let dateString: string;
   if (typeof trainingData.date === 'string') {
     if (/^\d{4}-\d{2}-\d{2}$/.test(trainingData.date)) {
-        const parsed = parseISO(trainingData.date); 
+        const parsed = parseISO(trainingData.date + "T00:00:00Z"); 
         if (isValid(parsed)) {
             dateString = trainingData.date;
         } else {
@@ -172,27 +172,31 @@ export const updateTraining = async (teamId: string, trainingId: string, data: P
 
   if (dateValue !== undefined && dateValue !== null) {
     if (typeof dateValue === 'string') {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-        const parsed = parseISO(dateValue);
-        if (isValid(parsed)) {
-          updateData.date = dateValue;
+      try {
+        let parsedDate;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+          parsedDate = parseISO(dateValue + "T00:00:00Z");
         } else {
-          console.error(`Date string "${dateValue}" in updateTraining is not a valid date. Date will not be updated.`);
+          parsedDate = parseISO(dateValue);
         }
-      } else {
-        const parsedDate = parseISO(dateValue);
         if (isValid(parsedDate)) {
           updateData.date = format(parsedDate, "yyyy-MM-dd");
         } else {
-          console.error(`Date string "${dateValue}" in updateTraining is not a valid ISO string or yyyy-MM-dd format. Date will not be updated.`);
+          console.error(`Date string "${dateValue}" in updateTraining is not a valid date format. TrainingId: ${trainingId}. Date will not be updated.`);
         }
+      } catch (e) {
+        console.error(`Error parsing date string "${dateValue}" in updateTraining. TrainingId: ${trainingId}. Date will not be updated. Error: ${e}`);
       }
-    } else if (dateValue instanceof Date) {
-      updateData.date = format(dateValue, "yyyy-MM-dd");
-    } else if (typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
-      updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+    } else if (typeof dateValue === 'object') {
+        if (dateValue instanceof Date) {
+            updateData.date = format(dateValue, "yyyy-MM-dd");
+        } else if ('toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+            updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+        } else {
+             console.error(`updateTraining received an unhandled object type for date. TrainingId: ${trainingId}, Value:`, dateValue);
+        }
     } else {
-      console.error(`updateTraining received an unhandled date type/value for training ${trainingId}. Value:`, dateValue, `Type: ${typeof dateValue}`);
+      console.error(`updateTraining received an unexpected non-object, non-string date type. TrainingId: ${trainingId}, Value:`, dateValue, `Type: ${typeof dateValue}`);
     }
   }
   
@@ -236,3 +240,4 @@ export const unarchiveTraining = async (teamId: string, trainingId: string): Pro
   const trainingDocRef = getTrainingDocRef(teamId, trainingId);
   await updateDoc(trainingDocRef, { isArchived: false });
 };
+
