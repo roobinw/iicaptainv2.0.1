@@ -1,6 +1,13 @@
 
 export type UserRole = "admin" | "player";
 
+// Explicitly define Firestore Timestamp type for clarity
+export interface Timestamp {
+  seconds: number;
+  nanoseconds: number;
+  toDate: () => Date;
+}
+
 export interface User {
   id: string; // Firestore document ID, often same as uid
   uid: string; // Firebase Auth UID
@@ -71,6 +78,7 @@ export interface Message {
   teamId: string; // To identify which team this message belongs to (useful for collection group queries if needed)
   isArchived?: boolean; // Added for archiving functionality, defaults to false
 }
+
 
 
 

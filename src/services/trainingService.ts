@@ -1,7 +1,7 @@
 // 'use server'; // Removed to run client-side
 
 import { db } from '@/lib/firebase';
-import type { Training } from '@/types';
+import type { Training, Timestamp } from '@/types'; // Ensured Timestamp is imported from types
 import {
   collection,
   doc,
@@ -11,14 +11,13 @@ import {
   deleteDoc,
   query,
   orderBy,
-  type Timestamp, // Ensure Timestamp is imported
+  // type Timestamp, // Already imported from @/types
   getDoc,
   writeBatch,
   where, 
 } from 'firebase/firestore';
 import { format, parseISO, isValid } from 'date-fns';
 import type { SingleTrainingFormInput } from '@/components/bulk-add-training-form';
-// Import EventArchiveFilter from matchService
 import type { EventArchiveFilter } from '@/services/matchService';
 
 
@@ -179,14 +178,14 @@ export const updateTraining = async (teamId: string, trainingId: string, data: P
       if (isValid(parsedDate)) {
         updateData.date = format(parsedDate, "yyyy-MM-dd");
       } else {
-        console.error(`Date string "${dateValue}" in updateTraining is not valid. TrainingId: ${trainingId}.`);
+        console.error(`Date string "${dateValue}" in updateTraining is not valid. TrainingId: ${trainingId}. Date will not be updated.`);
       }
     } catch (e) {
-      console.error(`Error parsing date string "${dateValue}" in updateTraining. TrainingId: ${trainingId}. Error: ${e}`);
+      console.error(`Error parsing date string "${dateValue}" in updateTraining. TrainingId: ${trainingId}. Date will not be updated. Error: ${e}`);
     }
-  } else if (dateValue instanceof Date) {
+  } else if (dateValue instanceof Date) { 
     updateData.date = format(dateValue, "yyyy-MM-dd");
-  } else if (typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+  } else if (dateValue && typeof dateValue === 'object' && typeof (dateValue as Timestamp).toDate === 'function') { // Duck-typing for Firestore Timestamp
     updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
   } else {
     console.error(`updateTraining received an unhandled type for date. TrainingId: ${trainingId}, Value:`, dateValue);
