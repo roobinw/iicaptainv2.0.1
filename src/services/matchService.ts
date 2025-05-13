@@ -1,7 +1,7 @@
 // 'use server'; // Removed to run client-side
 
 import { db } from '@/lib/firebase';
-import type { Match, Timestamp } from '@/types'; // Ensured Timestamp is imported from types
+import type { Match, Timestamp } from '@/types'; 
 import {
   collection,
   doc,
@@ -11,7 +11,6 @@ import {
   deleteDoc,
   query,
   orderBy,
-  // type Timestamp, // Already imported from @/types
   getDoc,
   where, 
 } from 'firebase/firestore';
@@ -145,9 +144,11 @@ export const updateMatch = async (teamId: string, matchId: string, data: Partial
     } catch (e) {
       console.error(`Error parsing date string "${dateValue}" in updateMatch. MatchId: ${matchId}. Date will not be updated. Error: ${e}`);
     }
-  } else if (dateValue instanceof Date) { 
-    updateData.date = format(dateValue, "yyyy-MM-dd");
-  } else if (dateValue && typeof dateValue === 'object' && typeof (dateValue as Timestamp).toDate === 'function') { // Duck-typing for Firestore Timestamp
+  } else if (Object.prototype.toString.call(dateValue) === '[object Date]' && !isNaN((dateValue as Date).getTime())) { 
+    // Robust check for Date object
+    updateData.date = format(dateValue as Date, "yyyy-MM-dd");
+  } else if (typeof dateValue === 'object' && dateValue !== null && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') { 
+    // Duck-typing for Firestore Timestamp
     updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
   } else {
     console.error(`updateMatch received an unhandled type for date. MatchId: ${matchId}, Value:`, dateValue);
