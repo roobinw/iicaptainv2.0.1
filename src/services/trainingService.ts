@@ -11,7 +11,7 @@ import {
   deleteDoc,
   query,
   orderBy,
-  Timestamp, 
+  type Timestamp, // Ensure Timestamp is imported
   getDoc,
   writeBatch,
   where, 
@@ -59,15 +59,11 @@ const fromFirestoreTraining = (docSnap: any): Training => {
   } else if (data.date instanceof Date) { 
     dateString = format(data.date, "yyyy-MM-dd");
   } else if (typeof data.date === 'string' && !/^\d{4}-\d{2}-\d{2}$/.test(data.date)) {
-    // If it's a string but not in yyyy-MM-dd, try parsing as ISO
     const parsed = parseISO(data.date);
     if (isValid(parsed)) {
       dateString = format(parsed, "yyyy-MM-dd");
-    } else {
-      // console.warn(`Invalid date string in fromFirestoreTraining: ${data.date}. Keeping original.`);
     }
   }
-
 
   return {
     id: docSnap.id,
@@ -170,34 +166,30 @@ export const updateTraining = async (teamId: string, trainingId: string, data: P
 
   const dateValue = data.date;
 
-  if (dateValue !== undefined && dateValue !== null) {
-    if (typeof dateValue === 'string') {
-      try {
-        let parsedDate;
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-          parsedDate = parseISO(dateValue + "T00:00:00Z");
-        } else {
-          parsedDate = parseISO(dateValue);
-        }
-        if (isValid(parsedDate)) {
-          updateData.date = format(parsedDate, "yyyy-MM-dd");
-        } else {
-          console.error(`Date string "${dateValue}" in updateTraining is not a valid date format. TrainingId: ${trainingId}. Date will not be updated.`);
-        }
-      } catch (e) {
-        console.error(`Error parsing date string "${dateValue}" in updateTraining. TrainingId: ${trainingId}. Date will not be updated. Error: ${e}`);
+  if (dateValue === null || dateValue === undefined) {
+    // No change to date
+  } else if (typeof dateValue === 'string') {
+    try {
+      let parsedDate;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+        parsedDate = parseISO(dateValue + "T00:00:00Z"); 
+      } else {
+        parsedDate = parseISO(dateValue);
       }
-    } else if (typeof dateValue === 'object') {
-        if (dateValue instanceof Date) {
-            updateData.date = format(dateValue, "yyyy-MM-dd");
-        } else if ('toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
-            updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
-        } else {
-             console.error(`updateTraining received an unhandled object type for date. TrainingId: ${trainingId}, Value:`, dateValue);
-        }
-    } else {
-      console.error(`updateTraining received an unexpected non-object, non-string date type. TrainingId: ${trainingId}, Value:`, dateValue, `Type: ${typeof dateValue}`);
+      if (isValid(parsedDate)) {
+        updateData.date = format(parsedDate, "yyyy-MM-dd");
+      } else {
+        console.error(`Date string "${dateValue}" in updateTraining is not valid. TrainingId: ${trainingId}.`);
+      }
+    } catch (e) {
+      console.error(`Error parsing date string "${dateValue}" in updateTraining. TrainingId: ${trainingId}. Error: ${e}`);
     }
+  } else if (dateValue instanceof Date) {
+    updateData.date = format(dateValue, "yyyy-MM-dd");
+  } else if (typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+    updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+  } else {
+    console.error(`updateTraining received an unhandled type for date. TrainingId: ${trainingId}, Value:`, dateValue);
   }
   
   for (const key in data) {
@@ -240,4 +232,3 @@ export const unarchiveTraining = async (teamId: string, trainingId: string): Pro
   const trainingDocRef = getTrainingDocRef(teamId, trainingId);
   await updateDoc(trainingDocRef, { isArchived: false });
 };
-

@@ -11,7 +11,7 @@ import {
   orderBy,
   getDoc,
   writeBatch, 
-  Timestamp, 
+  type Timestamp, // Ensure Timestamp is imported
   where, 
 } from 'firebase/firestore';
 import { format, parseISO, isValid } from "date-fns"; 
@@ -63,9 +63,8 @@ const fromFirestoreRefereeingAssignment = (docSnap: any): RefereeingAssignment =
 export const addRefereeingAssignment = async (teamId: string, assignmentData: Omit<RefereeingAssignment, 'id' | 'isArchived' | 'date'> & { date: string | Date }): Promise<string> => {
   let dateString: string;
   if (typeof assignmentData.date === 'string') {
-    // Check if the string is already in "yyyy-MM-dd" format or a full ISO string
     if (/^\d{4}-\d{2}-\d{2}$/.test(assignmentData.date)) {
-        const parsed = parseISO(assignmentData.date + "T00:00:00Z"); // Treat as local date
+        const parsed = parseISO(assignmentData.date + "T00:00:00Z"); 
         if (isValid(parsed)) {
             dateString = assignmentData.date;
         } else {
@@ -73,7 +72,6 @@ export const addRefereeingAssignment = async (teamId: string, assignmentData: Om
             throw new Error("Invalid date format. Please use YYYY-MM-DD.");
         }
     } else { 
-        // Try parsing as a full ISO string
         const parsedDate = parseISO(assignmentData.date);
         if (isValid(parsedDate)) {
             dateString = format(parsedDate, "yyyy-MM-dd");
@@ -138,50 +136,41 @@ export const updateRefereeingAssignment = async (
 
   const dateValue = data.date;
 
-  if (dateValue !== undefined && dateValue !== null) {
-    if (typeof dateValue === 'string') {
-      try {
-        let parsedDate;
-        // Check for "yyyy-MM-dd" format first
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-          // Append time to avoid timezone issues with parseISO for date-only strings
-          parsedDate = parseISO(dateValue + "T00:00:00Z"); 
-        } else {
-          // Try parsing as a full ISO string
-          parsedDate = parseISO(dateValue);
-        }
-
-        if (isValid(parsedDate)) {
-          updateData.date = format(parsedDate, "yyyy-MM-dd");
-        } else {
-          console.error(`Date string "${dateValue}" in updateRefereeingAssignment is not a valid date format. Date will not be updated. AssignmentId: ${assignmentId}`);
-        }
-      } catch (e) {
-        console.error(`Error parsing date string "${dateValue}" in updateRefereeingAssignment. Date will not be updated. AssignmentId: ${assignmentId}, Error: ${e}`);
+  if (dateValue === null || dateValue === undefined) {
+    // If date is explicitly set to null or undefined, we might not update it,
+    // or handle as per requirements (e.g., remove the field if Firestore allows via `deleteField()`).
+    // For now, if null/undefined, it means no change to the date field.
+  } else if (typeof dateValue === 'string') {
+    try {
+      let parsedDate;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+        parsedDate = parseISO(dateValue + "T00:00:00Z"); 
+      } else {
+        parsedDate = parseISO(dateValue);
       }
-    } else if (typeof dateValue === 'object') { // Ensures dateValue is an object, not null (already checked), not string
-        if (dateValue instanceof Date) { // Now safe to use instanceof
-            updateData.date = format(dateValue, "yyyy-MM-dd");
-        } else if ('toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') { // Duck-typing for Firestore Timestamp
-            updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
-        } else {
-            console.error(`updateRefereeingAssignment received an unhandled object type for date. AssignmentId: ${assignmentId}, Value:`, dateValue);
-        }
-    } else {
-      // This path should ideally not be hit if the type 'string | Date | Timestamp | null | undefined' is accurate for data.date
-      console.error(`updateRefereeingAssignment received an unexpected non-object, non-string date type. AssignmentId: ${assignmentId}, Value:`, dateValue, `Type: ${typeof dateValue}`);
+      if (isValid(parsedDate)) {
+        updateData.date = format(parsedDate, "yyyy-MM-dd");
+      } else {
+        console.error(`Date string "${dateValue}" in updateRefereeingAssignment is not a valid date format. AssignmentId: ${assignmentId}`);
+      }
+    } catch (e) {
+      console.error(`Error parsing date string "${dateValue}" in updateRefereeingAssignment. AssignmentId: ${assignmentId}, Error: ${e}`);
     }
+  } else if (dateValue instanceof Date) { 
+    updateData.date = format(dateValue, "yyyy-MM-dd");
+  } else if (typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') { 
+    updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+  } else {
+    console.error(`updateRefereeingAssignment received an unhandled type for date. AssignmentId: ${assignmentId}, Value:`, dateValue, `Type: ${typeof dateValue}`);
   }
   
-  // Populate other fields for update, excluding date which is handled above
   for (const key in data) {
     if (key !== 'date' && Object.prototype.hasOwnProperty.call(data, key)) {
-      const K = key as keyof typeof data; // Type assertion for key
-      // Handle cases where optional fields might be explicitly set to null by a form, convert to Firestore-friendly values (e.g., empty string or remove)
+      const K = key as keyof typeof data; 
       if (K === 'assignedPlayerUids' && (data as any)[K] === null) {
-        updateData[K] = []; // Default to empty array if null
+        updateData[K] = []; 
       } else if ((K === 'homeTeam' || K === 'notes') && ((data as any)[K] === null || (data as any)[K] === undefined)) {
-        updateData[K] = ""; // Default to empty string
+        updateData[K] = ""; 
       } else {
         updateData[K] = data[K];
       }
@@ -209,4 +198,3 @@ export const unarchiveRefereeingAssignment = async (teamId: string, assignmentId
   const assignmentDocRef = getRefereeingAssignmentDocRef(teamId, assignmentId);
   await updateDoc(assignmentDocRef, { isArchived: false });
 };
-
