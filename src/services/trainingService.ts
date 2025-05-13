@@ -54,11 +54,18 @@ const getTrainingDocRef = (teamId: string, trainingId: string) => {
 
 const fromFirestoreTraining = (docSnap: any): Training => {
   const data = docSnap.data();
+  let dateString = data.date;
+  if (data.date && typeof data.date.toDate === 'function') { // Check if it's a Firestore Timestamp
+    dateString = format(data.date.toDate(), "yyyy-MM-dd");
+  } else if (data.date instanceof Date) { // Check if it's a JS Date (less likely from Firestore direct)
+    dateString = format(data.date, "yyyy-MM-dd");
+  }
+  // Assuming date is already a string if not Timestamp or Date, or needs to be validated if other types are possible
+
   return {
     id: docSnap.id,
     ...data,
-    // Ensure date is a string; if it's a Timestamp, convert it.
-    date: data.date && typeof data.date.toDate === 'function' ? format(data.date.toDate(), "yyyy-MM-dd") : data.date,
+    date: dateString,
     attendance: data.attendance || {}, 
     isArchived: data.isArchived || false, // Default to false
   } as Training;
@@ -160,16 +167,20 @@ export const updateTraining = async (teamId: string, trainingId: string, data: P
         console.error(`Date string "${dateValue}" in updateTraining is not a valid ISO string or yyyy-MM-dd format. Date will not be updated. Error: ${e}`);
       }
     }
-  } else if (dateValue instanceof Date) {
-      updateData.date = format(dateValue, "yyyy-MM-dd");
-  } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
-      updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+  } else if (typeof dateValue === 'object' && dateValue !== null) {
+    if (dateValue instanceof Date) {
+        updateData.date = format(dateValue, "yyyy-MM-dd");
+    } else if ('toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+        updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+    } else {
+        console.error(`updateTraining received an unhandled object type for date. Value:`, dateValue);
+    }
   } else if (dateValue === null) {
       console.warn(`updateTraining received null for date. Date will not be updated for training: ${trainingId}`);
   } else if (dateValue === undefined) {
-      // Date is not being updated, this is fine.
+      // Date is not being updated, fine.
   } else {
-      console.error(`updateTraining received an unhandled date type/value for training ${trainingId}. Value:`, dateValue);
+      console.error(`updateTraining received an unhandled date type/value for training ${trainingId}. Value:`, dateValue, `Type: ${typeof dateValue}`);
   }
   
 

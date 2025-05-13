@@ -133,16 +133,20 @@ export const updateMatch = async (teamId: string, matchId: string, data: Partial
         console.error(`Date string "${dateValue}" in updateMatch is not a valid ISO string or yyyy-MM-dd format. Date will not be updated. Error: ${e}`);
       }
     }
-  } else if (dateValue instanceof Date) {
-      updateData.date = format(dateValue, "yyyy-MM-dd");
-  } else if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
-      updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+  } else if (typeof dateValue === 'object' && dateValue !== null) {
+    if (dateValue instanceof Date) {
+        updateData.date = format(dateValue, "yyyy-MM-dd");
+    } else if ('toDate' in dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+        updateData.date = format((dateValue as Timestamp).toDate(), "yyyy-MM-dd");
+    } else {
+        console.error(`updateMatch received an unhandled object type for date. Value:`, dateValue);
+    }
   } else if (dateValue === null) {
       console.warn(`updateMatch received null for date. Date will not be updated for match: ${matchId}`);
   } else if (dateValue === undefined) {
-      // Date is not being updated, this is fine.
+      // Date is not being updated, fine.
   } else {
-      console.error(`updateMatch received an unhandled date type/value for match ${matchId}. Value:`, dateValue);
+      console.error(`updateMatch received an unhandled date type/value for match ${matchId}. Value:`, dateValue, `Type: ${typeof dateValue}`);
   }
   
 
