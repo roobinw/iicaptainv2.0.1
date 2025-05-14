@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import type { Location, Timestamp } from '@/types';
+import type { Location } from '@/types'; // Timestamp type for interfaces is fine, but not for instanceof
 import {
   collection,
   doc,
@@ -12,6 +12,7 @@ import {
   orderBy,
   serverTimestamp,
   getDoc,
+  Timestamp, // Import actual Timestamp class from Firestore for instanceof checks
   type DocumentData,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore';
@@ -47,13 +48,25 @@ const getLocationDocRef = (teamId: string, locationId: string) => {
 
 const fromFirestoreLocation = (docSnap: QueryDocumentSnapshot<DocumentData>): Location => {
   const data = docSnap.data();
+  // Check if data.createdAt is a Firestore Timestamp object before calling toDate()
+  const createdAtValue = data.createdAt;
+  let formattedCreatedAt: string | undefined = undefined;
+
+  if (createdAtValue instanceof Timestamp) {
+    formattedCreatedAt = format(createdAtValue.toDate(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
+  } else if (typeof createdAtValue === 'string') {
+    // If it's already a string, use it as is (assuming it's in correct format or to be handled by UI)
+    formattedCreatedAt = createdAtValue;
+  }
+  // If createdAtValue is undefined or any other type, formattedCreatedAt remains undefined
+
   return {
     id: docSnap.id,
     name: data.name,
     address: data.address,
-    createdAt: data.createdAt instanceof Timestamp ? format(data.createdAt.toDate(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : data.createdAt,
+    createdAt: formattedCreatedAt,
     notes: data.notes,
-  } as Location;
+  } as Location; // Cast as Location, assuming name and address are always present
 };
 
 export const addLocation = async (
