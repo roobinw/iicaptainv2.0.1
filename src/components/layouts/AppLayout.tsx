@@ -42,7 +42,7 @@ const navItems: NavItem[] = [
 
 // New settings navigation items
 const settingsNavItems: NavItem[] = [
-  { href: "/settings", label: "My Profile", icon: "User", isSettingsSection: true },
+  // { href: "/settings", label: "My Profile", icon: "User", isSettingsSection: true }, // Removed this line
   { href: "/settings/locations", label: "Locations", icon: "MapPin", adminOnly: true, isSettingsSection: true },
   // Add future settings links here (e.g., Opponents)
 ];
