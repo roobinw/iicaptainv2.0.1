@@ -27,6 +27,7 @@ interface NavItem {
   label: string;
   icon: keyof typeof Icons;
   adminOnly?: boolean;
+  isSettingsSection?: boolean; // To group settings items
 }
 
 const navItems: NavItem[] = [
@@ -36,7 +37,16 @@ const navItems: NavItem[] = [
   { href: "/trainings", label: "Trainings", icon: "Trainings" },
   { href: "/refereeing", label: "Refereeing", icon: "Refereeing" },
   { href: "/players", label: "Players", icon: "Players" },
+  // Settings section will be handled separately or items added here with a flag
 ];
+
+// New settings navigation items
+const settingsNavItems: NavItem[] = [
+  { href: "/settings", label: "My Profile", icon: "User", isSettingsSection: true },
+  { href: "/settings/locations", label: "Locations", icon: "MapPin", adminOnly: true, isSettingsSection: true },
+  // Add future settings links here (e.g., Opponents)
+];
+
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, currentTeam, logout, isLoading: authIsLoading } = useAuth();
@@ -112,37 +122,35 @@ export function AppLayout({ children }: { children: ReactNode }) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
 
-  const sidebarNavigation = (isMobileContext = false) => (
-    <nav className="grid items-start justify-items-center gap-3 px-2 py-4"> 
-      {navItems.map((item) => {
-        if (item.adminOnly && user?.role !== "admin") { 
-          return null;
-        }
-        const IconComponent = Icons[item.icon];
-        return (
-          <Tooltip key={item.href} delayDuration={0}>
-            <TooltipTrigger asChild>
-              <Link
-                href={item.href}
-                onClick={() => isMobileContext && setIsMobileSheetOpen(false)} 
-                className={cn(
-                  "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-10 md:w-10", 
-                  pathname.startsWith(item.href) 
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground"
-                )}
-              >
-                <IconComponent className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5" />
-                <span className="sr-only">{item.label}</span>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side={isMobileContext ? "right" : "right"} className="bg-card text-card-foreground border-border">
-              {item.label}
-            </TooltipContent>
-          </Tooltip>
-        );
-      })}
-    </nav>
+  const renderNavItems = (itemsToRender: NavItem[], isMobileContext = false) => (
+    itemsToRender.map((item) => {
+      if (item.adminOnly && user?.role !== "admin") { 
+        return null;
+      }
+      const IconComponent = Icons[item.icon];
+      return (
+        <Tooltip key={item.href} delayDuration={0}>
+          <TooltipTrigger asChild>
+            <Link
+              href={item.href}
+              onClick={() => isMobileContext && setIsMobileSheetOpen(false)} 
+              className={cn(
+                "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-10 md:w-10", 
+                pathname === item.href || (item.href !== "/settings" && pathname.startsWith(item.href)) || (item.href === "/settings" && pathname.startsWith("/settings"))
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground"
+              )}
+            >
+              <IconComponent className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5" />
+              <span className="sr-only">{item.label}</span>
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent side={isMobileContext ? "right" : "right"} className="bg-card text-card-foreground border-border">
+            {item.label}
+          </TooltipContent>
+        </Tooltip>
+      );
+    })
   );
 
 
@@ -192,9 +200,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
-          <div className="flex-1 overflow-auto">
-            {sidebarNavigation(false)}
-          </div>
+          <nav className="grid items-start justify-items-center gap-3 px-2 py-4">
+            {renderNavItems(navItems, false)}
+            {/* Divider for settings if there are settings items */}
+            {(settingsNavItems.some(item => !item.adminOnly || user?.role === "admin")) && (
+                <div className="w-full px-2 my-2">
+                    <hr className="border-sidebar-border" />
+                </div>
+            )}
+            {renderNavItems(settingsNavItems, false)}
+          </nav>
         </div>
         
         {user && (
@@ -241,7 +256,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     </Link>
                   </div>
                 
-                <div className="flex-1 overflow-auto">{sidebarNavigation(true)}</div>
+                <nav className="grid items-start justify-items-center gap-3 px-2 py-4 flex-1 overflow-auto">
+                    {renderNavItems(navItems, true)}
+                    {/* Divider for settings if there are settings items */}
+                    {(settingsNavItems.some(item => !item.adminOnly || user?.role === "admin")) && (
+                        <div className="w-full px-2 my-2">
+                            <hr className="border-sidebar-border" />
+                        </div>
+                    )}
+                    {renderNavItems(settingsNavItems, true)}
+                </nav>
                  {user && (
                   <div className="mt-auto p-1 flex justify-center">
                     <DropdownMenu>

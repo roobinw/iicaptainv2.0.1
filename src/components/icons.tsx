@@ -29,8 +29,9 @@ import {
   MessageSquare,
   MessagesSquare, 
   Archive, 
-  ArchiveX, // Added for Unarchive
+  ArchiveX, 
   Send,
+  MapPin, // Added for Locations
   type LucideProps,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -52,7 +53,7 @@ export const Icons = {
   ChevronRight: ChevronRight,
   MoreHorizontal: MoreHorizontal,
   Settings: Settings,
-  User: UserCircle,
+  User: UserCircle, // For My Profile
   Attendance: ClipboardList, 
   AlertCircle: AlertCircle,
   CheckCircle2: CheckCircle2,
@@ -69,9 +70,10 @@ export const Icons = {
   MessageSquare: MessageSquare, 
   MessagesSquare: MessagesSquare, 
   Archive: Archive, 
-  ArchiveX: ArchiveX, // Added for Unarchive
+  ArchiveX: ArchiveX, 
   Send: Send, 
   ClipboardList: ClipboardList, 
+  MapPin: MapPin, // Added for Locations
   TeamLogo: ({ className, ...props }: TeamLogoProps) => ( 
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -89,8 +91,3 @@ export const Icons = {
   ),
   CalendarDays: CalendarDays,
 };
-
-
-
-
-
