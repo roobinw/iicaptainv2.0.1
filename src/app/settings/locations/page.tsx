@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"; // Added DialogTrigger
 import { Icons } from "@/components/icons";
 import { AddEditLocationForm, type LocationFormValues } from "@/components/add-edit-location-form";
 import { LocationList } from "@/components/location-list";
