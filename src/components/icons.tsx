@@ -31,7 +31,8 @@ import {
   Archive, 
   ArchiveX, 
   Send,
-  MapPin, // Added for Locations
+  Share2, 
+  BarChart3,
   type LucideProps,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -44,7 +45,7 @@ export const Icons = {
   Dashboard: LayoutDashboard,
   Matches: CalendarDays, 
   Trainings: Dumbbell, 
-  Players: Users,
+  Players: Users, // This is used for Team Settings link in user dropdown
   Logout: LogOut,
   Add: PlusCircle,
   Edit: Edit,
@@ -52,8 +53,8 @@ export const Icons = {
   ChevronDown: ChevronDown,
   ChevronRight: ChevronRight,
   MoreHorizontal: MoreHorizontal,
-  Settings: Settings,
-  User: UserCircle, // For My Profile
+  Settings: Settings, // Used for Profile Settings link
+  User: UserCircle, 
   Attendance: ClipboardList, 
   AlertCircle: AlertCircle,
   CheckCircle2: CheckCircle2,
@@ -73,7 +74,9 @@ export const Icons = {
   ArchiveX: ArchiveX, 
   Send: Send, 
   ClipboardList: ClipboardList, 
-  MapPin: MapPin, // Added for Locations
+  Share2: Share2,
+  Statistics: BarChart3,
+  // MapPin removed as Locations feature is removed
   TeamLogo: ({ className, ...props }: TeamLogoProps) => ( 
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -90,4 +93,5 @@ export const Icons = {
     </svg>
   ),
   CalendarDays: CalendarDays,
+  Users: Users, // Keep for opponents icon or other uses
 };

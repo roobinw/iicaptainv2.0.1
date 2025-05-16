@@ -21,7 +21,7 @@ Your Firestore database is now ready.
 
 ## 2. Firestore Data Structure
 
-The application uses the following collection and subcollection structure to support multi-tenancy (each team has its own environment) and roles (admin, player).
+The application uses the following collection and subcollection structure to support multi-tenancy (each team has its own environment) and roles (admin, member).
 
 ### Collection: `teams`
 
@@ -32,6 +32,7 @@ This is a top-level collection where each document represents a unique team.
     *   `name`: (String) The name of the team (e.g., "The Eagles").
     *   `ownerUid`: (String) The Firebase Auth UID of the user who created/owns the team. This user is typically the first admin.
     *   `createdAt`: (Timestamp) Server timestamp indicating when the team was created.
+    *   `inviteCode`: (String) A shareable code for new members to join this team. Generated on team creation, resettable by admins.
 
 *   **Subcollection of `teams/{teamId}`: `matches`**
     *   Stores all matches for a specific team.
@@ -41,11 +42,30 @@ This is a top-level collection where each document represents a unique team.
         *   `time`: (String) Match time in "HH:mm" format (24-hour).
         *   `opponent`: (String) Name of the opponent team.
         *   `location`: (String, optional) Venue of the match.
-        *   `attendance`: (Map) Stores player attendance.
-            *   Keys: Player Firebase Auth UIDs (String).
+        *   `attendance`: (Map) Stores member attendance.
+            *   Keys: Member Firebase Auth UIDs (String).
             *   Values: (String) "present", "absent", "excused", or "unknown".
             *   Example: `{"firebaseUserUid1": "present", "firebaseUserUid2": "absent"}`
         *   `isArchived`: (Boolean) `true` if the match is archived, `false` otherwise. Defaults to `false`.
+    *   **Subcollection of `matches/{matchId}`: `playerStats`**
+        * Stores individual player statistics for this specific match.
+        * **Document ID:** Player's Firebase Auth UID (String).
+        * **Fields:**
+            * `playerId`: (String) Firebase Auth UID of the player. (Matches the Document ID).
+            * `goals`: (Number) Goals scored by the player in this match. Defaults to 0.
+            * `assists`: (Number) Assists made by the player in this match. Defaults to 0.
+            * `saves`: (Number) Saves made by the player (if applicable, e.g., goalkeeper). Defaults to 0.
+            * `yellowCards`: (Number) Number of yellow cards received. Defaults to 0.
+            * `redCards`: (Number) Number of red cards received. Defaults to 0.
+            * `updatedAt`: (Timestamp) Server timestamp of when these stats were last updated.
+    *   **Subcollection of `matches/{matchId}`: `availability`**
+        *   Stores individual player availability for this specific match.
+        *   **Document ID:** Player's Firebase Auth UID (String).
+        *   **Fields:**
+            *   `playerId`: (String) Firebase Auth UID of the player (matches Document ID).
+            *   `status`: (String) Enum: "available", "unavailable", "maybe", "unknown".
+            *   `notes`: (String, optional) Any notes regarding availability.
+            *   `updatedAt`: (Timestamp) Server timestamp of when this availability was last updated.
 
 
 *   **Subcollection of `teams/{teamId}`: `trainings`**
@@ -56,8 +76,16 @@ This is a top-level collection where each document represents a unique team.
         *   `time`: (String) Training time in "HH:mm" format (24-hour).
         *   `location`: (String) Location of the training session.
         *   `description`: (String, optional) Additional details about the training.
-        *   `attendance`: (Map) Stores player attendance (same structure as in `matches`).
+        *   `attendance`: (Map) Stores member attendance (same structure as in `matches`).
         *   `isArchived`: (Boolean) `true` if the training is archived, `false` otherwise. Defaults to `false`.
+    *   **Subcollection of `trainings/{trainingId}`: `availability`**
+        *   Stores individual player availability for this specific training.
+        *   **Document ID:** Player's Firebase Auth UID (String).
+        *   **Fields:**
+            *   `playerId`: (String) Firebase Auth UID of the player (matches Document ID).
+            *   `status`: (String) Enum: "available", "unavailable", "maybe", "unknown".
+            *   `notes`: (String, optional) Any notes regarding availability.
+            *   `updatedAt`: (Timestamp) Server timestamp of when this availability was last updated.
 
 *   **Subcollection of `teams/{teamId}`: `refereeingAssignments`**
     *   Stores all refereeing assignments for a specific team.
@@ -66,7 +94,7 @@ This is a top-level collection where each document represents a unique team.
         *   `date`: (String) Assignment date in "yyyy-MM-dd" format.
         *   `time`: (String) Assignment time in "HH:mm" format (24-hour).
         *   `homeTeam`: (String, optional) The name of the home team for the match being refereed.
-        *   `assignedPlayerUids`: (Array of Strings) Firebase Auth UIDs of the players assigned to referee.
+        *   `assignedPlayerUids`: (Array of Strings) Firebase Auth UIDs of the members assigned to referee.
         *   `notes`: (String, optional) Additional details or instructions for the assignment.
         *   `isArchived`: (Boolean) `true` if the assignment is archived, `false` otherwise. Defaults to `false`.
 
@@ -81,14 +109,27 @@ This is a top-level collection where each document represents a unique team.
         *   `teamId`: (String) The ID of the team this message belongs to (matches parent `teamId`).
         *   `isArchived`: (Boolean) `true` if the message is archived, `false` otherwise. Defaults to `false`.
 
-*   **Subcollection of `teams/{teamId}`: `locations` (NEW)**
-    *   Stores all custom locations for a specific team (e.g., training grounds, common away venues).
+*   **Subcollection of `teams/{teamId}`: `opponents`**
+    *   Stores all opponents for a specific team.
     *   **Document ID:** Auto-generated by Firestore.
     *   **Fields:**
-        *   `name`: (String) The name of the location (e.g., "Main Training Field", "City Sports Complex Pitch 3").
-        *   `address`: (String) The full address of the location.
-        *   `createdAt`: (Timestamp) Server timestamp indicating when the location was added.
-        *   `notes`: (String, optional) Additional notes about the location (e.g., parking info, specific entrance).
+        *   `name`: (String) The name of the opponent team.
+        *   `contactPerson`: (String, optional) Name of a contact person for the opponent.
+        *   `contactEmail`: (String, optional) Email of the contact person.
+        *   `contactPhone`: (String, optional) Phone number of the contact person.
+        *   `homeGround`: (String, optional) Opponent's usual home ground/location.
+        *   `createdAt`: (Timestamp) Server timestamp indicating when the opponent was added.
+
+*   **Subcollection of `teams/{teamId}`: `equipment`**
+    *   Stores all equipment items for a specific team.
+    *   **Document ID:** Auto-generated by Firestore.
+    *   **Fields:**
+        *   `name`: (String) The name of the equipment item (e.g., "Size 5 Balls", "Training Cones").
+        *   `description`: (String, optional) Further details about the equipment.
+        *   `quantity`: (Number) How many of this item the team possesses.
+        *   `condition`: (String, enum: "new", "good", "fair", "poor") The current condition of the equipment.
+        *   `createdAt`: (Timestamp) Server timestamp indicating when the equipment was added.
+
 
 ### Collection: `users`
 
@@ -99,10 +140,22 @@ This is a top-level collection where each document represents a user profile.
     *   `uid`: (String) The Firebase Auth UID. This field must match the document ID.
     *   `name`: (String) Full name of the user.
     *   `email`: (String) Email address of the user (stored in lowercase).
-    *   `role`: (String) User's role within their team. Can be "admin" or "player".
+    *   `isAdmin`: (Boolean) `true` if the user is an admin for their team, `false` otherwise.
+    *   `canParticipateInMatches`: (Boolean) `true` if the member is eligible for matches. Defaults to `true`.
+    *   `canParticipateInTrainings`: (Boolean) `true` if the member is eligible for trainings. Defaults to `true`.
+    *   `canBeAssignedRefereeing`: (Boolean) `true` if the member can be assigned refereeing duties. Defaults to `true`.
+    *   `isCoach`: (Boolean) `true` if the member has coaching responsibilities. Defaults to `false`.
+    *   `isTrainer`: (Boolean) `true` if the member has trainer/physio responsibilities. Defaults to `false`.
     *   `teamId`: (String) The ID of the team (from the `teams` collection) that this user belongs to. This is crucial for multi-tenancy.
     *   `avatarUrl`: (String, optional) URL to the user's profile picture.
     *   `createdAt`: (Timestamp) Server timestamp indicating when the user profile was created.
+    *   `jerseyNumber`: (Number, optional) Player's jersey number.
+    *   `position`: (String, optional) Player's preferred position.
+    *   `dateOfBirth`: (String, "yyyy-MM-dd", optional) Player's date of birth.
+    *   `emergencyContactName`: (String, optional) Name of emergency contact.
+    *   `emergencyContactPhone`: (String, optional) Phone of emergency contact.
+    *   `medicalNotes`: (String, optional) Any relevant medical notes.
+
 
 ### Collection: `tickets`
 
@@ -128,6 +181,7 @@ This is a top-level collection where each document represents a support ticket.
 {
   "name": "The Roaring Lions",
   "ownerUid": "firebaseUserUidAbc",
+  "inviteCode": "LIONS01",
   "createdAt": "October 26, 2023 at 10:00:00 AM UTC+2"
 }
 ```
@@ -140,12 +194,34 @@ This is a top-level collection where each document represents a support ticket.
   "opponent": "The Sharks",
   "location": "Community Stadium",
   "attendance": {
-    "playerFirebaseUidXyz": "present",
-    "playerFirebaseUidPqr": "excused"
+    "memberFirebaseUidXyz": "present",
+    "memberFirebaseUidPqr": "excused"
   },
   "isArchived": false
 }
 ```
+**Example `playerStats` subcollection document (`/teams/uniqueTeamId123/matches/matchId456/playerStats/memberFirebaseUidXyz`):**
+```json
+{
+  "playerId": "memberFirebaseUidXyz",
+  "goals": 2,
+  "assists": 1,
+  "saves": 0,
+  "yellowCards": 0,
+  "redCards": 0,
+  "updatedAt": "November 05, 2023 at 17:00:00 PM UTC+1"
+}
+```
+**Example `availability` subcollection document (`/teams/uniqueTeamId123/matches/matchId456/availability/memberFirebaseUidXyz`):**
+```json
+{
+  "playerId": "memberFirebaseUidXyz",
+  "status": "available",
+  "notes": "Feeling great!",
+  "updatedAt": "November 02, 2023 at 09:00:00 AM UTC+1"
+}
+```
+
 
 **Example `trainings` subcollection document (`/teams/uniqueTeamId123/trainings/trainingId789`):**
 ```json
@@ -155,7 +231,7 @@ This is a top-level collection where each document represents a support ticket.
   "location": "Main Training Field",
   "description": "Tactical drills and fitness.",
   "attendance": {
-    "playerFirebaseUidXyz": "present"
+    "memberFirebaseUidXyz": "present"
   },
   "isArchived": false
 }
@@ -167,7 +243,7 @@ This is a top-level collection where each document represents a support ticket.
   "date": "2023-11-12",
   "time": "10:00",
   "homeTeam": "The Bears",
-  "assignedPlayerUids": ["playerFirebaseUidMno", "playerFirebaseUidJkl"],
+  "assignedPlayerUids": ["memberFirebaseUidMno", "memberFirebaseUidJkl"],
   "notes": "Remember to bring whistles and cards. Arrive 30 mins early.",
   "isArchived": false
 }
@@ -185,13 +261,26 @@ This is a top-level collection where each document represents a support ticket.
 }
 ```
 
-**Example `locations` subcollection document (`/teams/uniqueTeamId123/locations/locationIdDef`):**
+**Example `opponents` subcollection document (`/teams/uniqueTeamId123/opponents/opponentIdDef`):**
 ```json
 {
-  "name": "Community Sports Hall - Court 2",
-  "address": "123 Main St, Anytown, USA",
-  "createdAt": "November 20, 2023 at 11:00:00 AM UTC+1",
-  "notes": "Parking available at the back. Use side entrance."
+  "name": "The Sharks",
+  "contactPerson": "Coach Dave",
+  "contactEmail": "dave@thesharks.com",
+  "contactPhone": "555-1234",
+  "homeGround": "Ocean Arena",
+  "createdAt": "November 20, 2023 at 11:00:00 AM UTC+1"
+}
+```
+
+**Example `equipment` subcollection document (`/teams/uniqueTeamId123/equipment/equipmentIdGhi`):**
+```json
+{
+  "name": "Size 5 Match Balls",
+  "description": "Official league quality balls.",
+  "quantity": 10,
+  "condition": "good",
+  "createdAt": "November 21, 2023 at 02:00:00 PM UTC+1"
 }
 ```
 
@@ -201,21 +290,33 @@ This is a top-level collection where each document represents a support ticket.
   "uid": "firebaseUserUidAbc",
   "name": "Jane Doe",
   "email": "jane.doe@example.com",
-  "role": "admin",
+  "isAdmin": true,
+  "canParticipateInMatches": true,
+  "canParticipateInTrainings": true,
+  "canBeAssignedRefereeing": false,
+  "isCoach": true,
+  "isTrainer": false,
   "teamId": "uniqueTeamId123",
   "avatarUrl": "https://picsum.photos/seed/jane.doe@example.com/80/80",
-  "createdAt": "October 26, 2023 at 09:55:00 AM UTC+2"
+  "createdAt": "October 26, 2023 at 09:55:00 AM UTC+2",
+  "jerseyNumber": 10,
+  "position": "Forward"
 }
 ```
-**Example `users` document for a player added by an admin (`/users/newPlayerAuthUid789`):**
+**Example `users` document for a member added by an admin (`/users/newMemberAuthUid789`):**
 ```json
 {
-  "uid": "newPlayerAuthUid789",
-  "name": "John Player",
-  "email": "john.player@example.com",
-  "role": "player",
+  "uid": "newMemberAuthUid789",
+  "name": "John Member",
+  "email": "john.member@example.com",
+  "isAdmin": false,
+  "canParticipateInMatches": true,
+  "canParticipateInTrainings": true,
+  "canBeAssignedRefereeing": true,
+  "isCoach": false,
+  "isTrainer": false,
   "teamId": "uniqueTeamId123",
-  "avatarUrl": "https://picsum.photos/seed/john.player@example.com/80/80",
+  "avatarUrl": "https://picsum.photos/seed/john.member@example.com/80/80",
   "createdAt": "October 27, 2023 at 11:00:00 AM UTC+2"
 }
 ```
@@ -238,24 +339,25 @@ This is a top-level collection where each document represents a support ticket.
 ## 4. Initial Data and Security Rules
 
 *   **Initial Data:**
-    *   When a new user signs up via the app, they also provide a **Team Name** and their **own name**.
+    *   When a new user signs up via the app with no invite code, they provide a **Team Name** and their **own name**.
     *   The app then:
         1.  Creates their Firebase Authentication account.
-        2.  Creates a new team document in the `teams` collection with the provided team name and sets the new user as `ownerUid`.
-        3.  Creates their user profile document in the `users` collection (using their Firebase Auth UID as the document ID and the `uid` field), linking them to the newly created `teamId` and assigning them the `role: "admin"`.
-    *   Admins can then add other player profiles to their team via the "Players" page in the app. This:
-        1. Creates a new Firebase Authentication account for the player using an email and password provided by the admin.
-        2. Creates a `users` document for that player (using the new player's Firebase Auth UID as the document ID and the `uid` field), with `role: "player"` and the admin's `teamId`.
-    *   Matches, Trainings, and Refereeing Assignments are added by team admins through the app into their respective team's subcollections. They default to `isArchived: false`.
-    *   Messages are added by team admins via the dashboard message board. They default to `isArchived: false`.
-    *   Locations are added by team admins via the app into their team's `locations` subcollection.
-    *   Support tickets are created by any authenticated user via the "Support" page.
+        2.  Creates a new team document in the `teams` collection with the provided team name, a generated `inviteCode`, and sets the new user as `ownerUid`.
+        3.  Creates their user profile document in the `users` collection, linking them to the newly created `teamId` and setting `isAdmin: true` and default participation booleans.
+    *   When a new user signs up with a valid `inviteCode`:
+        1.  Creates their Firebase Authentication account.
+        2.  Finds the `teamId` associated with the `inviteCode`.
+        3.  Creates their user profile document in the `users` collection, linking them to the found `teamId` and setting `isAdmin: false` and default participation booleans.
+    *   Admins can edit member profiles (including their boolean roles/permissions) from the Team Settings page.
+    *   Matches, Trainings, and Refereeing Assignments are added by team admins. They default to `isArchived: false`.
+    *   Messages are added by team admins. They default to `isArchived: false`.
+    *   Opponents and Equipment are managed by admins within their team's subcollections.
+    *   Support tickets are created by any authenticated user.
 
 *   **Firestore Security Rules (VERY IMPORTANT):**
-    *   Default security rules (especially in "Production mode") are highly restrictive. You **must** configure Firestore Security Rules.
-    *   These rules enforce multi-tenancy (a user can only access data for their own team) and role-based access (only an admin can create/modify team-wide data like matches or other player profiles within their team).
-    *   **Carefully copy and paste the rules below into the Firebase console Rules editor.**
-    *   **If you encounter "Missing or insufficient permissions" errors, double-check that these rules are correctly applied and that your `users/{uid}` documents contain the correct `teamId` and `role` for the authenticated user.**
+    *   Default security rules are restrictive. You **must** configure Firestore Security Rules.
+    *   These rules enforce multi-tenancy and role-based access.
+    *   **If you encounter "Missing or insufficient permissions" errors, double-check these rules and user document data.**
 
     **Security Rules:**
     ```firestore-rules
@@ -264,12 +366,12 @@ This is a top-level collection where each document represents a support ticket.
     service cloud.firestore {
       match /databases/{database}/documents {
 
-        // Helper function to get requesting user's data (role, teamId)
+        // Helper function to get requesting user's data (isAdmin, teamId, etc.)
         // Returns user data if document exists, otherwise null.
         function getUserAuthData() {
-          // Construct the path string correctly using string concatenation for dynamic parts like request.auth.uid
-          let userDocumentPath = path('/databases/' + database + '/documents/users/' + request.auth.uid);
-          return exists(userDocumentPath) ? get(userDocumentPath).data : null;
+          return (request.auth != null && request.auth.uid != null && exists(path('/databases/' + database + '/documents/users/' + request.auth.uid)))
+            ? get(path('/databases/' + database + '/documents/users/' + request.auth.uid)).data
+            : null;
         }
 
         // Helper: Is the user signed in?
@@ -286,262 +388,205 @@ This is a top-level collection where each document represents a support ticket.
         // Helper: Is the requesting user an admin of the specified teamId?
         function isUserTeamAdmin(teamId) {
           let userAuthData = getUserAuthData(); 
-          return isUserTeamMember(teamId) && userAuthData != null && userAuthData.role == 'admin';
+          return isUserTeamMember(teamId) && userAuthData != null && userAuthData.isAdmin == true;
         }
         
         // Helper: Is the user creating/modifying their own document?
-        // (used when document ID is the user's auth UID)
         function isOwner(userId) {
           return request.auth != null && request.auth.uid == userId;
         }
 
         // Teams collection
         match /teams/{teamId} {
-          // Any authenticated user who is part of this team can read team details.
-          allow read: if isUserTeamMember(teamId);
+          // Any SIGNED IN user can read team details (e.g., to verify an invite code during signup or fetch team name).
+          allow read: if isSignedIn(); 
           // Only an authenticated user can create a team, and they must be its owner.
-          allow create: if isSignedIn() && request.auth.uid == request.resource.data.ownerUid;
-          // Only an admin of this team can update its name (ownerUid should not be changed by client).
-          allow update: if isUserTeamAdmin(teamId) && request.resource.data.ownerUid == resource.data.ownerUid;
-          // Deleting teams is typically a backend/admin function, not client-side.
-          allow delete: if false; 
+          // inviteCode must be set on create.
+          allow create: if isSignedIn() && 
+                           request.auth.uid == request.resource.data.ownerUid &&
+                           request.resource.data.inviteCode != null;
+          // Only an admin of this team can update its name or reset its inviteCode.
+          // ownerUid should not be changed by client.
+          allow update: if isUserTeamAdmin(teamId) && 
+                           request.resource.data.ownerUid == resource.data.ownerUid &&
+                           (request.resource.data.name != resource.data.name || 
+                            request.resource.data.inviteCode != resource.data.inviteCode);
+          allow delete: if false; // Deleting teams is typically a backend/admin function
         }
 
         // Users collection
         match /users/{userId} {
-          // Any signed-in user can read any user profile (e.g., to see names for attendance or their own profile).
-          allow read: if isSignedIn();
+          // Any signed-in user can read any user profile within their own team.
+          // For broader access (e.g., admin viewing any profile for assignment), rules might need adjustment or be handled by specific queries.
+          allow read: if isSignedIn() && 
+                         (isOwner(userId) || (getUserAuthData() != null && resource.data.teamId == getUserAuthData().teamId));
+
 
           // Allow creation of user documents under two conditions:
-          // 1. A user creating their own profile (documentId {userId} == auth.uid).
-          // 2. An admin creating a player profile (and associated auth account) for their team.
-          //    The documentId {userId} will be the new player's Firebase Auth UID.
+          // 1. A user creating their own profile (documentId {userId} == auth.uid) during signup.
+          // 2. (REMOVED - Admins no longer create auth accounts directly for other users)
           allow create: if isSignedIn() &&
                           (
                             // Case 1: User creating their own profile (e.g., during signup)
-                            // Here, {userId} in `match /users/{userId}` is expected to be `request.auth.uid`.
-                            ( isOwner(userId) && 
-                              request.resource.data.uid == request.auth.uid && // uid field must match auth uid
-                              request.resource.data.email != null && 
-                              request.resource.data.name != null &&
-                              request.resource.data.role != null && // e.g., 'admin' set by signup process
-                              request.resource.data.teamId != null    // teamId set by signup process
-                            ) ||
-                            // Case 2: Admin creating a player profile (and auth account) for their team
-                            // Here, {userId} in `match /users/{userId}` is the new player's Firebase Auth UID.
-                            // The `uid` field within the document will also be this new Firebase Auth UID.
-                            ( getUserAuthData() != null && // Admin (requesting user) must have a profile
-                              getUserAuthData().role == 'admin' && // Admin must be an admin
-                              request.resource.data.teamId == getUserAuthData().teamId && // New user's teamId matches admin's teamId
-                              request.resource.data.uid == userId && // The 'uid' field in the new doc matches the doc ID (new player's auth UID)
-                              request.resource.data.email != null &&
-                              request.resource.data.name != null &&
-                              request.resource.data.role == 'player' // Role for admin-added player is 'player'
-                            )
+                            isOwner(userId) && 
+                            request.resource.data.uid == request.auth.uid && // uid field must match auth uid
+                            request.resource.data.email != null && 
+                            request.resource.data.name != null &&
+                            request.resource.data.teamId != null && // Set by signup flow
+                            // Default roles set by signup flow
+                            request.resource.data.isAdmin != null && 
+                            request.resource.data.canParticipateInMatches != null &&
+                            request.resource.data.canParticipateInTrainings != null &&
+                            request.resource.data.canBeAssignedRefereeing != null &&
+                            request.resource.data.isCoach != null &&
+                            request.resource.data.isTrainer != null
                           );
 
-          // A user can update their own profile (e.g., name, avatarUrl).
-          // An admin can update profiles of users within their own team.
-          // Critical fields like 'role' and 'teamId' should be protected from arbitrary client-side changes.
+          // A user can update their own profile (e.g., name, avatarUrl, non-admin booleans).
+          // An admin can update profiles of users within their own team (including all boolean flags).
+          // Critical fields like teamId and uid should be protected from arbitrary client-side changes.
           allow update: if isSignedIn() &&
                           (
                             // User is updating their own profile
-                            (isOwner(userId) && // userId here is the user's auth UID
-                              request.resource.data.uid == resource.data.uid && // uid field should not change
-                              // User cannot change their own role, teamId, or email via this path.
-                              !(request.resource.data.role != resource.data.role || 
-                                request.resource.data.teamId != resource.data.teamId || 
-                                request.resource.data.email != resource.data.email    
-                               )) || 
+                            (isOwner(userId) &&
+                              request.resource.data.uid == resource.data.uid && // uid cannot change
+                              request.resource.data.teamId == resource.data.teamId && // teamId cannot change by self
+                              request.resource.data.email == resource.data.email && // email cannot change by self
+                              // User cannot change their own isAdmin status
+                              request.resource.data.isAdmin == resource.data.isAdmin
+                            ) || 
                             // Admin is updating another user's profile within their team
                             (isUserTeamAdmin(resource.data.teamId) && // Admin of the target user's team
                              resource.data.teamId == getUserAuthData().teamId && // Admin must be in the same team as the target user
                              request.resource.data.teamId == resource.data.teamId && // Admin is not changing the target user's teamId
                              request.resource.data.uid == resource.data.uid && // UID field must not change
-                             userId != request.auth.uid // Admin cannot use this rule to update their own profile via this path
+                             request.resource.data.email == resource.data.email // Email cannot be changed by admin
+                             // Admin can change all other fields, including isAdmin for other users
                             ) 
                           );
           
           // An admin can delete user profiles from their team (except their own).
-          // resource.data.teamId refers to the teamId of the user being deleted.
           // This rule only deletes the Firestore document, not the Firebase Auth account.
           allow delete: if isUserTeamAdmin(resource.data.teamId) && 
-                          resource.data.teamId == getUserAuthData().teamId && // Admin must be in the same team as the user being deleted
-                          userId != request.auth.uid; // Admin cannot delete themselves
+                          resource.data.teamId == getUserAuthData().teamId && 
+                          userId != request.auth.uid; 
         }
 
-        // Matches subcollection (nested under a specific team)
+        // Matches subcollection
         match /teams/{teamId}/matches/{matchId} {
-          // Any member of this team can read matches.
           allow read: if isUserTeamMember(teamId);
-          // Only an admin of this team can create or delete matches.
-          // When creating, ensure isArchived is set to false.
           allow create: if isUserTeamAdmin(teamId) && request.resource.data.isArchived == false;
-          // Only an admin can update match details. isArchived can be changed.
-          // All other fields should be immutable on update if only archiving/unarchiving.
-          allow update: if isUserTeamAdmin(teamId) &&
-                           ( // Case 1: Archiving/Unarchiving
-                             request.resource.data.isArchived != resource.data.isArchived &&
-                             request.resource.data.date == resource.data.date &&
-                             request.resource.data.time == resource.data.time &&
-                             request.resource.data.opponent == resource.data.opponent &&
-                             request.resource.data.location == resource.data.location &&
-                             request.resource.data.attendance == resource.data.attendance
-                           ) ||
-                           ( // Case 2: Updating other details (isArchived might or might not change)
-                             request.resource.data.isArchived == resource.data.isArchived || request.resource.data.isArchived != resource.data.isArchived
-                           );
+          allow update: if isUserTeamAdmin(teamId); // Simplified, can be refined if specific fields need protection
           allow delete: if isUserTeamAdmin(teamId);
+
+          // Player Statistics subcollection
+          match /playerStats/{playerId} {
+            allow read: if isUserTeamMember(teamId);
+            // Only admins can write/update player stats for their team's matches
+            allow write, update, delete: if isUserTeamAdmin(teamId);
+          }
+
+          // Availability subcollection
+          match /availability/{playerId} {
+            // Player can read/write their own availability for an event in their team. Admin can read any.
+            allow read: if isUserTeamMember(teamId);
+            allow write: if isUserTeamMember(teamId) && isOwner(playerId); // Player setting their own status
+            // Admin override for availability could be added here if needed
+            // allow write: if isUserTeamAdmin(teamId); // Example for admin override
+          }
         }
 
-        // Trainings subcollection (nested under a specific team)
+        // playerStats collection group query rule (for aggregate stats)
+        match /{pathSegments=**}/playerStats/{statId} {
+          allow read: if isSignedIn() &&
+                         pathSegments != null &&
+                         pathSegments.size() >= 2 &&
+                         pathSegments[0] == 'teams' &&
+                         isUserTeamMember(pathSegments[1]); // pathSegments[1] should be the teamId
+        }
+
+
+        // Trainings subcollection
         match /teams/{teamId}/trainings/{trainingId} {
-          // Any member of this team can read trainings.
           allow read: if isUserTeamMember(teamId);
-          // Only an admin of this team can create or delete trainings.
-          // When creating, ensure isArchived is set to false.
           allow create: if isUserTeamAdmin(teamId) && request.resource.data.isArchived == false;
-           // Only an admin can update training details. isArchived can be changed.
-          allow update: if isUserTeamAdmin(teamId) &&
-                           ( // Case 1: Archiving/Unarchiving
-                             request.resource.data.isArchived != resource.data.isArchived &&
-                             request.resource.data.date == resource.data.date &&
-                             request.resource.data.time == resource.data.time &&
-                             request.resource.data.location == resource.data.location &&
-                             request.resource.data.description == resource.data.description &&
-                             request.resource.data.attendance == resource.data.attendance
-                           ) ||
-                           ( // Case 2: Updating other details
-                             request.resource.data.isArchived == resource.data.isArchived || request.resource.data.isArchived != resource.data.isArchived
-                           );
+          allow update: if isUserTeamAdmin(teamId);
           allow delete: if isUserTeamAdmin(teamId);
+
+          // Availability subcollection for trainings
+          match /availability/{playerId} {
+            allow read: if isUserTeamMember(teamId);
+            allow write: if isUserTeamMember(teamId) && isOwner(playerId);
+          }
         }
 
-        // Refereeing Assignments subcollection (nested under a specific team)
+        // Refereeing Assignments subcollection
         match /teams/{teamId}/refereeingAssignments/{assignmentId} {
-          // Any member of this team can read refereeing assignments.
           allow read: if isUserTeamMember(teamId);
-          // Only an admin of this team can create or delete assignments.
-          // When creating, ensure isArchived is set to false.
           allow create: if isUserTeamAdmin(teamId) && request.resource.data.isArchived == false;
-          // Only an admin can update assignment details. isArchived can be changed.
-          allow update: if isUserTeamAdmin(teamId) &&
-                           ( // Case 1: Archiving/Unarchiving
-                             request.resource.data.isArchived != resource.data.isArchived &&
-                             request.resource.data.date == resource.data.date &&
-                             request.resource.data.time == resource.data.time &&
-                             request.resource.data.homeTeam == resource.data.homeTeam &&
-                             request.resource.data.assignedPlayerUids == resource.data.assignedPlayerUids &&
-                             request.resource.data.notes == resource.data.notes
-                           ) ||
-                           ( // Case 2: Updating other details
-                             request.resource.data.isArchived == resource.data.isArchived || request.resource.data.isArchived != resource.data.isArchived
-                           );
-          allow delete: if isUserTeamAdmin(teamId);
-        }
-
-        // Messages subcollection (nested under a specific team)
-        match /teams/{teamId}/messages/{messageId} {
-          // Any member of this team can read messages.
-          allow read: if isUserTeamMember(teamId);
-          // Only an admin of this team can create messages.
-          // Message author UID must match the authenticated user's UID.
-          // Message teamId must match the teamId in the path.
-          allow create: if isUserTeamAdmin(teamId) && 
-                           request.resource.data.authorUid == request.auth.uid &&
-                           request.resource.data.teamId == teamId &&
-                           request.resource.data.content != null &&
-                           request.resource.data.authorName != null &&
-                           request.resource.data.isArchived == false; // New messages default to not archived
-          
-          // Only an admin can delete messages or archive/unarchive them.
-          // isArchived can be changed by an admin. Other fields should generally be immutable on update.
-          allow update: if isUserTeamAdmin(teamId) &&
-                           request.resource.data.authorUid == resource.data.authorUid && // Author cannot change
-                           request.resource.data.teamId == resource.data.teamId &&       // TeamID cannot change
-                           request.resource.data.content == resource.data.content &&     // Content cannot change on archive/unarchive
-                           request.resource.data.authorName == resource.data.authorName && // Author name cannot change
-                           request.resource.data.createdAt.toMillis() == resource.data.createdAt.toMillis(); // Creation time immutable
-                           // Only isArchived can change
-                           
-          allow delete: if isUserTeamAdmin(teamId);
-        }
-
-        // Locations subcollection (NEW)
-        match /teams/{teamId}/locations/{locationId} {
-          // Any member of this team can read locations.
-          allow read: if isUserTeamMember(teamId);
-          // Only an admin of this team can create, update, or delete locations.
-          allow create: if isUserTeamAdmin(teamId);
           allow update: if isUserTeamAdmin(teamId);
           allow delete: if isUserTeamAdmin(teamId);
         }
 
+        // Messages subcollection
+        match /teams/{teamId}/messages/{messageId} {
+          allow read: if isUserTeamMember(teamId);
+          allow create: if isUserTeamAdmin(teamId) && 
+                           request.resource.data.authorUid == request.auth.uid &&
+                           request.resource.data.teamId == teamId &&
+                           request.resource.data.isArchived == false;
+          allow update: if isUserTeamAdmin(teamId) &&
+                           request.resource.data.authorUid == resource.data.authorUid &&
+                           request.resource.data.teamId == resource.data.teamId &&
+                           request.resource.data.content == resource.data.content &&
+                           request.resource.data.authorName == resource.data.authorName &&
+                           request.resource.data.createdAt.toMillis() == resource.data.createdAt.toMillis();
+          allow delete: if isUserTeamAdmin(teamId);
+        }
+
+        // Opponents subcollection
+        match /teams/{teamId}/opponents/{opponentId} {
+          allow read: if isUserTeamMember(teamId);
+          allow create, update, delete: if isUserTeamAdmin(teamId);
+        }
+
+        // Equipment subcollection
+        match /teams/{teamId}/equipment/{equipmentId} {
+          allow read: if isUserTeamMember(teamId);
+          allow create, update, delete: if isUserTeamAdmin(teamId);
+        }
+        
         // Tickets collection
         match /tickets/{ticketId} {
-          // Any authenticated user can create a ticket.
-          // They must set their own userId and other required fields.
           allow create: if isSignedIn() &&
                           request.resource.data.userId == request.auth.uid &&
-                          request.resource.data.status == 'open' && 
-                          request.resource.data.subject != null &&
-                          request.resource.data.message != null &&
-                          request.resource.data.userName != null &&
-                          request.resource.data.userEmail != null;
-
-          // A user can ONLY read their OWN tickets.
+                          request.resource.data.status == 'open';
           allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
-
-          // A user can update certain fields of their own tickets 
-          // (e.g., add more info to message, or change status if app logic allows).
-          // Critical fields like userId, teamId, userName, userEmail, createdAt should not be changed by user after creation.
-          // Status changes might be restricted to support personnel in a real app (not handled by these client rules).
           allow update: if isSignedIn() && resource.data.userId == request.auth.uid &&
-                          request.resource.data.userId == resource.data.userId && // Cannot change ownership
-                          request.resource.data.teamId == resource.data.teamId && // Cannot change team association
-                          request.resource.data.userName == resource.data.userName && // Username at submission time
-                          request.resource.data.userEmail == resource.data.userEmail && // Email at submission time
-                          request.resource.data.createdAt.toMillis() == resource.data.createdAt.toMillis(); // Creation time immutable
-                          // Subject, message, status, updatedAt can be updated by owner.
-          
-          // Deleting tickets is generally an admin function for the support system, not by end-users directly.
+                          request.resource.data.userId == resource.data.userId &&
+                          request.resource.data.createdAt.toMillis() == resource.data.createdAt.toMillis();
           allow delete: if false; 
         }
       }
     }
     ```
-    *   **Test your security rules thoroughly** using the Firebase console's Rules Playground before deploying your app widely. This allows you to simulate requests as different users and see if the rules grant or deny access as expected.
+    *   **Test your security rules thoroughly** using the Firebase console's Rules Playground.
 
 ## 5. Required Firestore Indexes
 
-Certain queries in the application, especially those involving multiple `orderBy` clauses or `where` filters on different fields, require composite indexes in Firestore. If these indexes are not present, the queries will fail, and you might see errors like "The query requires an index..." or generic data fetching errors in the app.
-
-You can create these indexes in the Firebase console:
-1.  Go to your Firebase Project -> Firestore Database -> Indexes.
-2.  Click on "Composite" and then "Create Index".
-3.  For each index listed below, enter the "Collection ID" (or "Collection group ID" if specified) and add the fields exactly as shown with their respective order (Ascending/Descending).
+*   **Collection:** `teams`
+    *   **Fields:**
+        1. `inviteCode` (Ascending)
+    *   **Query scope:** Collection (For looking up teams by invite code during signup)
 
 *   **Collection Group:** `matches`
-    *   **Fields:**
-        1.  `date` (Ascending)
-        2.  `time` (Ascending)
-    *   **Query scope:** Collection group
-
-*   **Collection Group:** `matches` (For filtering archived matches)
     *   **Fields:**
         1.  `isArchived` (Ascending)
         2.  `date` (Ascending)
         3.  `time` (Ascending)
     *   **Query scope:** Collection group
 
-
 *   **Collection Group:** `trainings`
-    *   **Fields:**
-        1.  `date` (Ascending)
-        2.  `time` (Ascending)
-    *   **Query scope:** Collection group
-
-*   **Collection Group:** `trainings` (For filtering archived trainings)
     *   **Fields:**
         1.  `isArchived` (Ascending)
         2.  `date` (Ascending)
@@ -550,12 +595,6 @@ You can create these indexes in the Firebase console:
 
 *   **Collection Group:** `refereeingAssignments`
     *   **Fields:**
-        1.  `date` (Ascending)
-        2.  `time` (Ascending)
-    *   **Query scope:** Collection group
-
-*   **Collection Group:** `refereeingAssignments` (For filtering archived assignments)
-    *   **Fields:**
         1.  `isArchived` (Ascending)
         2.  `date` (Ascending)
         3.  `time` (Ascending)
@@ -563,19 +602,33 @@ You can create these indexes in the Firebase console:
 
 *   **Collection Group:** `messages`
     *   **Fields:**
-        1.  `createdAt` (Descending)
-    *   **Query scope:** Collection group
-
-*   **Collection Group:** `messages` (For filtering archived messages)
-    *   **Fields:**
         1.  `isArchived` (Ascending)
         2.  `createdAt` (Descending)
     *   **Query scope:** Collection group
-    
-*   **Collection Group:** `locations` (NEW - For sorting locations by name)
+
+*   **Collection Group:** `opponents` (Under `teams/{teamId}/opponents`)
     *   **Fields:**
         1.  `name` (Ascending)
     *   **Query scope:** Collection group
+
+*   **Collection Group:** `equipment` (Under `teams/{teamId}/equipment`)
+    *   **Fields:**
+        1.  `name` (Ascending)
+    *   **Query scope:** Collection group
+    
+*   **Collection Group:** `playerStats` (Under `teams/{teamId}/matches/{matchId}/playerStats`)
+    *   **Fields:**
+        1. `playerId` (Ascending)
+    *   **Query scope:** Collection group (For aggregating player stats across all matches)
+
+*   **Collection Group:** `availability` (For `matches` subcollection)
+    *   **Fields:**
+        1. `eventId` (Ascending) // Assuming you add eventId to availability docs
+        2. `status` (Ascending)
+    *   **Query scope:** Collection group
+    *   *(Note: If eventId is not directly stored, specific queries for a single event's availability might not need a complex index if just fetching all docs for that event's subcollection.)*
+
+*   **Collection Group:** `availability` (For `trainings` subcollection - same as above if structure is identical)
 
 *   **Collection:** `users`
     *   **Fields:**
@@ -586,17 +639,17 @@ You can create these indexes in the Firebase console:
 *   **Collection:** `users`
     *   **Fields:**
         1. `teamId` (Ascending)
-        2. `role` (Ascending)
+        2. `isAdmin` (Ascending) // If you need to query admins within a team
         3. `name` (Ascending)
     *   **Query scope:** Collection
 
-*   **Collection:** `tickets` 
+*   **Collection:** `tickets`
     *   **Fields:**
         1. `userId` (Ascending)
         2. `createdAt` (Descending)
     *   **Query scope:** Collection
 
+**Note on Index Creation Time:** Composite indexes can take a few minutes to build.
 
-**Note on Index Creation Time:** Composite indexes can take a few minutes to build, especially if you already have data in your collections. Firestore will indicate the status of index creation in the console.
+By following this structure, implementing robust security rules, and creating the necessary indexes, your iiCaptain application will have a solid foundation for managing team data securely and efficiently.
 
-By following this structure, implementing robust security rules, and creating the necessary indexes, your iiCaptain application will have a solid foundation for managing team data securely and efficiently for multiple teams.
