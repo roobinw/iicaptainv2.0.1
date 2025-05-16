@@ -7,5 +7,3 @@
 export default function MarketingSubPagePlaceholder() {
   return null; // Does not render anything itself for the path /
 }
-
-    

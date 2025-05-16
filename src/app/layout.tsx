@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/lib/auth"; // Ensure AuthProvider is here
+import { AuthProvider } from "@/lib/auth"; // AuthProvider is kept here
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -46,5 +46,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-    
