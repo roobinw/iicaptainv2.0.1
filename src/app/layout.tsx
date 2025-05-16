@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-// AuthProvider is removed from here, will be in specific layouts
+import { AuthProvider } from "@/lib/auth"; // Ensure AuthProvider is here
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -25,7 +25,6 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{
-
   children: React.ReactNode;
 }>) {
   return (
@@ -37,13 +36,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* AuthProvider removed from here */}
-        <TooltipProvider>
-          {children}
-        </TooltipProvider>
-        <Toaster />
+        <AuthProvider> {/* AuthProvider wraps all children */}
+          <TooltipProvider>
+            {children}
+          </TooltipProvider>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );
 }
 
+    
