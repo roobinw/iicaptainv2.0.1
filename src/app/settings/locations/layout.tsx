@@ -1,7 +1,7 @@
-
+// This layout is deprecated.
+// You can safely delete this file.
 import type { ReactNode } from "react";
 
-// AppLayout and AuthProvider are already handled by src/app/settings/layout.tsx
-export default function LocationsSettingsLayout({ children }: { children: ReactNode }) {
+export default function DeprecatedLocationsSettingsLayout({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }

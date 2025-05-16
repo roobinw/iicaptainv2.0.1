@@ -14,12 +14,12 @@ export interface User {
   name: string;
   email: string;
   role: UserRole; // Reverted to string role
-  // isAdmin: boolean; // Was: true if the user is an admin for their team
-  // canParticipateInMatches: boolean; // Was: true if the member is eligible for matches
-  // canParticipateInTrainings: boolean; // Was: true if the member is eligible for trainings
-  // canBeAssignedRefereeing: boolean; // Was: true if the member can be assigned refereeing duties
-  // isCoach: boolean; // Was: true if the member has coaching responsibilities
-  // isTrainer: boolean; // Was: true if the member has trainer/physio responsibilities
+  isAdmin: boolean; 
+  canParticipateInMatches: boolean; 
+  canParticipateInTrainings: boolean;
+  canBeAssignedRefereeing: boolean; 
+  isCoach: boolean; 
+  isTrainer: boolean; 
   avatarUrl?: string;
   createdAt?: string; // ISO string from serverTimestamp
   teamId?: string; // ID of the team the user belongs to
@@ -36,7 +36,7 @@ export interface Team {
   name: string;
   ownerUid: string; // UID of the user who created/owns the team
   createdAt?: string; // ISO string from serverTimestamp
-  // inviteCode?: string; // Removed as per user request to simplify
+  inviteCode?: string; 
 }
 
 export type AttendanceStatus = "present" | "absent" | "excused" | "unknown";
@@ -57,7 +57,6 @@ export interface Match {
   location?: string; 
   attendance: Record<string, AttendanceStatus>; 
   isArchived?: boolean; 
-  // availability is now a subcollection
 }
 
 export interface Training {
@@ -68,7 +67,6 @@ export interface Training {
   description?: string;
   attendance: Record<string, AttendanceStatus>; 
   isArchived?: boolean; 
-  // availability is now a subcollection
 }
 
 export interface Ticket {
@@ -104,29 +102,6 @@ export interface Message {
   isArchived?: boolean; 
 }
 
-export interface Opponent {
-  id: string;
-  name: string;
-  contactPerson?: string;
-  contactEmail?: string;
-  contactPhone?: string;
-  homeGround?: string;
-  createdAt?: string; // ISO string from serverTimestamp
-  // teamId is implicit as it's a subcollection of team
-}
-
-export type EquipmentCondition = "new" | "good" | "fair" | "poor";
-
-export interface Equipment {
-  id: string;
-  name: string;
-  description?: string;
-  quantity: number;
-  condition: EquipmentCondition;
-  createdAt?: string; // ISO string from serverTimestamp
-  // teamId is implicit as it's a subcollection of team
-}
-
 export interface PlayerStat {
   id: string; // Will be the player's UID
   playerId: string; // Firebase Auth UID of the player
@@ -140,8 +115,8 @@ export interface PlayerStat {
 
 export interface PlayerAggregatedStats {
   playerId: string;
-  name: string; // For display
-  avatarUrl?: string; // For display
+  name: string; 
+  avatarUrl?: string; 
   matchesPlayed: number;
   totalGoals: number;
   totalAssists: number;
@@ -155,9 +130,6 @@ export interface PlayerTrainingAttendanceStats {
     name: string;
     avatarUrl?: string;
     trainingsAttended: number;
-    // totalTeamTrainings will be fetched separately for percentage calculation
 }
 
-
 export type EventArchiveFilter = "all" | "active" | "archived";
-

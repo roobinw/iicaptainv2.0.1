@@ -1,4 +1,4 @@
 // This component is no longer used. You can safely delete this file.
-export default function DeprecatedLocationCard() {
+export default function DeprecatedOpponentList() {
   return null;
 }

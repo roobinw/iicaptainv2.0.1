@@ -45,7 +45,9 @@ export const Icons = {
   Dashboard: LayoutDashboard,
   Matches: CalendarDays, 
   Trainings: Dumbbell, 
-  Players: Users, // This is used for Team Settings link in user dropdown
+  // Players icon is aliased as Users for consistency with lucide-react's Users icon.
+  // Used for Team Settings -> Members tab and player-related UI.
+  Users: Users, 
   Logout: LogOut,
   Add: PlusCircle,
   Edit: Edit,
@@ -53,7 +55,7 @@ export const Icons = {
   ChevronDown: ChevronDown,
   ChevronRight: ChevronRight,
   MoreHorizontal: MoreHorizontal,
-  Settings: Settings, // Used for Profile Settings link
+  Settings: Settings, 
   User: UserCircle, 
   Attendance: ClipboardList, 
   AlertCircle: AlertCircle,
@@ -76,7 +78,6 @@ export const Icons = {
   ClipboardList: ClipboardList, 
   Share2: Share2,
   Statistics: BarChart3,
-  // MapPin removed as Locations feature is removed
   TeamLogo: ({ className, ...props }: TeamLogoProps) => ( 
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -92,6 +93,5 @@ export const Icons = {
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
     </svg>
   ),
-  CalendarDays: CalendarDays,
-  Users: Users, // Keep for opponents icon or other uses
+  CalendarDays: CalendarDays, // Keep as it's used for Matches
 };

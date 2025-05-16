@@ -36,13 +36,11 @@ const navItems: NavItem[] = [
   { href: "/matches", label: "Matches", icon: "Matches" },
   { href: "/trainings", label: "Trainings", icon: "Trainings" },
   { href: "/refereeing", label: "Refereeing", icon: "Refereeing" },
-  // "Players" link removed, managed under Team Settings now
   { href: "/stats", label: "Statistics", icon: "Statistics"},
 ];
 
-const settingsNavItems: NavItem[] = [
-  // "Locations" & "Opponents" managed under Team Settings now
-];
+// SettingsNavItems are now integrated into the user dropdown, this array is empty
+const settingsNavItems: NavItem[] = [];
 
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -51,7 +49,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 
-  // Commented out to prevent Internal Server Errors during investigation
   // useEffect(() => {
   //   if (!authIsLoading) { 
   //     const isMarketingPage = pathname === "/" || pathname.startsWith("/(marketing)");
@@ -60,13 +57,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   //     if (!user) { 
   //       if (!isMarketingPage && !isAuthPage && !isOnboardingPage) {
-  //         router.replace("/"); 
+  //         // router.replace("/"); 
   //       }
   //     } else { 
   //       if (!user.teamId && !isOnboardingPage) {
-  //         router.replace("/onboarding/create-team");
+  //         // router.replace("/onboarding/create-team");
   //       } else if (user.teamId && (isAuthPage || isOnboardingPage || (isMarketingPage && pathname === "/"))) {
-  //          router.replace("/dashboard");
+  //         //  router.replace("/dashboard");
   //       }
   //     }
   //   }
@@ -82,39 +79,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
     );
   }
   
-  // The following blocks are temporarily commented out to debug potential redirect loops or premature redirects.
-  // if (!authIsLoading) {
-  //   const isPublicPage = pathname === "/" || pathname.startsWith("/(marketing)"); 
-  //   const isAuthFlowPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
-  //   const isOnboardingPage = pathname.startsWith("/onboarding");
-
-  //   if (!user && !isPublicPage && !isAuthFlowPage && !isOnboardingPage) {
-  //      return ( 
-  //          <div className="flex h-screen items-center justify-center bg-background">
-  //              <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
-  //              <p className="ml-4 text-lg text-foreground">Redirecting...</p>
-  //          </div>
-  //      );
-  //   }
-  //   if (user && !user.teamId && !isOnboardingPage) {
-  //     return (
-  //         <div className="flex h-screen items-center justify-center bg-background">
-  //             <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
-  //             <p className="ml-4 text-lg text-foreground">Finalizing setup or redirecting...</p>
-  //         </div>
-  //     );
-  //   }
-  //    if (user && user.teamId && (isAuthFlowPage || isOnboardingPage || (isPublicPage && pathname === "/"))) { 
-  //       return (
-  //            <div className="flex h-screen items-center justify-center bg-background">
-  //               <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
-  //               <p className="ml-4 text-lg text-foreground">Redirecting to dashboard...</p>
-  //           </div>
-  //       );
-  //   }
-  // }
-
-
   const getInitials = (name: string | undefined) => {
     if (!name) return "?";
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -122,7 +86,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const renderNavItems = (itemsToRender: NavItem[], isMobileContext = false) => (
     itemsToRender.map((item) => {
-      // Use user.isAdmin for admin-only checks
       if (item.adminOnly && (!user || !user.isAdmin)) { 
         return null;
       }
@@ -137,7 +100,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                  onClick={() => isMobileContext && setIsMobileSheetOpen(false)}
                  className={cn(
                    "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-10 md:w-10",
-                   "bg-destructive text-destructive-foreground" // Indicate error
+                   "bg-destructive text-destructive-foreground" 
                  )}
                >
                  <Icons.AlertCircle className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5" />
@@ -175,7 +138,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
     })
   );
 
-
   const userProfileDropdownContent = (
     <>
         <DropdownMenuLabel className="truncate">
@@ -195,7 +157,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               onClick={() => { router.push('/team-settings'); setIsMobileSheetOpen(false); }} 
               className="hover:bg-accent/50 cursor-pointer"
           >
-              <Icons.Players className="mr-2 h-5 w-5" /> 
+              <Icons.Users className="mr-2 h-5 w-5" /> 
               <span>Team Settings</span>
           </DropdownMenuItem>
         )}
@@ -217,7 +179,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </>
   );
 
-
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[100px_1fr] lg:grid-cols-[100px_1fr]"> 
       <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg sticky top-0 h-screen">
@@ -227,13 +188,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 href="/dashboard" 
                 className="text-sidebar-foreground flex justify-center"
             >
-              <Icons.TeamLogo className="mt-[10px] h-10 w-10" /> 
+              <Icons.TeamLogo className="h-10 w-10 text-sidebar-foreground" /> 
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
           <nav className="grid items-start justify-items-center gap-3 px-2 py-4">
             {renderNavItems(navItems, false)}
-            {/* SettingsNavItems are now integrated into the user dropdown or accessed directly via /team-settings or /settings */}
           </nav>
         </div>
         
@@ -333,4 +293,3 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-    
