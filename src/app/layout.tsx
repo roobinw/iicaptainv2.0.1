@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/lib/auth"; // AuthProvider is kept here
+import { AuthProvider } from "@/lib/auth"; // Ensure AuthProvider is here
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -20,6 +20,9 @@ export const metadata: Metadata = {
   title: "iiCaptain | Sports Team Management Software for Easy Organization",
   description: "Organize your sports team effortlessly with iiCaptain. Manage match schedules, training, player rosters, and attendance. Sign up free!",
   keywords: "sports team management, team organization app, iiCaptain, schedule management, player roster, attendance tracking, sports app, team manager, coaching tool",
+  icons: {
+    icon: '/favicon.ico', // Ensure favicon is correctly referenced
+  },
 };
 
 export default function RootLayout({
@@ -29,10 +32,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
- <head>
- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2767183690825400"
- crossOrigin="anonymous"></script>
- </head>
+      <head>
+        {/* Removed AdSense script for cleaner testing, can be added back later */}
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

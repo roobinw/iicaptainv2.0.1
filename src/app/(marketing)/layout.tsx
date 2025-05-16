@@ -13,9 +13,10 @@ export const metadata: Metadata = {
 
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
-    <> {/* AuthProvider removed from here */}
+    <> {/* AuthProvider removed from here, root layout handles it */}
       {children}
-      <Toaster />
+      {/* Toaster is already in root layout, can be removed here if not specifically needed for /marketing subpages */}
+      {/* <Toaster /> */}
     </>
   );
 }
