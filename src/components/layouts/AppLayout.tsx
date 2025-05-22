@@ -27,7 +27,7 @@ interface NavItem {
   label: string;
   icon: keyof typeof Icons;
   adminOnly?: boolean;
-  isSettingsSection?: boolean; 
+  isSettingsSection?: boolean; // To group settings items
 }
 
 const navItems: NavItem[] = [
@@ -36,11 +36,16 @@ const navItems: NavItem[] = [
   { href: "/matches", label: "Matches", icon: "Matches" },
   { href: "/trainings", label: "Trainings", icon: "Trainings" },
   { href: "/refereeing", label: "Refereeing", icon: "Refereeing" },
-  { href: "/stats", label: "Statistics", icon: "Statistics"},
+  { href: "/players", label: "Players", icon: "Players" },
+  // Settings section will be handled separately or items added here with a flag
 ];
 
-// SettingsNavItems are now integrated into the user dropdown, this array is empty
-const settingsNavItems: NavItem[] = [];
+// New settings navigation items
+const settingsNavItems: NavItem[] = [
+  { href: "/settings", label: "My Profile", icon: "User", isSettingsSection: true },
+  { href: "/settings/locations", label: "Locations", icon: "MapPin", adminOnly: true, isSettingsSection: true },
+  // Add future settings links here (e.g., Opponents)
+];
 
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -49,25 +54,26 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 
-  // useEffect(() => {
-  //   if (!authIsLoading) { 
-  //     const isMarketingPage = pathname === "/" || pathname.startsWith("/(marketing)");
-  //     const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
-  //     const isOnboardingPage = pathname.startsWith("/onboarding");
 
-  //     if (!user) { 
-  //       if (!isMarketingPage && !isAuthPage && !isOnboardingPage) {
-  //         // router.replace("/"); 
-  //       }
-  //     } else { 
-  //       if (!user.teamId && !isOnboardingPage) {
-  //         // router.replace("/onboarding/create-team");
-  //       } else if (user.teamId && (isAuthPage || isOnboardingPage || (isMarketingPage && pathname === "/"))) {
-  //         //  router.replace("/dashboard");
-  //       }
-  //     }
-  //   }
-  // }, [user, authIsLoading, router, pathname]);
+  useEffect(() => {
+    if (!authIsLoading) { 
+      const isMarketingPage = pathname === "/" || pathname.startsWith("/(marketing)");
+      const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
+      const isOnboardingPage = pathname.startsWith("/onboarding");
+
+      if (!user) { 
+        if (!isMarketingPage && !isAuthPage && !isOnboardingPage) {
+          router.replace("/"); 
+        }
+      } else { 
+        if (!user.teamId && !isOnboardingPage) {
+          router.replace("/onboarding/create-team");
+        } else if (user.teamId && (isAuthPage || isOnboardingPage || (isMarketingPage && pathname === "/"))) {
+           router.replace("/dashboard");
+        }
+      }
+    }
+  }, [user, authIsLoading, router, pathname]);
 
 
   if (authIsLoading) {
@@ -79,6 +85,38 @@ export function AppLayout({ children }: { children: ReactNode }) {
     );
   }
   
+  if (!authIsLoading) {
+    const isPublicPage = pathname === "/" || pathname.startsWith("/(marketing)"); 
+    const isAuthFlowPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
+    const isOnboardingPage = pathname.startsWith("/onboarding");
+
+    if (!user && !isPublicPage && !isAuthFlowPage && !isOnboardingPage) {
+       return ( 
+           <div className="flex h-screen items-center justify-center bg-background">
+               <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
+               <p className="ml-4 text-lg text-foreground">Redirecting...</p>
+           </div>
+       );
+    }
+    if (user && !user.teamId && !isOnboardingPage) {
+      return (
+          <div className="flex h-screen items-center justify-center bg-background">
+              <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
+              <p className="ml-4 text-lg text-foreground">Finalizing setup or redirecting...</p>
+          </div>
+      );
+    }
+     if (user && user.teamId && (isAuthFlowPage || isOnboardingPage || (isPublicPage && pathname === "/"))) { 
+        return (
+             <div className="flex h-screen items-center justify-center bg-background">
+                <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
+                <p className="ml-4 text-lg text-foreground">Redirecting to dashboard...</p>
+            </div>
+        );
+    }
+  }
+
+
   const getInitials = (name: string | undefined) => {
     if (!name) return "?";
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -86,33 +124,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const renderNavItems = (itemsToRender: NavItem[], isMobileContext = false) => (
     itemsToRender.map((item) => {
-      if (item.adminOnly && (!user || !user.isAdmin)) { 
+      if (item.adminOnly && user?.role !== "admin") { 
         return null;
       }
       const IconComponent = Icons[item.icon];
-      if (!IconComponent) {
-         console.error(`[AppLayout] Icon component not found for item.icon: "${item.icon}". Ensure this key exists in src/components/icons.tsx and the corresponding Lucide icon is correctly imported.`);
-         return (
-           <Tooltip key={`${item.href}-error`} delayDuration={0}>
-             <TooltipTrigger asChild>
-               <Link
-                 href={item.href}
-                 onClick={() => isMobileContext && setIsMobileSheetOpen(false)}
-                 className={cn(
-                   "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-10 md:w-10",
-                   "bg-destructive text-destructive-foreground" 
-                 )}
-               >
-                 <Icons.AlertCircle className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5" />
-                 <span className="sr-only">Error: {item.label}</span>
-               </Link>
-             </TooltipTrigger>
-             <TooltipContent side={isMobileContext ? "right" : "right"} className="bg-destructive text-destructive-foreground border-border">
-               Error: {item.label} (Icon Missing)
-             </TooltipContent>
-           </Tooltip>
-         );
-      }
       return (
         <Tooltip key={item.href} delayDuration={0}>
           <TooltipTrigger asChild>
@@ -138,6 +153,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     })
   );
 
+
   const userProfileDropdownContent = (
     <>
         <DropdownMenuLabel className="truncate">
@@ -150,17 +166,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
             className="hover:bg-accent/50 cursor-pointer"
         >
             <SettingsIcon className="mr-2 h-5 w-5" />
-            <span>Profile Settings</span>
+            <span>Settings</span>
         </DropdownMenuItem>
-        {user?.isAdmin && (
-          <DropdownMenuItem 
-              onClick={() => { router.push('/team-settings'); setIsMobileSheetOpen(false); }} 
-              className="hover:bg-accent/50 cursor-pointer"
-          >
-              <Icons.Users className="mr-2 h-5 w-5" /> 
-              <span>Team Settings</span>
-          </DropdownMenuItem>
-        )}
         <DropdownMenuItem 
             onClick={() => { router.push('/support'); setIsMobileSheetOpen(false); }} 
             className="hover:bg-accent/50 cursor-pointer"
@@ -179,6 +186,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </>
   );
 
+
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[100px_1fr] lg:grid-cols-[100px_1fr]"> 
       <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg sticky top-0 h-screen">
@@ -188,12 +196,19 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 href="/dashboard" 
                 className="text-sidebar-foreground flex justify-center"
             >
-              <Icons.TeamLogo className="h-10 w-10 text-sidebar-foreground" /> 
+              <Icons.TeamLogo className="mt-[10px] h-10 w-10" /> 
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
           <nav className="grid items-start justify-items-center gap-3 px-2 py-4">
             {renderNavItems(navItems, false)}
+            {/* Divider for settings if there are settings items */}
+            {(settingsNavItems.some(item => !item.adminOnly || user?.role === "admin")) && (
+                <div className="w-full px-2 my-2">
+                    <hr className="border-sidebar-border" />
+                </div>
+            )}
+            {renderNavItems(settingsNavItems, false)}
           </nav>
         </div>
         
@@ -243,6 +258,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 
                 <nav className="grid items-start justify-items-center gap-3 px-2 py-4 flex-1 overflow-auto">
                     {renderNavItems(navItems, true)}
+                    {/* Divider for settings if there are settings items */}
+                    {(settingsNavItems.some(item => !item.adminOnly || user?.role === "admin")) && (
+                        <div className="w-full px-2 my-2">
+                            <hr className="border-sidebar-border" />
+                        </div>
+                    )}
+                    {renderNavItems(settingsNavItems, true)}
                 </nav>
                  {user && (
                   <div className="mt-auto p-1 flex justify-center">
@@ -293,3 +315,4 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+    

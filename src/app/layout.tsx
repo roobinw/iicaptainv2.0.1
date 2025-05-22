@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/lib/auth"; // Ensure AuthProvider is here
+// AuthProvider is removed from here, will be in specific layouts
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -20,31 +20,30 @@ export const metadata: Metadata = {
   title: "iiCaptain | Sports Team Management Software for Easy Organization",
   description: "Organize your sports team effortlessly with iiCaptain. Manage match schedules, training, player rosters, and attendance. Sign up free!",
   keywords: "sports team management, team organization app, iiCaptain, schedule management, player roster, attendance tracking, sports app, team manager, coaching tool",
-  icons: {
-    icon: '/favicon.ico', // Ensure favicon is correctly referenced
-  },
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{
+
   children: React.ReactNode;
 }>) {
   return (
     <html lang="en">
-      <head>
-        {/* Removed AdSense script for cleaner testing, can be added back later */}
-      </head>
+ <head>
+ <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2767183690825400"
+ crossOrigin="anonymous"></script>
+ </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider> {/* AuthProvider wraps all children */}
-          <TooltipProvider>
-            {children}
-          </TooltipProvider>
-          <Toaster />
-        </AuthProvider>
+        {/* AuthProvider removed from here */}
+        <TooltipProvider>
+          {children}
+        </TooltipProvider>
+        <Toaster />
       </body>
     </html>
   );
 }
+

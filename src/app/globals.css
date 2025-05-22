@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -9,50 +8,62 @@ body {
 
 @layer base {
   :root {
-    --background: 220 20% 10%; 
-    --foreground: 210 20% 95%; 
+    /* Dark Mode Coherent Palette:
+       - Base Hue: Cool tones (e.g., HSL around 220 for blues/greys)
+       - Background: Very dark, slightly desaturated (e.g., HSL 220, Sat 15-25%, Lightness 8-12%)
+       - Foreground: Light grey/off-white, not pure white for comfort (e.g., HSL 210, Sat 10-20%, Lightness 90-96%)
+       - Containers (Cards): Slightly lighter than background, same hue family (e.g., Lightness +3-5% from background)
+       - Primary/Accent: Ensure good contrast (WCAG AA). Primary should be distinct. Accent should complement.
+    */
 
-    --card: 220 20% 14%; 
+    /* Main Theme Colors */
+    --background: 220 20% 10%; /* Deep cool dark blue/grey */
+    --foreground: 210 20% 95%; /* Soft off-white */
+
+    --card: 220 20% 14%; /* Slightly lighter than background, same hue family */
     --card-foreground: var(--foreground);
 
-    --popover: 220 20% 9%; 
+    --popover: 220 20% 9%; /* Darker than background for popovers, same hue family */
     --popover-foreground: var(--foreground);
 
-    --primary: 210 100% 56%;  
-    --primary-foreground: 210 100% 97%; 
+    --primary: 210 100% 56%;  /* Strong, vibrant Blue (e.g., Tailwind Blue 500) */
+    --primary-foreground: 210 100% 97%; /* Very light, almost white for max contrast on primary */
 
-    --secondary: 220 15% 25%; 
-    --secondary-foreground: 210 15% 85%; 
+    --secondary: 220 15% 25%; /* Muted, darker cool grey-blue */
+    --secondary-foreground: 210 15% 85%; /* Lighter grey for text on secondary */
 
-    --muted: 220 10% 30%; 
-    --muted-foreground: 220 10% 60%; 
+    --muted: 220 10% 30%; /* Even more desaturated and slightly lighter grey-blue for muted elements */
+    --muted-foreground: 220 10% 60%; /* Medium grey for muted text, legible */
 
-    --accent: 210 100% 56%; 
-    --accent-foreground: var(--foreground); 
+    --accent: 210 100% 56%; /* Using primary blue as accent */
+    --accent-foreground: var(--foreground); /* Consistent foreground for accents */
 
-    --destructive: 0 72% 51%; 
-    --destructive-foreground: 210 20% 95%; 
+    --destructive: 0 72% 51%; /* Bright Red (e.g., Tailwind Red 500) - kept for clarity */
+    --destructive-foreground: 210 20% 95%; /* Main foreground on destructive elements */
 
-    --border: 220 15% 22%; 
-    --input: 220 15% 18%;  
-    --ring: 210 100% 65%;   
+    /* Borders and Inputs */
+    --border: 220 15% 22%; /* Subtle border, visible on dark backgrounds */
+    --input: 220 15% 18%;  /* Darker input background, distinct from card but related */
+    --ring: 210 100% 65%;   /* Slightly lighter blue for focus rings, related to primary */
 
     --radius: 0.75rem;
 
-    --sidebar-background: 220 20% 8%; 
-    --sidebar-foreground: 210 15% 80%; 
-    --sidebar-primary: var(--primary); 
+    /* Sidebar specific theme - derived for coherence */
+    --sidebar-background: 220 20% 8%; /* Slightly darker & more defined than main background */
+    --sidebar-foreground: 210 15% 80%; /* Readable muted foreground for sidebar text */
+    --sidebar-primary: var(--primary); /* Active items use main primary color for strong visual cue */
     --sidebar-primary-foreground: var(--primary-foreground);
-    --sidebar-accent: 220 15% 18%; 
-    --sidebar-accent-foreground: var(--foreground); 
-    --sidebar-border: 220 15% 15%; 
+    --sidebar-accent: 220 15% 18%; /* Hover/accent for sidebar items - aligns with input background */
+    --sidebar-accent-foreground: var(--foreground); /* Main foreground for hover text consistency */
+    --sidebar-border: 220 15% 15%; /* Border for sidebar elements, subtly visible */
     --sidebar-ring: var(--ring);
 
+    /* Charts - ensure good contrast with dark background */
     --chart-1: var(--primary);
-    --chart-2: var(--accent); 
-    --chart-3: var(--destructive); 
-    --chart-4: 120 65% 50%; 
-    --chart-5: 40 85% 55%;  
+    --chart-2: var(--accent); /* This will now be the same as primary */
+    --chart-3: var(--destructive); /* Kept standard destructive */
+    --chart-4: 120 65% 50%; /* A distinct, visible green */
+    --chart-5: 40 85% 55%;  /* A distinct, visible orange/yellow */
   }
 
 }
@@ -65,53 +76,3 @@ body {
     @apply bg-background text-foreground;
   }
 }
-
-/* Dark theme styles for react-big-calendar toolbar buttons */
-.rbc-toolbar button {
-  @apply text-foreground hover:bg-accent/50 disabled:opacity-50 pointer-events-auto cursor-pointer;
-}
-.rbc-toolbar button.rbc-active {
-  @apply bg-primary text-primary-foreground hover:bg-primary/90;
-}
-.rbc-toolbar {
-  @apply mb-3; /* Add some margin below the toolbar */
-}
-.rbc-header {
-  @apply text-center py-1 border-b border-border;
-}
-.rbc-event {
-  @apply bg-primary/80 text-primary-foreground p-1 rounded-sm text-xs;
-}
-.rbc-event:hover {
-  @apply bg-primary;
-}
-.rbc-day-bg.rbc-today {
-  @apply bg-secondary/30;
-}
-.rbc-month-view, .rbc-time-view, .rbc-agenda-view {
-  @apply border border-border rounded-md;
-}
-.rbc-time-header-gutter, .rbc-time-gutter, .rbc-time-header-content {
-   @apply border-border;
-}
-.rbc-time-slot {
-   @apply border-t border-border;
-}
-
-/* Ensure react-big-calendar respects the card background */
-.rbc-calendar {
-  @apply bg-card text-card-foreground;
-}
-.rbc-month-row {
-  @apply border-border;
-}
-.rbc-day-bg {
-  @apply border-border;
-}
-.rbc-header + .rbc-header {
-    @apply border-l border-border;
-}
-.rbc-rtl .rbc-header + .rbc-header {
-    @apply border-l-0 border-r border-border;
-}
-

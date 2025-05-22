@@ -17,11 +17,9 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format, parseISO, isValid } from "date-fns";
+import { format } from "date-fns";
 import { Icons } from "./icons";
 import type { Match } from "@/types";
-import { useEffect, useState } from "react"; // Added useEffect and useState
-// Opponent service and type imports removed as opponents are now simple strings
 
 const matchSchema = z.object({
   opponent: z.string().min(1, { message: "Opponent name is required." }),
@@ -33,7 +31,7 @@ const matchSchema = z.object({
 type MatchFormValues = z.infer<typeof matchSchema>;
 
 interface AddMatchFormProps {
-  onSubmit: (data: Omit<Match, "id" | "attendance" | "isArchived">) => void;
+  onSubmit: (data: Omit<Match, "id" | "attendance">) => void; // Exclude order
   initialData?: Match | null;
   onClose: () => void;
 }
@@ -43,28 +41,18 @@ export function AddMatchForm({ onSubmit, initialData, onClose }: AddMatchFormPro
     resolver: zodResolver(matchSchema),
     defaultValues: initialData ? {
       ...initialData,
-      date: initialData.date ? (isValid(parseISO(initialData.date)) ? parseISO(initialData.date) : new Date()) : new Date(),
+      date: new Date(initialData.date), 
     } : {
       opponent: "",
-      time: "14:00",
-      location: "Home Ground",
-      date: new Date(),
+      time: "14:00", 
+      location: "Home Ground", 
     },
   });
-
-  useEffect(() => {
-    if (initialData) {
-      form.reset({
-        ...initialData,
-        date: initialData.date ? (isValid(parseISO(initialData.date)) ? parseISO(initialData.date) : new Date()) : new Date(),
-      });
-    }
-  }, [initialData, form]);
 
   const handleSubmit = (data: MatchFormValues) => {
     onSubmit({
       ...data,
-      date: format(data.date, "yyyy-MM-dd"),
+      date: format(data.date, "yyyy-MM-dd"), 
     });
   };
 
@@ -114,6 +102,7 @@ export function AddMatchForm({ onSubmit, initialData, onClose }: AddMatchFormPro
                     mode="single"
                     selected={field.value}
                     onSelect={field.onChange}
+                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} 
                     initialFocus
                   />
                 </PopoverContent>

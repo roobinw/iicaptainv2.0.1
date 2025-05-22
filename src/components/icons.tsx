@@ -31,8 +31,7 @@ import {
   Archive, 
   ArchiveX, 
   Send,
-  Share2, 
-  BarChart3,
+  MapPin, // Added for Locations
   type LucideProps,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -45,9 +44,7 @@ export const Icons = {
   Dashboard: LayoutDashboard,
   Matches: CalendarDays, 
   Trainings: Dumbbell, 
-  // Players icon is aliased as Users for consistency with lucide-react's Users icon.
-  // Used for Team Settings -> Members tab and player-related UI.
-  Users: Users, 
+  Players: Users,
   Logout: LogOut,
   Add: PlusCircle,
   Edit: Edit,
@@ -55,8 +52,8 @@ export const Icons = {
   ChevronDown: ChevronDown,
   ChevronRight: ChevronRight,
   MoreHorizontal: MoreHorizontal,
-  Settings: Settings, 
-  User: UserCircle, 
+  Settings: Settings,
+  User: UserCircle, // For My Profile
   Attendance: ClipboardList, 
   AlertCircle: AlertCircle,
   CheckCircle2: CheckCircle2,
@@ -76,8 +73,7 @@ export const Icons = {
   ArchiveX: ArchiveX, 
   Send: Send, 
   ClipboardList: ClipboardList, 
-  Share2: Share2,
-  Statistics: BarChart3,
+  MapPin: MapPin, // Added for Locations
   TeamLogo: ({ className, ...props }: TeamLogoProps) => ( 
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -93,5 +89,5 @@ export const Icons = {
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
     </svg>
   ),
-  CalendarDays: CalendarDays, // Keep as it's used for Matches
+  CalendarDays: CalendarDays,
 };

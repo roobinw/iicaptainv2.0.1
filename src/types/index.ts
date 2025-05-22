@@ -1,5 +1,5 @@
 
-export type UserRole = "admin" | "member"; // Reverted for current request, was boolean flags
+export type UserRole = "admin" | "player";
 
 // Explicitly define Firestore Timestamp type for clarity
 export interface Timestamp {
@@ -13,22 +13,10 @@ export interface User {
   uid: string; // Firebase Auth UID
   name: string;
   email: string;
-  role: UserRole; // Reverted to string role
-  isAdmin: boolean; 
-  canParticipateInMatches: boolean; 
-  canParticipateInTrainings: boolean;
-  canBeAssignedRefereeing: boolean; 
-  isCoach: boolean; 
-  isTrainer: boolean; 
+  role: UserRole;
   avatarUrl?: string;
   createdAt?: string; // ISO string from serverTimestamp
   teamId?: string; // ID of the team the user belongs to
-  jerseyNumber?: number;
-  position?: string;
-  dateOfBirth?: string; // "yyyy-MM-dd"
-  emergencyContactName?: string;
-  emergencyContactPhone?: string;
-  medicalNotes?: string;
 }
 
 export interface Team {
@@ -36,17 +24,6 @@ export interface Team {
   name: string;
   ownerUid: string; // UID of the user who created/owns the team
   createdAt?: string; // ISO string from serverTimestamp
-  inviteCode?: string; 
-}
-
-export type AttendanceStatus = "present" | "absent" | "excused" | "unknown";
-export type AvailabilityStatus = "available" | "unavailable" | "maybe" | "unknown";
-
-export interface PlayerAvailability {
-  playerId: string;
-  status: AvailabilityStatus;
-  notes?: string;
-  updatedAt?: string; // ISO string from serverTimestamp
 }
 
 export interface Match {
@@ -55,7 +32,7 @@ export interface Match {
   time: string; // e.g., "14:00"
   opponent: string;
   location?: string; 
-  attendance: Record<string, AttendanceStatus>; 
+  attendance: Record<string, "present" | "absent" | "excused" | "unknown">; // User's Firebase UID: status
   isArchived?: boolean; 
 }
 
@@ -65,7 +42,7 @@ export interface Training {
   time: string; // e.g., "19:00"
   location: string;
   description?: string;
-  attendance: Record<string, AttendanceStatus>; 
+  attendance: Record<string, "present" | "absent" | "excused" | "unknown">; // User's Firebase UID: status
   isArchived?: boolean; 
 }
 
@@ -74,7 +51,7 @@ export interface Ticket {
   userId: string;
   userName: string;
   userEmail: string;
-  teamId?: string; 
+  teamId?: string; // Optional, if user is part of a team
   subject: string;
   message: string;
   status: "open" | "in-progress" | "resolved" | "closed";
@@ -86,7 +63,7 @@ export interface RefereeingAssignment {
   id: string;
   date: string; // "yyyy-MM-dd"
   time: string; // "HH:mm"
-  homeTeam?: string; 
+  homeTeam?: string; // Name of the home team for the match being refereed
   assignedPlayerUids?: string[]; 
   notes?: string;
   isArchived?: boolean; 
@@ -102,34 +79,10 @@ export interface Message {
   isArchived?: boolean; 
 }
 
-export interface PlayerStat {
-  id: string; // Will be the player's UID
-  playerId: string; // Firebase Auth UID of the player
-  goals: number;
-  assists: number;
-  saves: number;
-  yellowCards: number;
-  redCards: number;
-  updatedAt?: string; // ISO string from serverTimestamp
+export interface Location {
+  id: string;
+  name: string;
+  address: string;
+  createdAt?: string; // ISO string from serverTimestamp
+  // teamId is implicit via subcollection path teams/{teamId}/locations/{locationId}
 }
-
-export interface PlayerAggregatedStats {
-  playerId: string;
-  name: string; 
-  avatarUrl?: string; 
-  matchesPlayed: number;
-  totalGoals: number;
-  totalAssists: number;
-  totalSaves: number;
-  totalYellowCards: number;
-  totalRedCards: number;
-}
-
-export interface PlayerTrainingAttendanceStats {
-    playerId: string;
-    name: string;
-    avatarUrl?: string;
-    trainingsAttended: number;
-}
-
-export type EventArchiveFilter = "all" | "active" | "archived";
