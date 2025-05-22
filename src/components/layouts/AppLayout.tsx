@@ -42,8 +42,7 @@ const navItems: NavItem[] = [
 
 // New settings navigation items
 const settingsNavItems: NavItem[] = [
-  // { href: "/settings", label: "My Profile", icon: "User", isSettingsSection: true }, // Removed as per user request
-  { href: "/settings/locations", label: "Locations", icon: "MapPin", adminOnly: true, isSettingsSection: true },
+  // { href: "/settings/locations", label: "Locations", icon: "MapPin", adminOnly: true, isSettingsSection: true }, // Removed
   // Add future settings links here (e.g., Opponents)
 ];
 
@@ -315,6 +314,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+    
+
     
 
     
