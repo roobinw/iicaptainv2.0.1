@@ -191,7 +191,7 @@ export default function LandingPage() {
               {[
                 { icon: Icons.Matches, title: "Match Scheduling", description: "Easily plan and share upcoming matches. Keep track of dates, times, opponents, locations, and member availability." },
                 { icon: Icons.Trainings, title: "Training Coordination", description: "Organize training sessions, define specific drills, and monitor your team's preparation and attendance effectively." },
-                { icon: Icons.Players, title: "Member Roster Management", description: "Maintain a detailed and up-to-date list of all team members, including roles, contact information, and performance notes." },
+                { icon: Icons.Users, title: "Member Roster Management", description: "Maintain a detailed and up-to-date list of all team members, including roles, contact information, and performance notes." },
                 { icon: Icons.Attendance, title: "Attendance Tracking", description: "Effortlessly mark and view attendance for both matches and training sessions, ensuring you know who's available." },
               ].map((feature, index) => {
                 const IconComponent = feature.icon;
@@ -354,4 +354,3 @@ export default function LandingPage() {
     </div>
   );
 }
-

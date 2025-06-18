@@ -188,7 +188,7 @@ export default function MarketingLandingPage() { // Renamed component for clarit
               {[
                 { icon: Icons.Matches, title: "Match Scheduling", description: "Easily create and manage match schedules. Keep everyone informed with automated reminders and clear views of upcoming games." },
                 { icon: Icons.Trainings, title: "Training Coordination", description: "Organize training sessions, specify drills, and monitor team preparation. Track attendance for optimal team readiness." },
-                { icon: Icons.Players, title: "Member Roster Management", description: "Maintain a comprehensive list of your team members with roles, contact details, and performance notes. All in one secure place." },
+                { icon: Icons.Users, title: "Member Roster Management", description: "Maintain a comprehensive list of your team members with roles, contact details, and performance notes. All in one secure place." },
                 { icon: Icons.Attendance, title: "Attendance Tracking", description: "Mark attendance for matches and training sessions. Know who's available and track commitment effortlessly for better planning." },
               ].map((feature, index) => {
                 const IconComponent = feature.icon;
@@ -328,4 +328,6 @@ export default function MarketingLandingPage() { // Renamed component for clarit
     </div>
   );
 }
+    
+
     
