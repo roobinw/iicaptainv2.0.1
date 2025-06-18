@@ -18,6 +18,7 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth'; // Import for creating auth user
+import { toast } from '@/hooks/use-toast'; // Added for potential info toast
 
 const processTimestamp = (timestamp: Timestamp | undefined): string | undefined => {
   return timestamp ? timestamp.toDate().toISOString() : undefined;
@@ -134,8 +135,8 @@ export const addMemberProfileToTeam = async (
       role: memberData.role, 
       teamId: teamId,
       avatarUrl: `https://picsum.photos/seed/${memberData.email.toLowerCase()}/80/80`,
-      isTrainingMember: memberData.isTrainingMember ?? false,
-      isMatchMember: memberData.isMatchMember ?? false,
+      isTrainingMember: memberData.isTrainingMember ?? true, // Default to true
+      isMatchMember: memberData.isMatchMember ?? true,    // Default to true
       isTeamManager: memberData.isTeamManager ?? false,
       isTrainer: memberData.isTrainer ?? false,
       isCoach: memberData.isCoach ?? false,
@@ -158,39 +159,42 @@ export const addMemberProfileToTeam = async (
 
 
 export const updateUserProfile = async (uid: string, data: Partial<Omit<User, 'id' | 'uid' | 'email' | 'createdAt' | 'avatarUrl'> & { avatarUrl?: string | null }>): Promise<void> => {
-   if (!db) {
+  if (!db) {
     console.error("Firestore not initialized in updateUserProfile");
     throw new Error("Firestore not initialized");
   }
   if (!uid) {
+    console.error("User UID is required to update profile.");
     throw new Error("User UID is required to update profile.");
   }
   const userDocRef = doc(db, 'users', uid);
   
-  const updateData: { [key: string]: any } = {}; 
+  const updateData: { [key: string]: any } = {};
 
-  if (data.teamId !== undefined) updateData.teamId = data.teamId;
-  if (data.role !== undefined) updateData.role = data.role;
   if (data.name !== undefined) updateData.name = data.name;
+  if (data.role !== undefined) updateData.role = data.role;
   
-  if (data.hasOwnProperty('avatarUrl')) { 
+  if (data.hasOwnProperty('avatarUrl')) {
     updateData.avatarUrl = data.avatarUrl; 
   }
 
-  // Handle new boolean fields
   if (data.isTrainingMember !== undefined) updateData.isTrainingMember = data.isTrainingMember;
   if (data.isMatchMember !== undefined) updateData.isMatchMember = data.isMatchMember;
   if (data.isTeamManager !== undefined) updateData.isTeamManager = data.isTeamManager;
   if (data.isTrainer !== undefined) updateData.isTrainer = data.isTrainer;
   if (data.isCoach !== undefined) updateData.isCoach = data.isCoach;
 
+  // Removed the `if (Object.keys(updateData).length === 0)` check.
+  // If called, an update will be attempted. The calling function should ensure
+  // it's called only when changes are intended (e.g., based on form.isDirty).
 
-  if (Object.keys(updateData).length === 0) {
-    console.warn("updateUserProfile called with no data to update for UID:", uid);
-    return;
+  try {
+    await updateDoc(userDocRef, updateData);
+  } catch (error) {
+    console.error("Firestore updateDoc error in updateUserProfile for UID:", uid, "Data:", updateData, "Error:", error);
+    // Re-throw the error so the calling function's catch block handles it and toasts.
+    throw error;
   }
-  
-  await updateDoc(userDocRef, updateData);
 };
 
 export const deleteUserProfile = async (uid: string): Promise<void> => {
@@ -204,3 +208,4 @@ export const deleteUserProfile = async (uid: string): Promise<void> => {
   const userDocRef = doc(db, 'users', uid);
   await deleteDoc(userDocRef);
 };
+
