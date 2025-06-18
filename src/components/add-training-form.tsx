@@ -94,7 +94,7 @@ export function AddTrainingForm({ onSubmit, initialData, onClose }: AddTrainingF
                       ) : (
                         <span>Pick a date</span>
                       )}
-                      <Icons.CalendarDays className="ml-auto h-4 w-4 opacity-50" />
+                      <Icons.Matches className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
