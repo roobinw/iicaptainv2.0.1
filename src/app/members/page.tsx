@@ -71,6 +71,11 @@ export default function MembersPage() {
         password: data.password, 
         name: data.name,
         role: data.role,
+        isTrainingMember: data.isTrainingMember,
+        isMatchMember: data.isMatchMember,
+        isTeamManager: data.isTeamManager,
+        isTrainer: data.isTrainer,
+        isCoach: data.isCoach,
       }, currentUser.teamId);
       toast({ title: "Member Account Created", description: `${data.name} has been added and their account created.` });
       setForceUpdateCounter(prev => prev + 1);
@@ -95,6 +100,11 @@ export default function MembersPage() {
       const updatePayload: Partial<Omit<User, 'id' | 'uid' | 'email' | 'createdAt'>> = {
         name: data.name,
         role: data.role,
+        isTrainingMember: data.isTrainingMember,
+        isMatchMember: data.isMatchMember,
+        isTeamManager: data.isTeamManager,
+        isTrainer: data.isTrainer,
+        isCoach: data.isCoach,
       };
       await updateUserProfile(editingMember.uid, updatePayload); 
       toast({ title: "Member Updated", description: `${data.name}'s details have been updated.` });
@@ -244,5 +254,7 @@ export default function MembersPage() {
     </div>
   );
 }
+
+    
 
     
