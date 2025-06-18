@@ -300,10 +300,10 @@ This is a top-level collection where each document represents a support ticket.
 
         // Helper: Is the requesting user an admin of the specified teamId?
         function isUserTeamAdmin(teamId) {
-          let userAuthData = getUserAuthData(); 
+          let userAuthData = getUserAuthData();
           return isUserTeamMember(teamId) && userAuthData != null && userAuthData.role == 'admin';
         }
-        
+
         // Helper: Is the user creating/modifying their own document?
         // (used when document ID is the user's auth UID)
         function isOwner(userId) {
@@ -319,7 +319,7 @@ This is a top-level collection where each document represents a support ticket.
           // Only an admin of this team can update its name (ownerUid should not be changed by client).
           allow update: if isUserTeamAdmin(teamId) && request.resource.data.ownerUid == resource.data.ownerUid;
           // Deleting teams is typically a backend/admin function, not client-side.
-          allow delete: if false; 
+          allow delete: if false;
         }
 
         // Users collection
@@ -329,16 +329,16 @@ This is a top-level collection where each document represents a support ticket.
 
           // Allow creation of user documents under two conditions:
           // 1. A user creating their own profile (documentId {userId} == auth.uid).
-          // 2. An admin creating a member profile (and associated auth account) for their team.
+          // 2. An admin creating a member profile for their team.
           //    The documentId {userId} will be the new member's Firebase Auth UID.
           allow create: if isSignedIn() &&
                           (
                             // Case 1: User creating their own profile (e.g., during signup)
-                            ( isOwner(userId) && 
-                              request.resource.data.uid == request.auth.uid && 
-                              request.resource.data.email != null && 
+                            ( isOwner(userId) &&
+                              request.resource.data.uid == request.auth.uid &&
+                              request.resource.data.email != null &&
                               request.resource.data.name != null &&
-                              request.resource.data.role != null && 
+                              request.resource.data.role != null &&
                               request.resource.data.teamId != null &&
                               // Check boolean roles are booleans if present, or not present
                               (request.resource.data.isTrainingMember is bool || !('isTrainingMember' in request.resource.data)) &&
@@ -348,10 +348,10 @@ This is a top-level collection where each document represents a support ticket.
                               (request.resource.data.isCoach is bool || !('isCoach' in request.resource.data))
                             ) ||
                             // Case 2: Admin creating a member profile for their team
-                            ( getUserAuthData() != null && 
-                              getUserAuthData().role == 'admin' && 
-                              request.resource.data.teamId == getUserAuthData().teamId && 
-                              request.resource.data.uid == userId && 
+                            ( getUserAuthData() != null &&
+                              getUserAuthData().role == 'admin' &&
+                              request.resource.data.teamId == getUserAuthData().teamId &&
+                              request.resource.data.uid == userId &&
                               request.resource.data.email != null &&
                               request.resource.data.name != null &&
                               request.resource.data.role == 'member' &&
@@ -363,45 +363,54 @@ This is a top-level collection where each document represents a support ticket.
                             )
                           );
 
-          // A user can update their own profile (e.g., name, avatarUrl).
-          // An admin can update profiles of users within their own team.
-          // Critical fields like 'role' and 'teamId' should be protected.
+          // A user can update their own profile (e.g., name, avatarUrl, their boolean roles).
+          // An admin can update profiles of users within their own team (name, role, avatarUrl, boolean roles).
           allow update: if isSignedIn() &&
                           (
-                            // User is updating their own profile (name, avatarUrl only)
-                            (isOwner(userId) && 
-                              request.resource.data.uid == resource.data.uid && 
-                              request.resource.data.email == resource.data.email &&
-                              request.resource.data.role == resource.data.role &&
-                              request.resource.data.teamId == resource.data.teamId &&
-                              // Allow boolean fields to change by user if they are already booleans or being set to booleans
-                              (request.resource.data.isTrainingMember is bool || !('isTrainingMember' in request.resource.data)) &&
-                              (request.resource.data.isMatchMember is bool || !('isMatchMember' in request.resource.data)) &&
-                              (request.resource.data.isTeamManager is bool || !('isTeamManager' in request.resource.data)) &&
-                              (request.resource.data.isTrainer is bool || !('isTrainer' in request.resource.data)) &&
-                              (request.resource.data.isCoach is bool || !('isCoach' in request.resource.data)) &&
-                              // Only allow name and avatarUrl to be changed by user themselves
-                              (request.resource.data.keys().hasOnly(['name', 'avatarUrl', 'uid', 'email', 'role', 'teamId', 'isTrainingMember', 'isMatchMember', 'isTeamManager', 'isTrainer', 'isCoach', 'createdAt']))
-                            ) || 
-                            // Admin is updating another user's profile within their team
-                            (isUserTeamAdmin(resource.data.teamId) && 
-                             resource.data.teamId == getUserAuthData().teamId && 
-                             request.resource.data.teamId == resource.data.teamId && 
-                             request.resource.data.uid == resource.data.uid && 
-                             userId != request.auth.uid &&
-                             // Allow boolean fields to change by admin
+                            // Case 1: User is updating their own profile
+                            (isOwner(userId) &&
+                              // Ensure fields that should not be changed by the user are not in the request OR match existing data.
+                              (request.resource.data.uid == resource.data.uid || !('uid' in request.resource.data)) &&
+                              (request.resource.data.email == resource.data.email || !('email' in request.resource.data)) &&
+                              (request.resource.data.role == resource.data.role || !('role' in request.resource.data)) && // User cannot change their own role
+                              (request.resource.data.teamId == resource.data.teamId || !('teamId' in request.resource.data)) && // User cannot change their own teamId
+                              (request.resource.data.createdAt == resource.data.createdAt || !('createdAt' in request.resource.data)) &&
+                              // Allow updates to 'name', 'avatarUrl', and boolean roles.
+                              // Validate types of boolean fields if they are present.
                               (request.resource.data.isTrainingMember is bool || !('isTrainingMember' in request.resource.data)) &&
                               (request.resource.data.isMatchMember is bool || !('isMatchMember' in request.resource.data)) &&
                               (request.resource.data.isTeamManager is bool || !('isTeamManager' in request.resource.data)) &&
                               (request.resource.data.isTrainer is bool || !('isTrainer' in request.resource.data)) &&
                               (request.resource.data.isCoach is bool || !('isCoach' in request.resource.data))
-                            ) 
+                            ) ||
+                            // Case 2: Admin is updating another user's profile within their team
+                            (
+                              isUserTeamAdmin(resource.data.teamId) && // Requester is admin of the user's team
+                              resource.data.teamId == getUserAuthData().teamId && // Admin is in the same team as the user being updated
+                              userId != request.auth.uid && // Admin cannot use this to update their own profile with admin privileges
+                              // Ensure immutable fields are not being changed if they are part of the request.
+                              (request.resource.data.uid == resource.data.uid || !('uid' in request.resource.data)) &&
+                              (request.resource.data.teamId == resource.data.teamId || !('teamId' in request.resource.data)) && // Admin cannot change user's teamId
+                              (request.resource.data.email == resource.data.email || !('email' in request.resource.data)) && // Admin cannot change user's email
+                              (request.resource.data.createdAt == resource.data.createdAt || !('createdAt'in request.resource.data)) &&
+                              // Allow updates to 'name', 'role', 'avatarUrl', and boolean roles.
+                              // Validate types of boolean fields if they are present.
+                              (request.resource.data.isTrainingMember is bool || !('isTrainingMember' in request.resource.data)) &&
+                              (request.resource.data.isMatchMember is bool || !('isMatchMember' in request.resource.data)) &&
+                              (request.resource.data.isTeamManager is bool || !('isTeamManager' in request.resource.data)) &&
+                              (request.resource.data.isTrainer is bool || !('isTrainer' in request.resource.data)) &&
+                              (request.resource.data.isCoach is bool || !('isCoach' in request.resource.data)) &&
+                              // Validate 'role' if present
+                              (request.resource.data.role is string || !('role' in request.resource.data)) &&
+                              // Prevent admin from changing the role of the team owner
+                              ( (resource.data.ownerUid == userId && request.resource.data.role == 'admin') || resource.data.ownerUid != userId )
+                            )
                           );
-          
+
           // An admin can delete user profiles from their team (except their own).
-          allow delete: if isUserTeamAdmin(resource.data.teamId) && 
-                          resource.data.teamId == getUserAuthData().teamId && 
-                          userId != request.auth.uid; 
+          allow delete: if isUserTeamAdmin(resource.data.teamId) &&
+                          resource.data.teamId == getUserAuthData().teamId &&
+                          userId != request.auth.uid;
         }
 
         // Matches subcollection (nested under a specific team)
@@ -409,7 +418,7 @@ This is a top-level collection where each document represents a support ticket.
           allow read: if isUserTeamMember(teamId);
           allow create: if isUserTeamAdmin(teamId) && request.resource.data.isArchived == false;
           allow update: if isUserTeamAdmin(teamId) &&
-                           ( 
+                           (
                              request.resource.data.isArchived != resource.data.isArchived &&
                              request.resource.data.date == resource.data.date &&
                              request.resource.data.time == resource.data.time &&
@@ -417,7 +426,7 @@ This is a top-level collection where each document represents a support ticket.
                              request.resource.data.location == resource.data.location &&
                              request.resource.data.attendance == resource.data.attendance
                            ) ||
-                           ( 
+                           (
                              request.resource.data.isArchived == resource.data.isArchived || request.resource.data.isArchived != resource.data.isArchived
                            );
           allow delete: if isUserTeamAdmin(teamId);
@@ -428,7 +437,7 @@ This is a top-level collection where each document represents a support ticket.
           allow read: if isUserTeamMember(teamId);
           allow create: if isUserTeamAdmin(teamId) && request.resource.data.isArchived == false;
           allow update: if isUserTeamAdmin(teamId) &&
-                           ( 
+                           (
                              request.resource.data.isArchived != resource.data.isArchived &&
                              request.resource.data.date == resource.data.date &&
                              request.resource.data.time == resource.data.time &&
@@ -436,7 +445,7 @@ This is a top-level collection where each document represents a support ticket.
                              request.resource.data.description == resource.data.description &&
                              request.resource.data.attendance == resource.data.attendance
                            ) ||
-                           ( 
+                           (
                              request.resource.data.isArchived == resource.data.isArchived || request.resource.data.isArchived != resource.data.isArchived
                            );
           allow delete: if isUserTeamAdmin(teamId);
@@ -447,7 +456,7 @@ This is a top-level collection where each document represents a support ticket.
           allow read: if isUserTeamMember(teamId);
           allow create: if isUserTeamAdmin(teamId) && request.resource.data.isArchived == false;
           allow update: if isUserTeamAdmin(teamId) &&
-                           ( 
+                           (
                              request.resource.data.isArchived != resource.data.isArchived &&
                              request.resource.data.date == resource.data.date &&
                              request.resource.data.time == resource.data.time &&
@@ -455,7 +464,7 @@ This is a top-level collection where each document represents a support ticket.
                              request.resource.data.assignedPlayerUids == resource.data.assignedPlayerUids &&
                              request.resource.data.notes == resource.data.notes
                            ) ||
-                           ( 
+                           (
                              request.resource.data.isArchived == resource.data.isArchived || request.resource.data.isArchived != resource.data.isArchived
                            );
           allow delete: if isUserTeamAdmin(teamId);
@@ -464,20 +473,20 @@ This is a top-level collection where each document represents a support ticket.
         // Messages subcollection (nested under a specific team)
         match /teams/{teamId}/messages/{messageId} {
           allow read: if isUserTeamMember(teamId);
-          allow create: if isUserTeamAdmin(teamId) && 
+          allow create: if isUserTeamAdmin(teamId) &&
                            request.resource.data.authorUid == request.auth.uid &&
                            request.resource.data.teamId == teamId &&
                            request.resource.data.content != null &&
                            request.resource.data.authorName != null &&
-                           request.resource.data.isArchived == false; 
-                           
+                           request.resource.data.isArchived == false;
+
           allow update: if isUserTeamAdmin(teamId) &&
-                           request.resource.data.authorUid == resource.data.authorUid && 
-                           request.resource.data.teamId == resource.data.teamId &&       
-                           request.resource.data.content == resource.data.content &&     
-                           request.resource.data.authorName == resource.data.authorName && 
-                           request.resource.data.createdAt.toMillis() == resource.data.createdAt.toMillis(); 
-                                                      
+                           request.resource.data.authorUid == resource.data.authorUid &&
+                           request.resource.data.teamId == resource.data.teamId &&
+                           request.resource.data.content == resource.data.content &&
+                           request.resource.data.authorName == resource.data.authorName &&
+                           request.resource.data.createdAt.toMillis() == resource.data.createdAt.toMillis();
+
           allow delete: if isUserTeamAdmin(teamId);
         }
 
@@ -493,7 +502,7 @@ This is a top-level collection where each document represents a support ticket.
         match /tickets/{ticketId} {
           allow create: if isSignedIn() &&
                           request.resource.data.userId == request.auth.uid &&
-                          request.resource.data.status == 'open' && 
+                          request.resource.data.status == 'open' &&
                           request.resource.data.subject != null &&
                           request.resource.data.message != null &&
                           request.resource.data.userName != null &&
@@ -501,12 +510,12 @@ This is a top-level collection where each document represents a support ticket.
 
           allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
           allow update: if isSignedIn() && resource.data.userId == request.auth.uid &&
-                          request.resource.data.userId == resource.data.userId && 
-                          request.resource.data.teamId == resource.data.teamId && 
-                          request.resource.data.userName == resource.data.userName && 
-                          request.resource.data.userEmail == resource.data.userEmail && 
-                          request.resource.data.createdAt.toMillis() == resource.data.createdAt.toMillis(); 
-          allow delete: if false; 
+                          request.resource.data.userId == resource.data.userId &&
+                          request.resource.data.teamId == resource.data.teamId &&
+                          request.resource.data.userName == resource.data.userName &&
+                          request.resource.data.userEmail == resource.data.userEmail &&
+                          request.resource.data.createdAt.toMillis() == resource.data.createdAt.toMillis();
+          allow delete: if false;
         }
       }
     }
@@ -546,7 +555,7 @@ This is a top-level collection where each document represents a support ticket.
 *   **Collection Group:** `messages` (For filtering archived messages)
     *   **Fields:** 1. `isArchived` (Ascending), 2. `createdAt` (Descending)
     *   **Query scope:** Collection group
-    
+
 *   **Collection Group:** `locations` (For sorting locations by name)
     *   **Fields:** 1. `name` (Ascending)
     *   **Query scope:** Collection group
@@ -559,8 +568,10 @@ This is a top-level collection where each document represents a support ticket.
     *   **Fields:** 1. `teamId` (Ascending), 2. `role` (Ascending), 3. `name` (Ascending)
     *   **Query scope:** Collection
 
-*   **Collection:** `tickets` 
+*   **Collection:** `tickets`
     *   **Fields:** 1. `userId` (Ascending), 2. `createdAt` (Descending)
     *   **Query scope:** Collection
 
 By following this structure, implementing robust security rules, and creating the necessary indexes, your iiCaptain application will have a solid foundation for managing team data securely and efficiently.
+
+    
