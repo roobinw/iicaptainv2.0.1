@@ -21,7 +21,7 @@ Your Firestore database is now ready.
 
 ## 2. Firestore Data Structure
 
-The application uses the following collection and subcollection structure to support multi-tenancy (each team has its own environment) and roles (admin, player).
+The application uses the following collection and subcollection structure to support multi-tenancy (each team has its own environment) and roles (admin, member).
 
 ### Collection: `teams`
 
@@ -41,8 +41,8 @@ This is a top-level collection where each document represents a unique team.
         *   `time`: (String) Match time in "HH:mm" format (24-hour).
         *   `opponent`: (String) Name of the opponent team.
         *   `location`: (String, optional) Venue of the match.
-        *   `attendance`: (Map) Stores player attendance.
-            *   Keys: Player Firebase Auth UIDs (String).
+        *   `attendance`: (Map) Stores member attendance.
+            *   Keys: Member Firebase Auth UIDs (String).
             *   Values: (String) "present", "absent", "excused", or "unknown".
             *   Example: `{"firebaseUserUid1": "present", "firebaseUserUid2": "absent"}`
         *   `isArchived`: (Boolean) `true` if the match is archived, `false` otherwise. Defaults to `false`.
@@ -56,7 +56,7 @@ This is a top-level collection where each document represents a unique team.
         *   `time`: (String) Training time in "HH:mm" format (24-hour).
         *   `location`: (String) Location of the training session.
         *   `description`: (String, optional) Additional details about the training.
-        *   `attendance`: (Map) Stores player attendance (same structure as in `matches`).
+        *   `attendance`: (Map) Stores member attendance (same structure as in `matches`).
         *   `isArchived`: (Boolean) `true` if the training is archived, `false` otherwise. Defaults to `false`.
 
 *   **Subcollection of `teams/{teamId}`: `refereeingAssignments`**
@@ -66,7 +66,7 @@ This is a top-level collection where each document represents a unique team.
         *   `date`: (String) Assignment date in "yyyy-MM-dd" format.
         *   `time`: (String) Assignment time in "HH:mm" format (24-hour).
         *   `homeTeam`: (String, optional) The name of the home team for the match being refereed.
-        *   `assignedPlayerUids`: (Array of Strings) Firebase Auth UIDs of the players assigned to referee.
+        *   `assignedPlayerUids`: (Array of Strings) Firebase Auth UIDs of the members assigned to referee.
         *   `notes`: (String, optional) Additional details or instructions for the assignment.
         *   `isArchived`: (Boolean) `true` if the assignment is archived, `false` otherwise. Defaults to `false`.
 
@@ -99,7 +99,7 @@ This is a top-level collection where each document represents a user profile.
     *   `uid`: (String) The Firebase Auth UID. This field must match the document ID.
     *   `name`: (String) Full name of the user.
     *   `email`: (String) Email address of the user (stored in lowercase).
-    *   `role`: (String) User's role within their team. Can be "admin" or "player".
+    *   `role`: (String) User's role within their team. Can be "admin" or "member".
     *   `teamId`: (String) The ID of the team (from the `teams` collection) that this user belongs to. This is crucial for multi-tenancy.
     *   `avatarUrl`: (String, optional) URL to the user's profile picture.
     *   `createdAt`: (Timestamp) Server timestamp indicating when the user profile was created.
@@ -140,8 +140,8 @@ This is a top-level collection where each document represents a support ticket.
   "opponent": "The Sharks",
   "location": "Community Stadium",
   "attendance": {
-    "playerFirebaseUidXyz": "present",
-    "playerFirebaseUidPqr": "excused"
+    "memberFirebaseUidXyz": "present",
+    "memberFirebaseUidPqr": "excused"
   },
   "isArchived": false
 }
@@ -155,7 +155,7 @@ This is a top-level collection where each document represents a support ticket.
   "location": "Main Training Field",
   "description": "Tactical drills and fitness.",
   "attendance": {
-    "playerFirebaseUidXyz": "present"
+    "memberFirebaseUidXyz": "present"
   },
   "isArchived": false
 }
@@ -167,7 +167,7 @@ This is a top-level collection where each document represents a support ticket.
   "date": "2023-11-12",
   "time": "10:00",
   "homeTeam": "The Bears",
-  "assignedPlayerUids": ["playerFirebaseUidMno", "playerFirebaseUidJkl"],
+  "assignedPlayerUids": ["memberFirebaseUidMno", "memberFirebaseUidJkl"],
   "notes": "Remember to bring whistles and cards. Arrive 30 mins early.",
   "isArchived": false
 }
@@ -207,15 +207,15 @@ This is a top-level collection where each document represents a support ticket.
   "createdAt": "October 26, 2023 at 09:55:00 AM UTC+2"
 }
 ```
-**Example `users` document for a player added by an admin (`/users/newPlayerAuthUid789`):**
+**Example `users` document for a member added by an admin (`/users/newMemberAuthUid789`):**
 ```json
 {
-  "uid": "newPlayerAuthUid789",
-  "name": "John Player",
-  "email": "john.player@example.com",
-  "role": "player",
+  "uid": "newMemberAuthUid789",
+  "name": "John Member",
+  "email": "john.member@example.com",
+  "role": "member",
   "teamId": "uniqueTeamId123",
-  "avatarUrl": "https://picsum.photos/seed/john.player@example.com/80/80",
+  "avatarUrl": "https://picsum.photos/seed/john.member@example.com/80/80",
   "createdAt": "October 27, 2023 at 11:00:00 AM UTC+2"
 }
 ```
@@ -243,9 +243,9 @@ This is a top-level collection where each document represents a support ticket.
         1.  Creates their Firebase Authentication account.
         2.  Creates a new team document in the `teams` collection with the provided team name and sets the new user as `ownerUid`.
         3.  Creates their user profile document in the `users` collection (using their Firebase Auth UID as the document ID and the `uid` field), linking them to the newly created `teamId` and assigning them the `role: "admin"`.
-    *   Admins can then add other player profiles to their team via the "Players" page in the app. This:
-        1. Creates a new Firebase Authentication account for the player using an email and password provided by the admin.
-        2. Creates a `users` document for that player (using the new player's Firebase Auth UID as the document ID and the `uid` field), with `role: "player"` and the admin's `teamId`.
+    *   Admins can then add other member profiles to their team via the "Members" page in the app. This:
+        1. Creates a new Firebase Authentication account for the member using an email and password provided by the admin.
+        2. Creates a `users` document for that member (using the new member's Firebase Auth UID as the document ID and the `uid` field), with `role: "member"` and the admin's `teamId`.
     *   Matches, Trainings, and Refereeing Assignments are added by team admins through the app into their respective team's subcollections. They default to `isArchived: false`.
     *   Messages are added by team admins via the dashboard message board. They default to `isArchived: false`.
     *   Locations are added by team admins via the app into their team's `locations` subcollection.
@@ -253,7 +253,7 @@ This is a top-level collection where each document represents a support ticket.
 
 *   **Firestore Security Rules (VERY IMPORTANT):**
     *   Default security rules (especially in "Production mode") are highly restrictive. You **must** configure Firestore Security Rules.
-    *   These rules enforce multi-tenancy (a user can only access data for their own team) and role-based access (only an admin can create/modify team-wide data like matches or other player profiles within their team).
+    *   These rules enforce multi-tenancy (a user can only access data for their own team) and role-based access (only an admin can create/modify team-wide data like matches or other member profiles within their team).
     *   **Carefully copy and paste the rules below into the Firebase console Rules editor.**
     *   **If you encounter "Missing or insufficient permissions" errors, double-check that these rules are correctly applied and that your `users/{uid}` documents contain the correct `teamId` and `role` for the authenticated user.**
 
@@ -314,8 +314,8 @@ This is a top-level collection where each document represents a support ticket.
 
           // Allow creation of user documents under two conditions:
           // 1. A user creating their own profile (documentId {userId} == auth.uid).
-          // 2. An admin creating a player profile (and associated auth account) for their team.
-          //    The documentId {userId} will be the new player's Firebase Auth UID.
+          // 2. An admin creating a member profile (and associated auth account) for their team.
+          //    The documentId {userId} will be the new member's Firebase Auth UID.
           allow create: if isSignedIn() &&
                           (
                             // Case 1: User creating their own profile (e.g., during signup)
@@ -327,16 +327,16 @@ This is a top-level collection where each document represents a support ticket.
                               request.resource.data.role != null && // e.g., 'admin' set by signup process
                               request.resource.data.teamId != null    // teamId set by signup process
                             ) ||
-                            // Case 2: Admin creating a player profile (and auth account) for their team
-                            // Here, {userId} in `match /users/{userId}` is the new player's Firebase Auth UID.
+                            // Case 2: Admin creating a member profile (and auth account) for their team
+                            // Here, {userId} in `match /users/{userId}` is the new member's Firebase Auth UID.
                             // The `uid` field within the document will also be this new Firebase Auth UID.
                             ( getUserAuthData() != null && // Admin (requesting user) must have a profile
                               getUserAuthData().role == 'admin' && // Admin must be an admin
                               request.resource.data.teamId == getUserAuthData().teamId && // New user's teamId matches admin's teamId
-                              request.resource.data.uid == userId && // The 'uid' field in the new doc matches the doc ID (new player's auth UID)
+                              request.resource.data.uid == userId && // The 'uid' field in the new doc matches the doc ID (new member's auth UID)
                               request.resource.data.email != null &&
                               request.resource.data.name != null &&
-                              request.resource.data.role == 'player' // Role for admin-added player is 'player'
+                              request.resource.data.role == 'member' // Role for admin-added member is 'member'
                             )
                           );
 
@@ -600,3 +600,4 @@ You can create these indexes in the Firebase console:
 **Note on Index Creation Time:** Composite indexes can take a few minutes to build, especially if you already have data in your collections. Firestore will indicate the status of index creation in the console.
 
 By following this structure, implementing robust security rules, and creating the necessary indexes, your iiCaptain application will have a solid foundation for managing team data securely and efficiently for multiple teams.
+

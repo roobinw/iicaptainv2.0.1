@@ -138,7 +138,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               uid: fbUser.uid,
               email: fbUser.email!.toLowerCase(), 
               name: fbUser.displayName || `User-${fbUser.uid.substring(0,5)}`, // Default name
-              role: "player", // Default role, user needs to create/join a team
+              role: "member", // Default role, user needs to create/join a team
               teamId: undefined, // No teamId initially
               avatarUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.email!.toLowerCase()}/80/80`,
               createdAt: serverTimestamp(),

@@ -21,13 +21,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const assignPlayersSchema = z.object({
-  assignedPlayerUids: z.array(z.string()), // Allow empty array, or min(1, "At least one player must be assigned.")
+const assignMembersSchema = z.object({ // Renamed schema
+  assignedPlayerUids: z.array(z.string()), 
 });
 
-type AssignPlayersFormValues = z.infer<typeof assignPlayersSchema>;
+type AssignMembersFormValues = z.infer<typeof assignMembersSchema>; // Renamed type
 
-interface AssignPlayersFormProps {
+interface AssignMembersFormProps { // Renamed interface
   assignment: RefereeingAssignment;
   teamMembers: User[];
   isLoadingMembers: boolean;
@@ -35,24 +35,24 @@ interface AssignPlayersFormProps {
   onAssignSuccess: () => void;
 }
 
-export function AssignPlayersForm({
+export function AssignPlayersForm({ // Function name can remain if it's broadly about "players" of the game being refereed
   assignment,
   teamMembers,
   isLoadingMembers,
   onClose,
   onAssignSuccess,
-}: AssignPlayersFormProps) {
+}: AssignMembersFormProps) {
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
 
-  const form = useForm<AssignPlayersFormValues>({
-    resolver: zodResolver(assignPlayersSchema),
+  const form = useForm<AssignMembersFormValues>({ // Use renamed type
+    resolver: zodResolver(assignMembersSchema), // Use renamed schema
     defaultValues: {
       assignedPlayerUids: assignment.assignedPlayerUids || [],
     },
   });
 
-  async function onSubmit(data: AssignPlayersFormValues) {
+  async function onSubmit(data: AssignMembersFormValues) { // Use renamed type
     if (!currentUser?.teamId || !assignment.id) {
       toast({
         title: "Error",
@@ -68,13 +68,13 @@ export function AssignPlayersForm({
       });
       toast({
         title: "Assignment Updated",
-        description: "Assigned players have been updated.",
+        description: "Assigned members have been updated.", // Updated text
       });
       onAssignSuccess();
     } catch (error: any) {
       toast({
         title: "Update Failed",
-        description: error.message || "Could not update assigned players.",
+        description: error.message || "Could not update assigned members.", // Updated text
         variant: "destructive",
       });
     }
@@ -145,3 +145,4 @@ export function AssignPlayersForm({
     </Form>
   );
 }
+

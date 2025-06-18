@@ -52,7 +52,7 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
   return fromFirestoreUser(userDocSnap);
 };
 
-// Get all users (admins and players) for a specific team
+// Get all users (admins and members) for a specific team
 export const getAllUsersByTeam = async (teamId: string): Promise<User[]> => {
    if (!db) {
     console.error("Firestore not initialized in getAllUsersByTeam");
@@ -68,45 +68,45 @@ export const getAllUsersByTeam = async (teamId: string): Promise<User[]> => {
   return userSnapshot.docs.map(docSnap => fromFirestoreUser(docSnap)).filter(user => user !== null) as User[];
 };
 
-// Get only players (role 'player') for a specific team
-export const getPlayersByTeam = async (teamId: string): Promise<User[]> => {
+// Get only members (role 'member') for a specific team
+export const getMembersByTeamWithMemberRole = async (teamId: string): Promise<User[]> => {
   if (!db) {
-    console.error("Firestore not initialized in getPlayersByTeam");
+    console.error("Firestore not initialized in getMembersByTeamWithMemberRole");
     return [];
   }
    if (!teamId) {
-    console.warn("getPlayersByTeam called without teamId");
+    console.warn("getMembersByTeamWithMemberRole called without teamId");
     return [];
   }
   const usersCol = collection(db, 'users');
-  const q = query(usersCol, where('teamId', '==', teamId), where('role', '==', 'player'), orderBy('name', 'asc'));
-  const playerSnapshot = await getDocs(q);
-  return playerSnapshot.docs.map(docSnap => fromFirestoreUser(docSnap)).filter(user => user !== null) as User[];
+  const q = query(usersCol, where('teamId', '==', teamId), where('role', '==', 'member'), orderBy('name', 'asc'));
+  const memberSnapshot = await getDocs(q);
+  return memberSnapshot.docs.map(docSnap => fromFirestoreUser(docSnap)).filter(user => user !== null) as User[];
 };
 
-// Admin adding a player profile to their team AND creating a Firebase Auth account.
-export const addPlayerProfileToTeam = async (
-  playerData: { email: string; password?: string; name: string; role: UserRole },
+// Admin adding a member profile to their team AND creating a Firebase Auth account.
+export const addMemberProfileToTeam = async (
+  memberData: { email: string; password?: string; name: string; role: UserRole },
   teamId: string
 ): Promise<string> => {
   if (!db || !firebaseAuth) {
-    console.error("Firebase services not initialized in addPlayerProfileToTeam");
+    console.error("Firebase services not initialized in addMemberProfileToTeam");
     throw new Error("Firebase services not initialized");
   }
   if (!teamId) {
-    console.error("TeamId is required to add a player profile.");
+    console.error("TeamId is required to add a member profile.");
     throw new Error("TeamId is required.");
   }
-  if (!playerData.email || !playerData.name) {
-    throw new Error("Email and Name are required for the new player.");
+  if (!memberData.email || !memberData.name) {
+    throw new Error("Email and Name are required for the new member.");
   }
-  if (!playerData.password) {
-    throw new Error("Password is required to create an account for the new player.");
+  if (!memberData.password) {
+    throw new Error("Password is required to create an account for the new member.");
   }
 
   try {
     // 1. Create Firebase Authentication user
-    const userCredential = await createUserWithEmailAndPassword(firebaseAuth, playerData.email, playerData.password);
+    const userCredential = await createUserWithEmailAndPassword(firebaseAuth, memberData.email, memberData.password);
     const newAuthUser = userCredential.user;
 
     // 2. Create Firestore user profile document with the new auth UID
@@ -114,11 +114,11 @@ export const addPlayerProfileToTeam = async (
 
     const newProfileData: Omit<User, 'id' | 'createdAt'> & { createdAt: any } = {
       uid: newAuthUser.uid, // Use the Firebase Auth UID
-      name: playerData.name,
-      email: playerData.email.toLowerCase(),
-      role: playerData.role,
+      name: memberData.name,
+      email: memberData.email.toLowerCase(),
+      role: memberData.role, // This should be "member" or "admin" based on input
       teamId: teamId,
-      avatarUrl: `https://picsum.photos/seed/${playerData.email.toLowerCase()}/80/80`,
+      avatarUrl: `https://picsum.photos/seed/${memberData.email.toLowerCase()}/80/80`,
       createdAt: serverTimestamp(),
     };
 
@@ -132,8 +132,8 @@ export const addPlayerProfileToTeam = async (
     } else if (error.code === 'auth/weak-password') {
       throw new Error('The password is too weak. Please use a stronger password.');
     }
-    console.error("Error creating player auth account or Firestore profile:", error);
-    throw new Error(error.message || "Failed to add player and create account.");
+    console.error("Error creating member auth account or Firestore profile:", error);
+    throw new Error(error.message || "Failed to add member and create account.");
   }
 };
 
@@ -183,3 +183,4 @@ export const deleteUserProfile = async (uid: string): Promise<void> => {
   const userDocRef = doc(db, 'users', uid);
   await deleteDoc(userDocRef);
 };
+

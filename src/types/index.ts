@@ -1,5 +1,5 @@
 
-export type UserRole = "admin" | "player";
+export type UserRole = "admin" | "member";
 
 // Explicitly define Firestore Timestamp type for clarity
 export interface Timestamp {
@@ -86,3 +86,4 @@ export interface Location {
   createdAt?: string; // ISO string from serverTimestamp
   // teamId is implicit via subcollection path teams/{teamId}/locations/{locationId}
 }
+

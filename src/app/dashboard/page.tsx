@@ -283,6 +283,11 @@ export default function DashboardPage() {
                   <p className="text-sm text-muted-foreground">
                     {format(parseISO(upcomingRefereeingAssignments[0].date), "EEEE, MMMM dd, yyyy")} at {upcomingRefereeingAssignments[0].time}
                   </p>
+                  {upcomingRefereeingAssignments[0].assignedPlayerUids && upcomingRefereeingAssignments[0].assignedPlayerUids.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {upcomingRefereeingAssignments[0].assignedPlayerUids.length} member(s) assigned.
+                    </p>
+                  )}
                   {upcomingRefereeingAssignments[0].notes && <p className="text-xs text-muted-foreground mt-1">Notes: {upcomingRefereeingAssignments[0].notes}</p>}
                 </div>
             ) : (
@@ -299,3 +304,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

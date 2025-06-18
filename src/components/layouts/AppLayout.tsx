@@ -36,7 +36,7 @@ const navItems: NavItem[] = [
   { href: "/matches", label: "Matches", icon: "Matches" },
   { href: "/trainings", label: "Trainings", icon: "Trainings" },
   { href: "/refereeing", label: "Refereeing", icon: "Refereeing" },
-  { href: "/players", label: "Players", icon: "Players" },
+  { href: "/members", label: "Members", icon: "Users" }, // Changed from Players to Members
   // Settings section will be handled separately or items added here with a flag
 ];
 

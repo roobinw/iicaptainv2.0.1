@@ -1,38 +1,39 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Icons } from "@/components/icons";
-import { PlayerCard } from "@/components/player-card";
-import { AddPlayerForm, type PlayerFormValuesExtended } from "@/components/add-player-form";
+import { MemberCard } from "@/components/member-card"; // Updated import
+import { AddMemberForm, type MemberFormValuesExtended } from "@/components/add-member-form"; // Updated import
 import type { User } from "@/types";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { getAllUsersByTeam, addPlayerProfileToTeam, updateUserProfile, deleteUserProfile } from "@/services/userService"; 
+import { getAllUsersByTeam, addMemberProfileToTeam, updateUserProfile, deleteUserProfile } from "@/services/userService"; 
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function PlayersPage() {
+export default function MembersPage() { // Renamed function
   const { user: currentUser, isLoading: authLoading, currentTeam } = useAuth();
   const { toast } = useToast();
-  const [players, setPlayers] = useState<User[]>([]);
+  const [members, setMembers] = useState<User[]>([]); // Renamed state
   const [isLoadingData, setIsLoadingData] = useState(true);
-  const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
-  const [editingPlayer, setEditingPlayer] = useState<User | null>(null);
+  const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false); // Renamed state
+  const [editingMember, setEditingMember] = useState<User | null>(null); // Renamed state
   const [searchTerm, setSearchTerm] = useState("");
   const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
 
 
-  const fetchPlayers = async (teamId: string) => {
+  const fetchMembers = async (teamId: string) => { // Renamed function
     setIsLoadingData(true);
     try {
-      const fetchedPlayers = await getAllUsersByTeam(teamId); 
-      setPlayers(fetchedPlayers);
+      const fetchedMembers = await getAllUsersByTeam(teamId); 
+      setMembers(fetchedMembers); // Updated state setter
     } catch (error) {
-      console.error("Error fetching players:", error);
-      toast({ title: "Error", description: "Could not fetch players for your team.", variant: "destructive" });
+      console.error("Error fetching members:", error); // Updated log message
+      toast({ title: "Error", description: "Could not fetch members for your team.", variant: "destructive" });
     } finally {
       setIsLoadingData(false);
     }
@@ -40,102 +41,97 @@ export default function PlayersPage() {
 
   useEffect(() => {
     if (!authLoading && currentUser && currentUser.teamId && currentTeam) {
-        fetchPlayers(currentUser.teamId);
+        fetchMembers(currentUser.teamId); // Call renamed function
     } else if (!authLoading && (!currentUser || !currentUser.teamId || !currentTeam)) {
-        setPlayers([]);
+        setMembers([]); // Updated state setter
         setIsLoadingData(false);
     }
   }, [authLoading, currentUser, currentTeam, forceUpdateCounter, toast]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.hash === "#add" && currentUser?.role === "admin") {
-      setIsAddPlayerDialogOpen(true);
-      setEditingPlayer(null);
+      setIsAddMemberDialogOpen(true); // Updated state setter
+      setEditingMember(null); // Updated state setter
       window.location.hash = "";
     }
   }, [currentUser?.role]);
 
-  const handleAddPlayer = async (data: PlayerFormValuesExtended) => {
+  const handleAddMember = async (data: MemberFormValuesExtended) => { // Renamed function and type
     if (!currentUser?.teamId) {
         toast({ title: "Error", description: "Team information is missing.", variant: "destructive"});
         return;
     }
     if (!data.password) {
-      toast({ title: "Error", description: "Password is required to create a new player account.", variant: "destructive"});
+      toast({ title: "Error", description: "Password is required to create a new member account.", variant: "destructive"});
       return;
     }
     try {
-      // addPlayerProfileToTeam now expects email, password, name, role.
-      await addPlayerProfileToTeam({
+      // addMemberProfileToTeam now expects email, password, name, role.
+      await addMemberProfileToTeam({ // Call renamed service function
         email: data.email,
-        password: data.password, // Pass the password
+        password: data.password, 
         name: data.name,
         role: data.role,
       }, currentUser.teamId);
-      toast({ title: "Player Account Created", description: `${data.name} has been added and their account created.` });
+      toast({ title: "Member Account Created", description: `${data.name} has been added and their account created.` }); // Updated toast message
       setForceUpdateCounter(prev => prev + 1);
-      setIsAddPlayerDialogOpen(false);
+      setIsAddMemberDialogOpen(false); // Updated state setter
     } catch (error: any) {
-      console.error("Error adding player and creating account:", error);
-      toast({ title: "Error", description: error.message || "Could not add player or create account.", variant: "destructive" });
+      console.error("Error adding member and creating account:", error); // Updated log message
+      toast({ title: "Error", description: error.message || "Could not add member or create account.", variant: "destructive" }); // Updated toast message
     }
   };
 
-  const handleEditPlayer = (player: User) => {
-    setEditingPlayer(player);
-    setIsAddPlayerDialogOpen(true);
+  const handleEditMember = (member: User) => { // Renamed function and parameter
+    setEditingMember(member); // Updated state setter
+    setIsAddMemberDialogOpen(true); // Updated state setter
   };
 
-  const handleUpdatePlayer = async (data: PlayerFormValuesExtended) => { // Now uses PlayerFormValuesExtended
-    if (!editingPlayer || !editingPlayer.uid || !currentUser?.teamId) {
-        toast({ title: "Error", description: "Player or team information missing for update.", variant: "destructive"});
+  const handleUpdateMember = async (data: MemberFormValuesExtended) => { // Renamed function and type
+    if (!editingMember || !editingMember.uid || !currentUser?.teamId) { // Updated state variable
+        toast({ title: "Error", description: "Member or team information missing for update.", variant: "destructive"}); // Updated toast message
         return;
     }
     try {
-      // Password changes are not handled in this function for editing.
-      // Email is disabled for editing in the form.
       const updatePayload: Partial<Omit<User, 'id' | 'uid' | 'email' | 'createdAt'>> = {
         name: data.name,
         role: data.role,
-        // avatarUrl: data.avatarUrl, // If avatarUrl is part of the form and updatable
       };
-      await updateUserProfile(editingPlayer.uid, updatePayload); 
-      toast({ title: "Player Updated", description: `${data.name}'s details have been updated.` });
+      await updateUserProfile(editingMember.uid, updatePayload); 
+      toast({ title: "Member Updated", description: `${data.name}'s details have been updated.` }); // Updated toast message
       setForceUpdateCounter(prev => prev + 1);
-      setIsAddPlayerDialogOpen(false);
-      setEditingPlayer(null);
+      setIsAddMemberDialogOpen(false); // Updated state setter
+      setEditingMember(null); // Updated state setter
     } catch (error: any) {
-      console.error("Error updating player:", error);
-      toast({ title: "Error", description: error.message || "Could not update player.", variant: "destructive" });
+      console.error("Error updating member:", error); // Updated log message
+      toast({ title: "Error", description: error.message || "Could not update member.", variant: "destructive" }); // Updated toast message
     }
   };
 
-  const handleDeletePlayer = async (playerToDelete: User) => {
-    if (!playerToDelete.uid || !currentUser?.teamId) {
-        toast({ title: "Error", description: "Player UID or Team info not found.", variant: "destructive"});
+  const handleDeleteMember = async (memberToDelete: User) => { // Renamed parameter
+    if (!memberToDelete.uid || !currentUser?.teamId) {
+        toast({ title: "Error", description: "Member UID or Team info not found.", variant: "destructive"}); // Updated toast message
         return;
     }
-    if (playerToDelete.uid === currentUser?.uid) {
+    if (memberToDelete.uid === currentUser?.uid) {
       toast({ title: "Action Denied", description: "You cannot delete your own profile.", variant: "destructive"});
       return;
     }
-    // Consider adding a check: if the user has a Firebase Auth account, this only deletes the Firestore profile.
-    // True deletion of auth account would require Firebase Admin SDK on backend or re-authentication.
-    if (!window.confirm(`Are you sure you want to remove ${playerToDelete.name}'s profile from this team? This does NOT delete their login account if one exists.`)) return;
+    if (!window.confirm(`Are you sure you want to remove ${memberToDelete.name}'s profile from this team? This does NOT delete their login account if one exists.`)) return;
     
     try {
-      await deleteUserProfile(playerToDelete.uid);
-      toast({ title: "Player Profile Removed", description: `${playerToDelete.name}'s profile has been removed.`, variant: "destructive" });
+      await deleteUserProfile(memberToDelete.uid);
+      toast({ title: "Member Profile Removed", description: `${memberToDelete.name}'s profile has been removed.`, variant: "destructive" }); // Updated toast message
       setForceUpdateCounter(prev => prev + 1);
     } catch (error: any) {
-      console.error("Error deleting player profile:", error);
-      toast({ title: "Error", description: error.message || "Could not remove player profile.", variant: "destructive" });
+      console.error("Error deleting member profile:", error); // Updated log message
+      toast({ title: "Error", description: error.message || "Could not remove member profile.", variant: "destructive" }); // Updated toast message
     }
   };
 
-  const filteredPlayers = players.filter(player =>
-    player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    player.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredMembers = members.filter(member => // Renamed variable
+    member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
   const isAdmin = currentUser?.role === "admin";
@@ -171,28 +167,28 @@ export default function PlayersPage() {
           </p>
         </div>
         {isAdmin && (
-           <Dialog open={isAddPlayerDialogOpen} onOpenChange={(isOpen) => {
-            setIsAddPlayerDialogOpen(isOpen);
-            if (!isOpen) setEditingPlayer(null);
+           <Dialog open={isAddMemberDialogOpen} onOpenChange={(isOpen) => { // Updated state variable
+            setIsAddMemberDialogOpen(isOpen); // Updated state setter
+            if (!isOpen) setEditingMember(null); // Updated state setter
           }}>
             <DialogTrigger asChild>
               <Button>
-                <Icons.Add className="mr-2 h-4 w-4" /> Add Player & Create Account
+                <Icons.Add className="mr-2 h-4 w-4" /> Add Member & Create Account 
               </Button>
             </DialogTrigger>
             <DialogContent className="w-[95vw] max-w-[400px] sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>{editingPlayer ? "Edit Player Profile" : "Add New Player & Create Account"}</DialogTitle>
+                <DialogTitle>{editingMember ? "Edit Member Profile" : "Add New Member & Create Account"}</DialogTitle> {/* Updated text */}
                 <DialogDescription>
-                  {editingPlayer ? "Update player profile details." : "Enter the new player's information. An account will be created for them."}
+                  {editingMember ? "Update member profile details." : "Enter the new member's information. An account will be created for them."} {/* Updated text */}
                 </DialogDescription>
               </DialogHeader>
-              <AddPlayerForm 
-                onSubmit={editingPlayer ? handleUpdatePlayer : handleAddPlayer}
-                initialDataProp={editingPlayer} // Pass editingPlayer here
+              <AddMemberForm  // Updated component name
+                onSubmit={editingMember ? handleUpdateMember : handleAddMember} // Updated state variable
+                initialDataProp={editingMember} // Updated state variable
                 onClose={() => {
-                  setIsAddPlayerDialogOpen(false);
-                  setEditingPlayer(null);
+                  setIsAddMemberDialogOpen(false); // Updated state setter
+                  setEditingMember(null); // Updated state setter
                 }}
               />
             </DialogContent>
@@ -204,31 +200,31 @@ export default function PlayersPage() {
           <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search players by name or email..."
+            placeholder="Search members by name or email..." // Updated placeholder
             className="w-full pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
-      {filteredPlayers.length === 0 ? (
+      {filteredMembers.length === 0 ? ( // Updated variable
         <Card className="col-span-full">
             <CardHeader>
-                <CardTitle>No Players Found</CardTitle>
+                <CardTitle>No Members Found</CardTitle> {/* Updated text */}
                 <CardDescription>
-                {searchTerm ? "No players match your search criteria." : "There are no players in your team yet."}
-                {isAdmin && !searchTerm && " Click 'Add Player & Create Account' to add members."}
+                {searchTerm ? "No members match your search criteria." : "There are no members in your team yet."} {/* Updated text */}
+                {isAdmin && !searchTerm && " Click 'Add Member & Create Account' to add members."} {/* Updated text */}
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <Icons.Players className="w-16 h-16 text-muted-foreground mb-4" />
+                    <Icons.Users className="w-16 h-16 text-muted-foreground mb-4" /> {/* Changed Icon */}
                     <p className="text-muted-foreground">
                         It looks a bit lonely here.
                     </p>
                     {isAdmin && !searchTerm && (
-                        <Button className="mt-4" onClick={() => {setEditingPlayer(null); setIsAddPlayerDialogOpen(true);}}>
-                            <Icons.Add className="mr-2 h-4 w-4" /> Add First Player
+                        <Button className="mt-4" onClick={() => {setEditingMember(null); setIsAddMemberDialogOpen(true);}}> {/* Updated state setters */}
+                            <Icons.Add className="mr-2 h-4 w-4" /> Add First Member {/* Updated text */}
                         </Button>
                     )}
                 </div>
@@ -236,12 +232,12 @@ export default function PlayersPage() {
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredPlayers.map((player) => (
-            <PlayerCard 
-              key={player.uid} 
-              player={player} 
-              onEdit={isAdmin && player.uid !== currentUser.uid ? handleEditPlayer : undefined} 
-              onDelete={isAdmin && player.uid !== currentUser.uid ? () => handleDeletePlayer(player) : undefined}
+          {filteredMembers.map((member) => ( // Updated variable
+            <MemberCard  // Updated component name
+              key={member.uid} 
+              member={member} // Updated prop name
+              onEdit={isAdmin && member.uid !== currentUser.uid ? handleEditMember : undefined} 
+              onDelete={isAdmin && member.uid !== currentUser.uid ? () => handleDeleteMember(member) : undefined}
             />
           ))}
         </div>

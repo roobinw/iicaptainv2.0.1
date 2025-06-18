@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,10 +17,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { User, UserRole } from "@/types";
 
-const playerSchema = z.object({
+const memberSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Invalid email address." }).transform(value => value.toLowerCase()),
-  role: z.enum(["admin", "player"] as [UserRole, ...UserRole[]], { required_error: "Role is required." }),
+  role: z.enum(["admin", "member"] as [UserRole, ...UserRole[]], { required_error: "Role is required." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }).optional(), // Optional for editing existing users
   confirmPassword: z.string().optional(), // Optional for editing existing users
 }).refine((data) => {
@@ -33,34 +34,34 @@ const playerSchema = z.object({
   path: ["confirmPassword"],
 }).refine((data) => {
   // If it's a new user (initialData is null), password is required
-  if (!initialData && !data.password) {
+  if (!initialDataForSchema && !data.password) { // Changed initialData to initialDataForSchema
     return false;
   }
   return true;
 }, {
-  message: "Password is required for new players.",
+  message: "Password is required for new members.",
   path: ["password"],
 });
 
 
 // Refined schema needs access to initialData, so we define it inside the component or pass initialData to a factory
-let initialData: User | null = null; // This will be set in the component props
+let initialDataForSchema: User | null = null; // This will be set in the component props
 
-interface AddPlayerFormProps {
-  onSubmit: (data: PlayerFormValuesExtended) => void; 
+interface AddMemberFormProps {
+  onSubmit: (data: MemberFormValuesExtended) => void; 
   initialDataProp?: User | null; // Renamed to avoid conflict and make it clear it's a prop
   onClose: () => void;
 }
 
 // Extended form values to include password
-export type PlayerFormValuesExtended = z.infer<typeof playerSchema>;
+export type MemberFormValuesExtended = z.infer<typeof memberSchema>;
 
 
-export function AddPlayerForm({ onSubmit, initialDataProp, onClose }: AddPlayerFormProps) {
-  initialData = initialDataProp || null; // Set the global-like initialData for the schema refinement
+export function AddMemberForm({ onSubmit, initialDataProp, onClose }: AddMemberFormProps) {
+  initialDataForSchema = initialDataProp || null; // Set the global-like initialDataForSchema for the schema refinement
 
-  const form = useForm<PlayerFormValuesExtended>({
-    resolver: zodResolver(playerSchema),
+  const form = useForm<MemberFormValuesExtended>({
+    resolver: zodResolver(memberSchema),
     defaultValues: initialDataProp ? {
       name: initialDataProp.name,
       email: initialDataProp.email,
@@ -70,13 +71,13 @@ export function AddPlayerForm({ onSubmit, initialDataProp, onClose }: AddPlayerF
     } : {
       name: "",
       email: "",
-      role: "player",
+      role: "member",
       password: "",
       confirmPassword: "",
     },
   });
 
-  const handleSubmit = (data: PlayerFormValuesExtended) => {
+  const handleSubmit = (data: MemberFormValuesExtended) => {
     // If editing, and password is not provided, don't include it in the submit data.
     if (initialDataProp && !data.password) {
       const { password, confirmPassword, ...restData } = data;
@@ -111,7 +112,7 @@ export function AddPlayerForm({ onSubmit, initialDataProp, onClose }: AddPlayerF
               <FormControl>
                 <Input 
                   type="email" 
-                  placeholder="player@example.com" {...field} 
+                  placeholder="member@example.com" {...field} 
                   disabled={!!initialDataProp} // Disable email editing for existing users
                 />
               </FormControl>
@@ -134,7 +135,7 @@ export function AddPlayerForm({ onSubmit, initialDataProp, onClose }: AddPlayerF
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="player">Player</SelectItem>
+                  <SelectItem value="member">Member</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
@@ -142,7 +143,7 @@ export function AddPlayerForm({ onSubmit, initialDataProp, onClose }: AddPlayerF
             </FormItem>
           )}
         />
-        {/* Conditionally render password fields only if it's a new player or if explicitly editing password */}
+        {/* Conditionally render password fields only if it's a new member or if explicitly editing password */}
         {/* For simplicity, always show for new, hide for edit (password changes would be a separate flow) */}
         {!initialDataProp && (
           <>
@@ -176,7 +177,7 @@ export function AddPlayerForm({ onSubmit, initialDataProp, onClose }: AddPlayerF
         )}
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="submit">{initialDataProp ? "Save Changes" : "Add Player & Create Account"}</Button>
+          <Button type="submit">{initialDataProp ? "Save Changes" : "Add Member & Create Account"}</Button>
         </div>
       </form>
     </Form>

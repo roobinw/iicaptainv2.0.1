@@ -21,22 +21,22 @@ interface RefereeingAssignmentCardProps {
 
 export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, onAssignPlayersSuccess, onArchiveToggle }: RefereeingAssignmentCardProps) {
   const { user: currentUser, currentTeam } = useAuth();
-  const [assignedPlayersDetails, setAssignedPlayersDetails] = useState<User[]>([]);
-  const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
+  const [assignedMembersDetails, setAssignedMembersDetails] = useState<User[]>([]); // Renamed state
+  const [isLoadingMembers, setIsLoadingMembers] = useState(true); // Renamed state
 
   useEffect(() => {
     if (currentUser?.teamId && assignment.assignedPlayerUids && assignment.assignedPlayerUids.length > 0) {
-      setIsLoadingPlayers(true);
+      setIsLoadingMembers(true); // Updated state setter
       getAllUsersByTeam(currentUser.teamId)
         .then(allTeamMembers => {
           const details = allTeamMembers.filter(member => assignment.assignedPlayerUids!.includes(member.uid));
-          setAssignedPlayersDetails(details);
+          setAssignedMembersDetails(details); // Updated state setter
         })
         .catch(console.error)
-        .finally(() => setIsLoadingPlayers(false));
+        .finally(() => setIsLoadingMembers(false)); // Updated state setter
     } else {
-      setAssignedPlayersDetails([]);
-      setIsLoadingPlayers(false);
+      setAssignedMembersDetails([]); // Updated state setter
+      setIsLoadingMembers(false); // Updated state setter
     }
   }, [currentUser?.teamId, assignment.assignedPlayerUids]);
 
@@ -66,24 +66,24 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, onAssig
                 </div>
                 <div className="mt-2">
                   <h4 className="text-xs font-semibold text-muted-foreground mb-1">Assigned Referee(s):</h4>
-                  {isLoadingPlayers ? (
+                  {isLoadingMembers ? ( // Updated state variable
                     <div className="flex flex-wrap gap-1">
                         <Badge variant="outline" className="animate-pulse text-xs">Loading...</Badge>
                     </div>
-                  ) : assignedPlayersDetails.length > 0 ? (
+                  ) : assignedMembersDetails.length > 0 ? ( // Updated state variable
                     <div className="flex flex-wrap gap-1">
-                      {assignedPlayersDetails.map(player => (
-                        <Badge key={player.uid} variant="secondary" className="flex items-center gap-1 pr-2 text-xs">
+                      {assignedMembersDetails.map(member => ( // Updated variable name
+                        <Badge key={member.uid} variant="secondary" className="flex items-center gap-1 pr-2 text-xs">
                            <Avatar className="h-3.5 w-3.5 -ml-0.5">
-                                <AvatarImage src={player.avatarUrl} alt={player.name} data-ai-hint="player avatar"/>
-                                <AvatarFallback className="text-xxs">{getInitials(player.name)}</AvatarFallback>
+                                <AvatarImage src={member.avatarUrl} alt={member.name} data-ai-hint="member avatar"/> {/* Updated data-ai-hint */}
+                                <AvatarFallback className="text-xxs">{getInitials(member.name)}</AvatarFallback>
                             </Avatar>
-                          {player.name}
+                          {member.name}
                         </Badge>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-muted-foreground">No players assigned.</p>
+                    <p className="text-xs text-muted-foreground">No members assigned.</p> // Updated text
                   )}
                 </div>
                 {assignment.notes && (
@@ -101,3 +101,4 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, onAssig
     />
   );
 }
+

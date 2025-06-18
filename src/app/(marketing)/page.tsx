@@ -53,13 +53,13 @@ export default function MarketingLandingPage() { // Renamed component for clarit
     "name": "iiCaptain",
     "applicationCategory": "SportsTeamManagementApplication",
     "operatingSystem": "Web",
-    "description": "iiCaptain is the ultimate platform to manage your sports team effortlessly. Schedule matches, track training, manage players, and conquer the league with our team organization software.",
+    "description": "iiCaptain is the ultimate platform to manage your sports team effortlessly. Schedule matches, track training, manage members, and conquer the league with our team organization software.",
     "offers": {
       "@type": "Offer",
       "price": "0",
       "priceCurrency": "USD"
     },
-     "keywords": "sports team management, team organization app, coaching software, player scheduling, attendance tracker",
+     "keywords": "sports team management, team organization app, coaching software, member scheduling, attendance tracker",
     "aggregateRating": {
       "@type": "AggregateRating",
       "ratingValue": "4.9", 
@@ -138,7 +138,7 @@ export default function MarketingLandingPage() { // Renamed component for clarit
               initial={{ opacity: 0, y:20 }} animate={{ opacity: 1, y:0 }} transition={{ delay: 0.4, duration: 0.5 }}
               className="text-xl sm:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto"
             >
-              iiCaptain streamlines your sports team organization. Manage schedules, player rosters, track attendance, and enhance communication, all in one place.
+              iiCaptain streamlines your sports team organization. Manage schedules, member rosters, track attendance, and enhance communication, all in one place.
             </motion.p>
             <motion.div 
               initial={{ opacity: 0, y:20 }} animate={{ opacity: 1, y:0 }} transition={{ delay: 0.6, duration: 0.5 }}
@@ -159,7 +159,7 @@ export default function MarketingLandingPage() { // Renamed component for clarit
              >
                 <Image 
                     src="/screenshotwebappiicaptain.png" 
-                    alt="iiCaptain app screenshot - showing sports team schedule and player management dashboard" 
+                    alt="iiCaptain app screenshot - showing sports team schedule and member management dashboard" 
                     width={1200} 
                     height={600} 
                     className="rounded-xl shadow-2xl border-2 border-border/20"
@@ -188,7 +188,7 @@ export default function MarketingLandingPage() { // Renamed component for clarit
               {[
                 { icon: Icons.Matches, title: "Match Scheduling", description: "Easily create and manage match schedules. Keep everyone informed with automated reminders and clear views of upcoming games." },
                 { icon: Icons.Trainings, title: "Training Coordination", description: "Organize training sessions, specify drills, and monitor team preparation. Track attendance for optimal team readiness." },
-                { icon: Icons.Players, title: "Player Roster Management", description: "Maintain a comprehensive list of your team members with roles, contact details, and performance notes. All in one secure place." },
+                { icon: Icons.Players, title: "Member Roster Management", description: "Maintain a comprehensive list of your team members with roles, contact details, and performance notes. All in one secure place." },
                 { icon: Icons.Attendance, title: "Attendance Tracking", description: "Mark attendance for matches and training sessions. Know who's available and track commitment effortlessly for better planning." },
               ].map((feature, index) => {
                 const IconComponent = feature.icon;
@@ -222,7 +222,7 @@ export default function MarketingLandingPage() { // Renamed component for clarit
                 <h2 className="text-3xl sm:text-4xl font-bold mb-8 tracking-tight">Loved by Teams & Coaches Worldwide</h2>
                 <blockquote className="max-w-3xl mx-auto">
                     <p className="text-xl md:text-2xl italic text-foreground leading-relaxed">
-                        "iiCaptain has revolutionized how we manage our sports team. Scheduling is a breeze, communication has never been better, and our player attendance tracking is spot on!"
+                        "iiCaptain has revolutionized how we manage our sports team. Scheduling is a breeze, communication has never been better, and our member attendance tracking is spot on!"
                     </p>
                     <footer className="mt-6">
                         <p className="font-semibold text-lg text-primary">- Coach Jane, The Roaring Lions FC</p>

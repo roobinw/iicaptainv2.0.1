@@ -38,7 +38,7 @@ export default function LandingPage() {
     "name": "iiCaptain",
     "applicationCategory": "SportsTeamManagementApplication",
     "operatingSystem": "Web",
-    "description": "iiCaptain is the ultimate sports team management platform. Effortlessly organize schedules, track training, manage player rosters, and enhance team communication.",
+    "description": "iiCaptain is the ultimate sports team management platform. Effortlessly organize schedules, track training, manage member rosters, and enhance team communication.",
     "offers": {
       "@type": "Offer",
       "price": "0",
@@ -49,7 +49,7 @@ export default function LandingPage() {
       "ratingValue": "4.8", 
       "reviewCount": "150" 
     },
-    "keywords": "sports team management, team organization, coaching app, player schedule, attendance tracking"
+    "keywords": "sports team management, team organization, coaching app, member schedule, attendance tracking"
   };
 
 
@@ -129,7 +129,7 @@ export default function LandingPage() {
               transition={{ delay: 0.6, duration: 0.5 }}
               className="text-xl sm:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto"
             >
-              Organize your sports team like a pro with iiCaptain. Manage match schedules, track training sessions, oversee player rosters, and keep everyone in sync.
+              Organize your sports team like a pro with iiCaptain. Manage match schedules, track training sessions, oversee member rosters, and keep everyone in sync.
             </motion.p>
             <motion.div 
               initial={{ opacity: 0, y:20 }}
@@ -156,7 +156,7 @@ export default function LandingPage() {
             >
               <Image
                 src="/screenshotwebappiicaptain.png" 
-                alt="iiCaptain dashboard - sports team management software interface for scheduling and player organization"
+                alt="iiCaptain dashboard - sports team management software interface for scheduling and member organization"
                 width={1200}
                 height={600}
                 className="rounded-xl shadow-2xl border-2 border-border/20"
@@ -184,14 +184,14 @@ export default function LandingPage() {
                 Everything Your Sports Team Needs
               </h2>
               <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-                iiCaptain provides a comprehensive suite of tools to streamline your team's operations, from scheduling to player management, boosting overall performance.
+                iiCaptain provides a comprehensive suite of tools to streamline your team's operations, from scheduling to member management, boosting overall performance.
               </p>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               {[
-                { icon: Icons.Matches, title: "Match Scheduling", description: "Easily plan and share upcoming matches. Keep track of dates, times, opponents, locations, and player availability." },
+                { icon: Icons.Matches, title: "Match Scheduling", description: "Easily plan and share upcoming matches. Keep track of dates, times, opponents, locations, and member availability." },
                 { icon: Icons.Trainings, title: "Training Coordination", description: "Organize training sessions, define specific drills, and monitor your team's preparation and attendance effectively." },
-                { icon: Icons.Players, title: "Player Roster Management", description: "Maintain a detailed and up-to-date list of all team members, including roles, contact information, and performance notes." },
+                { icon: Icons.Players, title: "Member Roster Management", description: "Maintain a detailed and up-to-date list of all team members, including roles, contact information, and performance notes." },
                 { icon: Icons.Attendance, title: "Attendance Tracking", description: "Effortlessly mark and view attendance for both matches and training sessions, ensuring you know who's available." },
               ].map((feature, index) => {
                 const IconComponent = feature.icon;
@@ -238,7 +238,7 @@ export default function LandingPage() {
             </h2>
             <blockquote className="max-w-3xl mx-auto">
               <p className="text-xl md:text-2xl italic text-foreground leading-relaxed">
-                "iiCaptain has transformed how we manage our club. Scheduling is now a breeze, communication is seamless, and our players are more engaged than ever. It's a game-changer for any sports team!"
+                "iiCaptain has transformed how we manage our club. Scheduling is now a breeze, communication is seamless, and our members are more engaged than ever. It's a game-changer for any sports team!"
               </p>
               <footer className="mt-6">
                 <p className="font-semibold text-lg text-primary">- Coach Alex, 'The Invincibles' FC</p>
