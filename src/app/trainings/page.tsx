@@ -237,7 +237,7 @@ export default function TrainingsPage() {
                 <Dialog open={isBulkAddTrainingDialogOpen} onOpenChange={setIsBulkAddTrainingDialogOpen}>
                     <DialogTrigger asChild>
                         <Button variant="outline" className="w-full sm:w-auto">
-                            <Icons.ClipboardList className="mr-2 h-4 w-4" /> Schedule Recurring
+                            <Icons.Attendance className="mr-2 h-4 w-4" /> Schedule Recurring
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="w-[95vw] max-w-xl"> 
