@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import type { User, UserRole } from "@/types";
 import { Separator } from "@/components/ui/separator";
+import React from "react"; // Import React for useEffect
 
 const memberSchemaBase = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -29,20 +30,21 @@ const memberSchemaBase = z.object({
   isTeamManager: z.boolean().optional(),
   isTrainer: z.boolean().optional(),
   isCoach: z.boolean().optional(),
+  avatarUrl: z.string().url({ message: "Please enter a valid URL for the avatar." }).or(z.literal("")).optional(),
 });
 
-// This will be used to conditionally require password
+// This variable will be set based on whether initialDataProp is present
 let initialDataForSchema: User | null = null;
 
 const memberSchema = memberSchemaBase.extend({
   password: z.string().min(6, { message: "Password must be at least 6 characters." })
     .optional()
-    .refine(val => initialDataForSchema ? true : !!val, { // Password required if new user
+    .refine(val => initialDataForSchema ? true : !!val, { 
       message: "Password is required for new members.",
     }),
   confirmPassword: z.string().optional(),
 }).refine((data) => {
-  if (data.password && data.password !== data.confirmPassword) {
+  if (!initialDataForSchema && data.password && data.password !== data.confirmPassword) { // Only validate confirmPassword if password is provided for new user
     return false;
   }
   return true;
@@ -53,7 +55,7 @@ const memberSchema = memberSchemaBase.extend({
 
 
 interface AddMemberFormProps {
-  onSubmit: (data: MemberFormValuesExtended) => void; 
+  onSubmit: (data: MemberFormValuesExtended) => void;
   initialDataProp?: User | null;
   onClose: () => void;
 }
@@ -62,7 +64,7 @@ export type MemberFormValuesExtended = z.infer<typeof memberSchema>;
 
 
 export function AddMemberForm({ onSubmit, initialDataProp, onClose }: AddMemberFormProps) {
-  initialDataForSchema = initialDataProp || null; 
+  initialDataForSchema = initialDataProp || null;
 
   const form = useForm<MemberFormValuesExtended>({
     resolver: zodResolver(memberSchema),
@@ -75,27 +77,65 @@ export function AddMemberForm({ onSubmit, initialDataProp, onClose }: AddMemberF
       isTeamManager: initialDataProp.isTeamManager ?? false,
       isTrainer: initialDataProp.isTrainer ?? false,
       isCoach: initialDataProp.isCoach ?? false,
-      password: "", 
+      avatarUrl: initialDataProp.avatarUrl ?? "",
+      password: "",
       confirmPassword: "",
     } : {
       name: "",
       email: "",
       role: "member",
-      isTrainingMember: true, // Default new members to be training members
-      isMatchMember: true,   // Default new members to be match members
+      isTrainingMember: true,
+      isMatchMember: true,
       isTeamManager: false,
       isTrainer: false,
       isCoach: false,
+      avatarUrl: "",
       password: "",
       confirmPassword: "",
     },
   });
 
+  React.useEffect(() => {
+    if (initialDataProp) {
+      form.reset({
+        name: initialDataProp.name,
+        email: initialDataProp.email,
+        role: initialDataProp.role,
+        isTrainingMember: initialDataProp.isTrainingMember ?? false,
+        isMatchMember: initialDataProp.isMatchMember ?? false,
+        isTeamManager: initialDataProp.isTeamManager ?? false,
+        isTrainer: initialDataProp.isTrainer ?? false,
+        isCoach: initialDataProp.isCoach ?? false,
+        avatarUrl: initialDataProp.avatarUrl ?? "",
+        password: "", 
+        confirmPassword: "",
+      });
+    } else {
+      form.reset({
+        name: "",
+        email: "",
+        role: "member",
+        isTrainingMember: true,
+        isMatchMember: true,
+        isTeamManager: false,
+        isTrainer: false,
+        isCoach: false,
+        avatarUrl: "",
+        password: "",
+        confirmPassword: "",
+      });
+    }
+  }, [initialDataProp, form.reset]);
+
+
   const handleSubmit = (data: MemberFormValuesExtended) => {
     const dataToSubmit = { ...data };
-    if (initialDataProp && !data.password) {
+    if (initialDataProp && !data.password) { // If editing and password field is empty, don't submit it
       delete dataToSubmit.password;
       delete dataToSubmit.confirmPassword;
+    }
+    if (dataToSubmit.avatarUrl === "") { // Treat empty string as null for Firestore
+        (dataToSubmit as any).avatarUrl = null;
     }
     onSubmit(dataToSubmit);
   };
@@ -132,17 +172,33 @@ export function AddMemberForm({ onSubmit, initialDataProp, onClose }: AddMemberF
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input 
-                  type="email" 
-                  placeholder="member@example.com" {...field} 
-                  disabled={!!initialDataProp} 
+                <Input
+                  type="email"
+                  placeholder="member@example.com" {...field}
+                  disabled={!!initialDataProp}
                 />
               </FormControl>
-              {initialDataProp && 
+              {initialDataProp &&
                 <p className="text-xs text-muted-foreground">Email cannot be changed for existing users.</p>}
               <FormMessage />
             </FormItem>
           )}
+        />
+        <FormField
+            control={form.control}
+            name="avatarUrl"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Avatar Image URL (Optional)</FormLabel>
+                <FormControl>
+                    <Input type="url" placeholder="https://example.com/avatar.png" {...field} />
+                </FormControl>
+                <FormDescription>
+                    Enter a web link to an image (e.g., .png, .jpg). Leave blank to use default.
+                </FormDescription>
+                <FormMessage />
+                </FormItem>
+            )}
         />
         <FormField
           control={form.control}
@@ -150,7 +206,7 @@ export function AddMemberForm({ onSubmit, initialDataProp, onClose }: AddMemberF
           render={({ field }) => (
             <FormItem>
               <FormLabel>Authorization Role</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!!initialDataProp && initialDataProp.role === 'admin'}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select authorization role" />
@@ -161,7 +217,7 @@ export function AddMemberForm({ onSubmit, initialDataProp, onClose }: AddMemberF
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
-              <FormDescription>This role controls app permissions (e.g., editing events).</FormDescription>
+              <FormDescription>This role controls app permissions (e.g., editing events). Admin role cannot be demoted.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -194,7 +250,7 @@ export function AddMemberForm({ onSubmit, initialDataProp, onClose }: AddMemberF
                 />
             ))}
         </div>
-        
+
         {!initialDataProp && (
           <>
             <Separator className="my-6" />
@@ -232,9 +288,13 @@ export function AddMemberForm({ onSubmit, initialDataProp, onClose }: AddMemberF
         )}
         <div className="flex justify-end gap-2 pt-6">
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="submit">{initialDataProp ? "Save Changes" : "Add Member & Create Account"}</Button>
+          <Button type="submit" disabled={form.formState.isSubmitting || (!form.formState.isDirty && !!initialDataProp)}>
+            {initialDataProp ? "Save Changes" : "Add Member & Create Account"}
+          </Button>
         </div>
       </form>
     </Form>
   );
 }
+
+    
