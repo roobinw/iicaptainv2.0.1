@@ -46,7 +46,8 @@ export default function MembersPage() {
         setMembers([]);
         setIsLoadingData(false);
     }
-  }, [authLoading, currentUser, currentTeam, forceUpdateCounter, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, currentUser, currentTeam, forceUpdateCounter]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.hash === "#add" && currentUser?.role === "admin") {
@@ -97,23 +98,28 @@ export default function MembersPage() {
         return;
     }
     try {
-      const updatePayload: Partial<Omit<User, 'id' | 'uid' | 'email' | 'createdAt'>> = {
+      // Construct the payload for updateUserProfile
+      // avatarUrl from data is already string | null due to AddMemberForm logic
+      const payloadForService: Partial<User> = {
         name: data.name,
         role: data.role,
+        avatarUrl: data.avatarUrl, 
         isTrainingMember: data.isTrainingMember,
         isMatchMember: data.isMatchMember,
         isTeamManager: data.isTeamManager,
         isTrainer: data.isTrainer,
         isCoach: data.isCoach,
       };
-      await updateUserProfile(editingMember.uid, updatePayload); 
+      
+      await updateUserProfile(editingMember.uid, payloadForService);
+      
       toast({ title: "Member Updated", description: `${data.name}'s details have been updated.` });
-      setForceUpdateCounter(prev => prev + 1);
-      setIsAddMemberDialogOpen(false);
-      setEditingMember(null);
+      setForceUpdateCounter(prev => prev + 1); // Force re-fetch
+      setIsAddMemberDialogOpen(false); // Close dialog on success
+      setEditingMember(null); // Clear editing state
     } catch (error: any) {
-      console.error("Error updating member:", error);
-      toast({ title: "Error", description: error.message || "Could not update member.", variant: "destructive" });
+      console.error("Error updating member in MembersPage:", error);
+      toast({ title: "Update Failed", description: error.message || "Could not update member profile.", variant: "destructive" });
     }
   };
 

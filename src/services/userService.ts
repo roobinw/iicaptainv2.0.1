@@ -157,8 +157,7 @@ export const addMemberProfileToTeam = async (
   }
 };
 
-
-export const updateUserProfile = async (uid: string, data: Partial<Omit<User, 'id' | 'uid' | 'email' | 'createdAt' | 'avatarUrl'> & { avatarUrl?: string | null }>): Promise<void> => {
+export const updateUserProfile = async (uid: string, dataToUpdate: Partial<User>): Promise<void> => {
   if (!db) {
     console.error("Firestore not initialized in updateUserProfile");
     throw new Error("Firestore not initialized");
@@ -168,32 +167,47 @@ export const updateUserProfile = async (uid: string, data: Partial<Omit<User, 'i
     throw new Error("User UID is required to update profile.");
   }
   const userDocRef = doc(db, 'users', uid);
-  
-  const updateData: { [key: string]: any } = {};
 
-  if (data.name !== undefined) updateData.name = data.name;
-  if (data.role !== undefined) updateData.role = data.role;
+  // Create a mutable copy to ensure we don't modify the original object,
+  // and to strip out fields that should never be updated by this function.
+  const finalUpdateData = { ...dataToUpdate };
+
+  // Fields that should never be updated via this specific form/service call by client
+  delete finalUpdateData.id; // Firestore ID, not part of user modifiable data
+  delete finalUpdateData.uid; // Firebase UID, immutable
+  delete finalUpdateData.email; // Email changes require Firebase Auth specific methods
+  delete finalUpdateData.createdAt; // Creation timestamp, immutable
+  // teamId changes should be handled by a separate, dedicated process if ever needed, not this general profile update.
+  // The payload from MembersPage does not include teamId, so this is mostly a safeguard.
+  delete finalUpdateData.teamId; 
+
+  // avatarUrl can be string or null (to delete). If it's undefined in finalUpdateData, it won't be sent.
+  // If it's explicitly set to null by the form, it will be sent as null.
   
-  if (data.hasOwnProperty('avatarUrl')) {
-    updateData.avatarUrl = data.avatarUrl; 
+  // Ensure boolean fields are explicitly included, even if false,
+  // as 'undefined' would skip them. The payload from MembersPage should always include them.
+  if (finalUpdateData.hasOwnProperty('isTrainingMember')) finalUpdateData.isTrainingMember = !!finalUpdateData.isTrainingMember;
+  if (finalUpdateData.hasOwnProperty('isMatchMember')) finalUpdateData.isMatchMember = !!finalUpdateData.isMatchMember;
+  if (finalUpdateData.hasOwnProperty('isTeamManager')) finalUpdateData.isTeamManager = !!finalUpdateData.isTeamManager;
+  if (finalUpdateData.hasOwnProperty('isTrainer')) finalUpdateData.isTrainer = !!finalUpdateData.isTrainer;
+  if (finalUpdateData.hasOwnProperty('isCoach')) finalUpdateData.isCoach = !!finalUpdateData.isCoach;
+
+
+  // Only proceed if there's actually something to update after stripping immutable fields.
+  // This is a client-side check; Firestore rules are the authoritative source for what's allowed.
+  if (Object.keys(finalUpdateData).length === 0) {
+    // console.warn("updateUserProfile called with no effective changes for user:", uid);
+    // This situation should ideally be caught by form.isDirty on the client.
+    // If isDirty is true but finalUpdateData is empty, it might indicate an issue.
+    // However, we'll still proceed to allow Firestore to make the final determination.
+    // An empty update to Firestore is a no-op.
   }
 
-  if (data.isTrainingMember !== undefined) updateData.isTrainingMember = data.isTrainingMember;
-  if (data.isMatchMember !== undefined) updateData.isMatchMember = data.isMatchMember;
-  if (data.isTeamManager !== undefined) updateData.isTeamManager = data.isTeamManager;
-  if (data.isTrainer !== undefined) updateData.isTrainer = data.isTrainer;
-  if (data.isCoach !== undefined) updateData.isCoach = data.isCoach;
-
-  // Removed the `if (Object.keys(updateData).length === 0)` check.
-  // If called, an update will be attempted. The calling function should ensure
-  // it's called only when changes are intended (e.g., based on form.isDirty).
-
   try {
-    await updateDoc(userDocRef, updateData);
+    await updateDoc(userDocRef, finalUpdateData);
   } catch (error) {
-    console.error("Firestore updateDoc error in updateUserProfile for UID:", uid, "Data:", updateData, "Error:", error);
-    // Re-throw the error so the calling function's catch block handles it and toasts.
-    throw error;
+    console.error("Firestore updateDoc error in updateUserProfile for UID:", uid, "Data Sent:", finalUpdateData, "Error:", error);
+    throw error; // Re-throw to be caught by the calling function
   }
 };
 
