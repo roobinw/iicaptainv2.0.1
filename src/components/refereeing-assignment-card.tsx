@@ -16,27 +16,28 @@ interface RefereeingAssignmentCardProps {
   onEdit?: (assignment: RefereeingAssignment) => void;
   onDelete?: (assignmentId: string) => void;
   onAssignPlayersSuccess?: () => void;
-  onArchiveToggle?: (assignment: RefereeingAssignment) => void; // New prop
+  onArchiveToggle?: (assignment: RefereeingAssignment) => void; 
 }
 
 export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, onAssignPlayersSuccess, onArchiveToggle }: RefereeingAssignmentCardProps) {
-  const { user: currentUser, currentTeam } = useAuth();
-  const [assignedMembersDetails, setAssignedMembersDetails] = useState<User[]>([]); // Renamed state
-  const [isLoadingMembers, setIsLoadingMembers] = useState(true); // Renamed state
+  const { user: currentUser } = useAuth();
+  const [assignedMembersDetails, setAssignedMembersDetails] = useState<User[]>([]);
+  const [isLoadingMembers, setIsLoadingMembers] = useState(true);
 
   useEffect(() => {
     if (currentUser?.teamId && assignment.assignedPlayerUids && assignment.assignedPlayerUids.length > 0) {
-      setIsLoadingMembers(true); // Updated state setter
-      getAllUsersByTeam(currentUser.teamId)
+      setIsLoadingMembers(true);
+      getAllUsersByTeam(currentUser.teamId) // This fetches ALL members
         .then(allTeamMembers => {
+          // Filter to get details of only assigned members
           const details = allTeamMembers.filter(member => assignment.assignedPlayerUids!.includes(member.uid));
-          setAssignedMembersDetails(details); // Updated state setter
+          setAssignedMembersDetails(details);
         })
         .catch(console.error)
-        .finally(() => setIsLoadingMembers(false)); // Updated state setter
+        .finally(() => setIsLoadingMembers(false));
     } else {
-      setAssignedMembersDetails([]); // Updated state setter
-      setIsLoadingMembers(false); // Updated state setter
+      setAssignedMembersDetails([]);
+      setIsLoadingMembers(false);
     }
   }, [currentUser?.teamId, assignment.assignedPlayerUids]);
 
@@ -51,7 +52,6 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, onAssig
         item={assignment as unknown as Match | Training | RefereeingAssignment} 
         eventType="refereeing"
         icon={<Icons.Refereeing className="h-5 w-5 text-primary" />}
-        // titlePrefix is not used for refereeing, title is constructed differently
         renderDetails={() => ( 
             <>
                 <div className="text-xs sm:text-sm space-y-0.5 mt-1">
@@ -66,16 +66,16 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, onAssig
                 </div>
                 <div className="mt-2">
                   <h4 className="text-xs font-semibold text-muted-foreground mb-1">Assigned Referee(s):</h4>
-                  {isLoadingMembers ? ( // Updated state variable
+                  {isLoadingMembers ? ( 
                     <div className="flex flex-wrap gap-1">
                         <Badge variant="outline" className="animate-pulse text-xs">Loading...</Badge>
                     </div>
-                  ) : assignedMembersDetails.length > 0 ? ( // Updated state variable
+                  ) : assignedMembersDetails.length > 0 ? ( 
                     <div className="flex flex-wrap gap-1">
-                      {assignedMembersDetails.map(member => ( // Updated variable name
+                      {assignedMembersDetails.map(member => ( 
                         <Badge key={member.uid} variant="secondary" className="flex items-center gap-1 pr-2 text-xs">
                            <Avatar className="h-3.5 w-3.5 -ml-0.5">
-                                <AvatarImage src={member.avatarUrl} alt={member.name} data-ai-hint="member avatar"/> {/* Updated data-ai-hint */}
+                                <AvatarImage src={member.avatarUrl} alt={member.name} data-ai-hint="member avatar"/> 
                                 <AvatarFallback className="text-xxs">{getInitials(member.name)}</AvatarFallback>
                             </Avatar>
                           {member.name}
@@ -83,7 +83,7 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, onAssig
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-muted-foreground">No members assigned.</p> // Updated text
+                    <p className="text-xs text-muted-foreground">No members assigned.</p> 
                   )}
                 </div>
                 {assignment.notes && (
@@ -97,8 +97,7 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, onAssig
         onEdit={onEdit ? () => onEdit(assignment) : undefined}
         onDelete={onDelete ? () => onDelete(assignment.id) : undefined}
         onAssignPlayersSuccess={onAssignPlayersSuccess}
-        onArchiveToggle={onArchiveToggle ? () => onArchiveToggle(assignment) : undefined} // Pass to EventCardBase
+        onArchiveToggle={onArchiveToggle ? () => onArchiveToggle(assignment) : undefined} 
     />
   );
 }
-

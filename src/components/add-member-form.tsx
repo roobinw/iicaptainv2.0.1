@@ -12,19 +12,36 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { User, UserRole } from "@/types";
+import { Separator } from "@/components/ui/separator";
 
-const memberSchema = z.object({
+const memberSchemaBase = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Invalid email address." }).transform(value => value.toLowerCase()),
   role: z.enum(["admin", "member"] as [UserRole, ...UserRole[]], { required_error: "Role is required." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }).optional(), // Optional for editing existing users
-  confirmPassword: z.string().optional(), // Optional for editing existing users
+  isTrainingMember: z.boolean().optional(),
+  isMatchMember: z.boolean().optional(),
+  isTeamManager: z.boolean().optional(),
+  isTrainer: z.boolean().optional(),
+  isCoach: z.boolean().optional(),
+});
+
+// This will be used to conditionally require password
+let initialDataForSchema: User | null = null;
+
+const memberSchema = memberSchemaBase.extend({
+  password: z.string().min(6, { message: "Password must be at least 6 characters." })
+    .optional()
+    .refine(val => initialDataForSchema ? true : !!val, { // Password required if new user
+      message: "Password is required for new members.",
+    }),
+  confirmPassword: z.string().optional(),
 }).refine((data) => {
-  // Password confirmation is only required if a new password is being set (i.e., for new users)
   if (data.password && data.password !== data.confirmPassword) {
     return false;
   }
@@ -32,33 +49,20 @@ const memberSchema = z.object({
 }, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
-}).refine((data) => {
-  // If it's a new user (initialData is null), password is required
-  if (!initialDataForSchema && !data.password) { // Changed initialData to initialDataForSchema
-    return false;
-  }
-  return true;
-}, {
-  message: "Password is required for new members.",
-  path: ["password"],
 });
 
 
-// Refined schema needs access to initialData, so we define it inside the component or pass initialData to a factory
-let initialDataForSchema: User | null = null; // This will be set in the component props
-
 interface AddMemberFormProps {
   onSubmit: (data: MemberFormValuesExtended) => void; 
-  initialDataProp?: User | null; // Renamed to avoid conflict and make it clear it's a prop
+  initialDataProp?: User | null;
   onClose: () => void;
 }
 
-// Extended form values to include password
 export type MemberFormValuesExtended = z.infer<typeof memberSchema>;
 
 
 export function AddMemberForm({ onSubmit, initialDataProp, onClose }: AddMemberFormProps) {
-  initialDataForSchema = initialDataProp || null; // Set the global-like initialDataForSchema for the schema refinement
+  initialDataForSchema = initialDataProp || null; 
 
   const form = useForm<MemberFormValuesExtended>({
     resolver: zodResolver(memberSchema),
@@ -66,25 +70,43 @@ export function AddMemberForm({ onSubmit, initialDataProp, onClose }: AddMemberF
       name: initialDataProp.name,
       email: initialDataProp.email,
       role: initialDataProp.role,
-      password: "", // Passwords are not pre-filled for editing
+      isTrainingMember: initialDataProp.isTrainingMember ?? false,
+      isMatchMember: initialDataProp.isMatchMember ?? false,
+      isTeamManager: initialDataProp.isTeamManager ?? false,
+      isTrainer: initialDataProp.isTrainer ?? false,
+      isCoach: initialDataProp.isCoach ?? false,
+      password: "", 
       confirmPassword: "",
     } : {
       name: "",
       email: "",
       role: "member",
+      isTrainingMember: true, // Default new members to be training members
+      isMatchMember: true,   // Default new members to be match members
+      isTeamManager: false,
+      isTrainer: false,
+      isCoach: false,
       password: "",
       confirmPassword: "",
     },
   });
 
   const handleSubmit = (data: MemberFormValuesExtended) => {
-    // If editing, and password is not provided, don't include it in the submit data.
+    const dataToSubmit = { ...data };
     if (initialDataProp && !data.password) {
-      const { password, confirmPassword, ...restData } = data;
-      onSubmit(restData as any); // Type assertion, as password fields are removed
-    } else {
-      onSubmit(data);
+      delete dataToSubmit.password;
+      delete dataToSubmit.confirmPassword;
     }
+    onSubmit(dataToSubmit);
+  };
+
+  const booleanRoles: (keyof MemberFormValuesExtended)[] = ['isTrainingMember', 'isMatchMember', 'isTeamManager', 'isTrainer', 'isCoach'];
+  const booleanRoleLabels: Record<string, string> = {
+      isTrainingMember: "Participates in Trainings",
+      isMatchMember: "Participates in Matches",
+      isTeamManager: "Team Manager",
+      isTrainer: "Trainer",
+      isCoach: "Coach"
   };
 
   return (
@@ -113,7 +135,7 @@ export function AddMemberForm({ onSubmit, initialDataProp, onClose }: AddMemberF
                 <Input 
                   type="email" 
                   placeholder="member@example.com" {...field} 
-                  disabled={!!initialDataProp} // Disable email editing for existing users
+                  disabled={!!initialDataProp} 
                 />
               </FormControl>
               {initialDataProp && 
@@ -127,11 +149,11 @@ export function AddMemberForm({ onSubmit, initialDataProp, onClose }: AddMemberF
           name="role"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Role (within this team)</FormLabel>
+              <FormLabel>Authorization Role</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a role" />
+                    <SelectValue placeholder="Select authorization role" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -139,14 +161,47 @@ export function AddMemberForm({ onSubmit, initialDataProp, onClose }: AddMemberF
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
+              <FormDescription>This role controls app permissions (e.g., editing events).</FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        {/* Conditionally render password fields only if it's a new member or if explicitly editing password */}
-        {/* For simplicity, always show for new, hide for edit (password changes would be a separate flow) */}
+
+        <Separator className="my-6" />
+        <FormLabel>Responsibilities / Participation</FormLabel>
+        <FormDescription className="!mt-0 mb-3">
+            Select the responsibilities for this member. This affects where they appear (e.g., training attendance).
+        </FormDescription>
+        <div className="space-y-3">
+            {booleanRoles.map((roleKey) => (
+                <FormField
+                    key={roleKey}
+                    control={form.control}
+                    name={roleKey as 'isTrainingMember' | 'isMatchMember' | 'isTeamManager' | 'isTrainer' | 'isCoach'}
+                    render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-secondary/30">
+                        <FormControl>
+                        <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                        />
+                        </FormControl>
+                        <FormLabel className="font-normal text-sm !mt-0 cursor-pointer flex-1">
+                            {booleanRoleLabels[roleKey]}
+                        </FormLabel>
+                    </FormItem>
+                    )}
+                />
+            ))}
+        </div>
+        
         {!initialDataProp && (
           <>
+            <Separator className="my-6" />
+            <FormLabel>Account Credentials</FormLabel>
+             <FormDescription className="!mt-0 mb-3">
+                Set an initial password for the new member's account.
+            </FormDescription>
             <FormField
               control={form.control}
               name="password"
@@ -175,7 +230,7 @@ export function AddMemberForm({ onSubmit, initialDataProp, onClose }: AddMemberF
             />
           </>
         )}
-        <div className="flex justify-end gap-2 pt-4">
+        <div className="flex justify-end gap-2 pt-6">
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
           <Button type="submit">{initialDataProp ? "Save Changes" : "Add Member & Create Account"}</Button>
         </div>

@@ -50,17 +50,17 @@ export function EventCardBase({
   onAssignPlayersSuccess,
   onArchiveToggle,
 }: EventCardBaseProps) {
-  const { user: currentUser } = useAuth(); // Removed currentTeam as it's not used directly here for title
+  const { user: currentUser } = useAuth(); 
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
   const [isAssignPlayersDialogOpen, setIsAssignPlayersDialogOpen] = useState(false);
-  const [memberList, setMemberList] = useState<User[]>([]);
+  const [allTeamMembers, setAllTeamMembers] = useState<User[]>([]); // Store all members
+  const [attendanceEligibleMembers, setAttendanceEligibleMembers] = useState<User[]>([]); // Filtered list for attendance
   const [isLoadingMembers, setIsLoadingMembers] = useState(true);
 
   const initialAttendanceSource = (eventType === "match" || eventType === "training")
     ? (item as Match | Training).attendance
     : {};
   const [currentAttendance, setCurrentAttendance] = useState<Record<string, AttendanceStatus>>(initialAttendanceSource || {});
-
 
   const initializeAttendance = useCallback((members: User[], eventAttendance: Record<string, AttendanceStatus> | undefined) => {
     const newAttendance: Record<string, AttendanceStatus> = {};
@@ -81,21 +81,35 @@ export function EventCardBase({
       setIsLoadingMembers(true);
       getAllUsersByTeam(currentUser.teamId)
         .then(fetchedMembers => {
-          setMemberList(fetchedMembers);
+          setAllTeamMembers(fetchedMembers); // Set all members first
+
+          // Filter for attendance eligibility
+          let eligibleMembers: User[] = [];
+          if (eventType === "match") {
+            eligibleMembers = fetchedMembers.filter(m => m.isMatchMember);
+          } else if (eventType === "training") {
+            eligibleMembers = fetchedMembers.filter(m => m.isTrainingMember);
+          } else {
+            eligibleMembers = fetchedMembers; // For refereeing or other types, use all
+          }
+          setAttendanceEligibleMembers(eligibleMembers);
+          
           if (eventType === "match" || eventType === "training") {
-            initializeAttendance(fetchedMembers, (item as Match | Training).attendance);
+            initializeAttendance(eligibleMembers, (item as Match | Training).attendance);
           }
         })
         .catch(err => {
           console.error(`Failed to fetch team members for ${eventType} card:`, err);
-          setMemberList([]);
+          setAllTeamMembers([]);
+          setAttendanceEligibleMembers([]);
           if (eventType === "match" || eventType === "training") {
             initializeAttendance([], (item as Match | Training).attendance);
           }
         })
         .finally(() => setIsLoadingMembers(false));
     } else {
-      setMemberList([]);
+      setAllTeamMembers([]);
+      setAttendanceEligibleMembers([]);
       if (eventType === "match" || eventType === "training") {
         initializeAttendance([], (item as Match | Training).attendance);
       }
@@ -107,10 +121,11 @@ export function EventCardBase({
 
   useEffect(() => {
     if (eventType === "match" || eventType === "training") {
-      initializeAttendance(memberList, (item as Match | Training).attendance);
+      // Re-initialize attendance if item.attendance changes or eligible members list changes
+      initializeAttendance(attendanceEligibleMembers, (item as Match | Training).attendance);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [(eventType === "match" || eventType === "training") ? (item as Match | Training).attendance : null, memberList, eventType]);
+  }, [(eventType === "match" || eventType === "training") ? (item as Match | Training).attendance : null, attendanceEligibleMembers, eventType]);
 
 
   const isAdmin = currentUser?.role === "admin";
@@ -124,8 +139,10 @@ export function EventCardBase({
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
 
+  // Use attendanceEligibleMembers for attendance count
   const presentCount = Object.values(currentAttendance).filter(status => status === 'present').length;
-  const totalMembersForAttendanceCount = memberList.length > 0 ? memberList.length : Object.keys(currentAttendance).length;
+  const totalMembersForAttendanceCount = attendanceEligibleMembers.length;
+
 
   let eventNameForDialog: string;
   let eventDateForDialog: string = "";
@@ -146,7 +163,7 @@ export function EventCardBase({
 
   const cardTitle =
     eventType === "match" && 'opponent' in item
-      ? `${titlePrefix || ""} ${item.opponent}` // Simplified for matches
+      ? `${titlePrefix || ""} ${item.opponent}` 
       : eventType === "training" && 'location' in item
       ? `${item.location}`
       : eventType === "refereeing" && 'date' in item && 'homeTeam' in item
@@ -180,11 +197,11 @@ export function EventCardBase({
       <CardContent className="flex-grow pt-2 pb-3">
          {(eventType === "match" || eventType === "training") && (
             <div className="text-sm text-muted-foreground">
-                Attendance: {isLoadingMembers && memberList.length === 0 && totalMembersForAttendanceCount === 0 ? (
+                Attendance: {isLoadingMembers && attendanceEligibleMembers.length === 0 ? (
                     <span className="inline-block"><Skeleton className="h-4 w-20" /></span>
                 ) : (
                     <span className="font-semibold text-primary">{presentCount} / {totalMembersForAttendanceCount}</span>
-                )} members present.
+                )} {eventType === "match" ? "match" : "training"} members present.
             </div>
          )}
          {eventType === "refereeing" && 'assignedPlayerUids' in item && (item as RefereeingAssignment).assignedPlayerUids && (item as RefereeingAssignment).assignedPlayerUids!.length > 0 && (
@@ -214,10 +231,11 @@ export function EventCardBase({
                 <DialogTitle>Manage Attendance</DialogTitle>
                 <DialogDescription>
                     Update attendance for {eventNameForDialog} on {format(parseISO(eventDateForDialog), "MMM dd, yyyy")}.
+                    Showing {eventType === "match" ? "match-participating" : "training-participating"} members.
                 </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="h-[300px] md:h-[400px] pr-4">
-                {isLoadingMembers && memberList.length === 0 && totalMembersForAttendanceCount === 0 ? (
+                {isLoadingMembers && attendanceEligibleMembers.length === 0 ? (
                     <div className="space-y-3 py-1">
                     {[1,2,3].map(i => (
                         <div key={i} className="flex items-center justify-between p-2 border rounded-md">
@@ -232,9 +250,9 @@ export function EventCardBase({
                         </div>
                     ))}
                     </div>
-                ) : memberList.length > 0 ? (
+                ) : attendanceEligibleMembers.length > 0 ? (
                     <div className="space-y-3 py-1">
-                    {memberList.map((member) => (
+                    {attendanceEligibleMembers.map((member) => (
                         <div key={member.uid} className="flex items-center justify-between p-2 border rounded-md bg-card hover:bg-secondary/30">
                         <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
@@ -258,7 +276,9 @@ export function EventCardBase({
                     ))}
                     </div>
                 ) : (
-                    <p className="text-muted-foreground text-center py-4">No members found in your team.</p>
+                    <p className="text-muted-foreground text-center py-4">
+                        No members eligible for {eventType} attendance found. Check member responsibilities.
+                    </p>
                 )}
                 </ScrollArea>
             </DialogContent>
@@ -268,7 +288,7 @@ export function EventCardBase({
           <Dialog open={isAssignPlayersDialogOpen} onOpenChange={setIsAssignPlayersDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" className="hover:bg-accent hover:text-accent-foreground whitespace-nowrap">
-                <Icons.Players className="mr-2 h-4 w-4" /> Manage Assignment
+                <Icons.Users className="mr-2 h-4 w-4" /> Manage Assignment
               </Button>
             </DialogTrigger>
             <DialogContent className="w-[95vw] max-w-[400px] sm:max-w-md md:max-w-lg">
@@ -280,7 +300,7 @@ export function EventCardBase({
               </DialogHeader>
               <AssignPlayersForm
                 assignment={item as RefereeingAssignment}
-                teamMembers={memberList}
+                teamMembers={allTeamMembers} 
                 isLoadingMembers={isLoadingMembers}
                 onClose={() => setIsAssignPlayersDialogOpen(false)}
                 onAssignSuccess={() => {

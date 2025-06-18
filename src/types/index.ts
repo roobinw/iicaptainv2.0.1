@@ -17,6 +17,13 @@ export interface User {
   avatarUrl?: string;
   createdAt?: string; // ISO string from serverTimestamp
   teamId?: string; // ID of the team the user belongs to
+
+  // New boolean role specifiers
+  isTrainingMember?: boolean;
+  isMatchMember?: boolean;
+  isTeamManager?: boolean;
+  isTrainer?: boolean;
+  isCoach?: boolean;
 }
 
 export interface Team {

@@ -32,9 +32,14 @@ const fromFirestoreUser = (docSnap: any): User | null => {
     name: data.name,
     email: data.email,
     role: data.role,
-    avatarUrl: data.avatarUrl, // This could be null/undefined from Firestore
+    avatarUrl: data.avatarUrl, 
     teamId: data.teamId,
     createdAt: processTimestamp(data.createdAt as Timestamp | undefined),
+    isTrainingMember: data.isTrainingMember ?? false,
+    isMatchMember: data.isMatchMember ?? false,
+    isTeamManager: data.isTeamManager ?? false,
+    isTrainer: data.isTrainer ?? false,
+    isCoach: data.isCoach ?? false,
   } as User;
 };
 
@@ -86,7 +91,17 @@ export const getMembersByTeamWithMemberRole = async (teamId: string): Promise<Us
 
 // Admin adding a member profile to their team AND creating a Firebase Auth account.
 export const addMemberProfileToTeam = async (
-  memberData: { email: string; password?: string; name: string; role: UserRole },
+  memberData: { 
+    email: string; 
+    password?: string; 
+    name: string; 
+    role: UserRole;
+    isTrainingMember?: boolean;
+    isMatchMember?: boolean;
+    isTeamManager?: boolean;
+    isTrainer?: boolean;
+    isCoach?: boolean;
+  },
   teamId: string
 ): Promise<string> => {
   if (!db || !firebaseAuth) {
@@ -113,20 +128,24 @@ export const addMemberProfileToTeam = async (
     const userDocRef = doc(db, 'users', newAuthUser.uid); 
 
     const newProfileData: Omit<User, 'id' | 'createdAt'> & { createdAt: any } = {
-      uid: newAuthUser.uid, // Use the Firebase Auth UID
+      uid: newAuthUser.uid, 
       name: memberData.name,
       email: memberData.email.toLowerCase(),
-      role: memberData.role, // This should be "member" or "admin" based on input
+      role: memberData.role, 
       teamId: teamId,
       avatarUrl: `https://picsum.photos/seed/${memberData.email.toLowerCase()}/80/80`,
+      isTrainingMember: memberData.isTrainingMember ?? false,
+      isMatchMember: memberData.isMatchMember ?? false,
+      isTeamManager: memberData.isTeamManager ?? false,
+      isTrainer: memberData.isTrainer ?? false,
+      isCoach: memberData.isCoach ?? false,
       createdAt: serverTimestamp(),
     };
 
     await setDoc(userDocRef, newProfileData);
-    return newAuthUser.uid; // Return the new Firebase Auth UID
+    return newAuthUser.uid; 
 
   } catch (error: any) {
-    // Handle specific Firebase Auth errors
     if (error.code === 'auth/email-already-in-use') {
       throw new Error('This email address is already associated with an account.');
     } else if (error.code === 'auth/weak-password') {
@@ -148,18 +167,23 @@ export const updateUserProfile = async (uid: string, data: Partial<Omit<User, 'i
   }
   const userDocRef = doc(db, 'users', uid);
   
-  // Construct the data object for Firestore update carefully
-  // Explicitly typed to allow avatarUrl to be string or null
   const updateData: { [key: string]: any } = {}; 
 
   if (data.teamId !== undefined) updateData.teamId = data.teamId;
   if (data.role !== undefined) updateData.role = data.role;
   if (data.name !== undefined) updateData.name = data.name;
   
-  // Special handling for avatarUrl to allow setting it to null
   if (data.hasOwnProperty('avatarUrl')) { 
-    updateData.avatarUrl = data.avatarUrl; // This will correctly pass null to Firestore if data.avatarUrl is null
+    updateData.avatarUrl = data.avatarUrl; 
   }
+
+  // Handle new boolean fields
+  if (data.isTrainingMember !== undefined) updateData.isTrainingMember = data.isTrainingMember;
+  if (data.isMatchMember !== undefined) updateData.isMatchMember = data.isMatchMember;
+  if (data.isTeamManager !== undefined) updateData.isTeamManager = data.isTeamManager;
+  if (data.isTrainer !== undefined) updateData.isTrainer = data.isTrainer;
+  if (data.isCoach !== undefined) updateData.isCoach = data.isCoach;
+
 
   if (Object.keys(updateData).length === 0) {
     console.warn("updateUserProfile called with no data to update for UID:", uid);
@@ -177,10 +201,6 @@ export const deleteUserProfile = async (uid: string): Promise<void> => {
   if (!uid) {
     throw new Error("User UID is required to delete profile.");
   }
-  // This only deletes the Firestore user profile.
-  // Deleting the Firebase Auth user is a separate, more complex operation,
-  // typically requiring admin privileges or re-authentication of the user.
   const userDocRef = doc(db, 'users', uid);
   await deleteDoc(userDocRef);
 };
-

@@ -12,9 +12,9 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   type User as FirebaseUser,
-  EmailAuthProvider, // Added for re-authentication
-  reauthenticateWithCredential, // Added for re-authentication
-  updatePassword // Added for password update
+  EmailAuthProvider, 
+  reauthenticateWithCredential, 
+  updatePassword 
 } from "firebase/auth";
 import { doc, setDoc, getDoc, serverTimestamp, collection } from "firebase/firestore";
 import { auth, db } from "./firebase"; 
@@ -28,7 +28,6 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   isLoading: boolean;
   login: (email: string, password?: string) => Promise<void>; 
-  // loginWithGoogle: () => Promise<void>; // Removed as per user request
   logout: () => Promise<void>;
   signup: (email: string, name: string, teamName: string, password?: string) => Promise<void>; 
   refreshTeamData: () => Promise<void>;
@@ -126,21 +125,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               }
             }
           } else {
-            // This case implies a Firebase Auth user exists but no Firestore profile.
-            // This could happen if Google Sign-In was used and profile creation wasn't completed,
-            // or if a user was created via Firebase console without a corresponding Firestore doc.
-            // For new signups via email/password, the signup function handles profile creation.
-            // For Google, a profile might need to be created here if it's the first sign-in.
-            // However, since Google Sign-In was removed from the UI, this path is less likely for new users.
-            // We'll proceed with a default profile creation if name/email are available from fbUser.
             const userDocRef = doc(db, "users", fbUser.uid);
             const newUserData: Omit<User, 'id' | 'createdAt'> & { createdAt: any } = {
               uid: fbUser.uid,
               email: fbUser.email!.toLowerCase(), 
-              name: fbUser.displayName || `User-${fbUser.uid.substring(0,5)}`, // Default name
-              role: "member", // Default role, user needs to create/join a team
-              teamId: undefined, // No teamId initially
+              name: fbUser.displayName || `User-${fbUser.uid.substring(0,5)}`, 
+              role: "member", 
+              teamId: undefined, 
               avatarUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.email!.toLowerCase()}/80/80`,
+              isTrainingMember: false,
+              isMatchMember: false,
+              isTeamManager: false,
+              isTrainer: false,
+              isCoach: false,
               createdAt: serverTimestamp(),
             };
             await setDoc(userDocRef, newUserData);
@@ -156,28 +153,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 router.replace("/onboarding/create-team");
             }
           }
-        } else { // fbUser is null (user is not authenticated)
+        } else { 
           setUser(null);
           setFirebaseUser(null);
           setCurrentTeam(null);
           
-          // Define paths accessible to unauthenticated users
           const unauthenticatedAccessiblePaths = [
-            "/", // Landing page
+            "/", 
             "/login",
             "/signup",
-            // Add any other public marketing paths like /privacy, /terms if they exist under /
-            // Note: Paths under /app/(marketing) are handled by startsWith below.
           ];
           
-          // Check if current path is one of the explicitly accessible paths,
-          // or part of the /onboarding flow, or under the (marketing) group.
           const canStay = unauthenticatedAccessiblePaths.includes(pathname) || 
                           pathname.startsWith("/onboarding") || 
                           pathname.startsWith("/(marketing)");
 
           if (!canStay) {
-            router.replace("/"); // Redirect to landing page if not on an accessible page
+            router.replace("/"); 
           }
         }
       } catch (error: any) {
@@ -198,7 +190,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           variant: "destructive",
         });
         
-        // Define paths accessible to unauthenticated users (same as above)
         const unauthenticatedAccessiblePaths = [
             "/", "/login", "/signup", 
         ];
@@ -229,7 +220,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will handle redirect to /dashboard or /onboarding/create-team
     } catch (error: any) {
       console.error("Firebase login error (AuthContext):", error);
       let errorMessage = "Failed to login. Please check your credentials.";
@@ -246,22 +236,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false); 
       throw error; 
     }
-    // No setIsLoading(false) here, as onAuthStateChanged will set it.
   };
-
-  // loginWithGoogle function was removed as per user request
 
   const logout = async () => {
     setIsLoading(true);
     try {
       await firebaseSignOut(auth);
-      // onAuthStateChanged will set user to null and trigger redirect to landing page if necessary
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
     } catch (error: any) {
       console.error("Error signing out: ", error);
       toast({ title: "Logout Failed", description: error.message, variant: "destructive" });
-    } finally {
-      // setIsLoading(false); // onAuthStateChanged handles this
     }
   };
   
@@ -298,6 +282,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         role: "admin" as UserRole, 
         teamId: newTeamId,
         avatarUrl: `https://picsum.photos/seed/${email.toLowerCase()}/80/80`,
+        isTrainingMember: true, // Admin is part of training by default
+        isMatchMember: true,    // Admin is part of matches by default
+        isTeamManager: true,   // Admin is team manager by default
+        isTrainer: false,       // Admin is not trainer by default
+        isCoach: false,         // Admin is not coach by default
         createdAt: serverTimestamp(),
       });
       
@@ -305,7 +294,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Account & Team Created!",
         description: "Welcome to iiCaptain! Redirecting...",
       });
-      // onAuthStateChanged will handle redirect to /dashboard
     } catch (error: any) {
       console.error("Firebase signup error (AuthContext):", error);
       let errorMessage = "Failed to create account. Please try again.";
@@ -322,7 +310,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false); 
       throw error; 
     }
-    // No setIsLoading(false) here, as onAuthStateChanged will set it.
   };
 
   const changePassword = async (currentPassword: string, newPassword: string) => {
@@ -334,7 +321,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const credential = EmailAuthProvider.credential(firebaseUser.email, currentPassword);
       await reauthenticateWithCredential(firebaseUser, credential);
       await updatePassword(firebaseUser, newPassword);
-      // Toast for success is handled in the component calling this.
     } catch (error: any) {
       console.error("Error changing password:", error);
       let errorMessage = "Failed to change password.";
@@ -359,7 +345,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, fetchAndSetCurrentTeam]); 
 
   return (
-    <AuthContext.Provider value={{ user, currentTeam, firebaseUser, isLoading, login, /*loginWithGoogle,*/ logout, signup, refreshTeamData, refreshAuthUser, changePassword }}>
+    <AuthContext.Provider value={{ user, currentTeam, firebaseUser, isLoading, login, logout, signup, refreshTeamData, refreshAuthUser, changePassword }}>
       {children}
     </AuthContext.Provider>
   );
@@ -372,4 +358,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
