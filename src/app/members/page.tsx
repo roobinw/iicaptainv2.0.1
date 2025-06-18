@@ -12,7 +12,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { getAllUsersByTeam, addMemberProfileToTeam, updateUserProfile, deleteUserProfile } from "@/services/userService";
+import { getAllUsersByTeam, addMemberProfileToTeam, updateUserProfile, deleteUserProfile } from "@/services/userService"; 
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MembersPage() {
@@ -29,7 +29,7 @@ export default function MembersPage() {
   const fetchMembers = async (teamId: string) => {
     setIsLoadingData(true);
     try {
-      const fetchedMembers = await getAllUsersByTeam(teamId);
+      const fetchedMembers = await getAllUsersByTeam(teamId); 
       setMembers(fetchedMembers);
     } catch (error) {
       console.error("Error fetching members:", error);
@@ -68,7 +68,7 @@ export default function MembersPage() {
     try {
       await addMemberProfileToTeam({
         email: data.email,
-        password: data.password,
+        password: data.password, 
         name: data.name,
         role: data.role,
       }, currentUser.teamId);
@@ -96,7 +96,7 @@ export default function MembersPage() {
         name: data.name,
         role: data.role,
       };
-      await updateUserProfile(editingMember.uid, updatePayload);
+      await updateUserProfile(editingMember.uid, updatePayload); 
       toast({ title: "Member Updated", description: `${data.name}'s details have been updated.` });
       setForceUpdateCounter(prev => prev + 1);
       setIsAddMemberDialogOpen(false);
@@ -117,7 +117,7 @@ export default function MembersPage() {
       return;
     }
     if (!window.confirm(`Are you sure you want to remove ${memberToDelete.name}'s profile from this team? This does NOT delete their login account if one exists.`)) return;
-
+    
     try {
       await deleteUserProfile(memberToDelete.uid);
       toast({ title: "Member Profile Removed", description: `${memberToDelete.name}'s profile has been removed.`, variant: "destructive" });
@@ -128,11 +128,11 @@ export default function MembersPage() {
     }
   };
 
-  const filteredMembers = members.filter(member =>
+  const filteredMembers = members.filter(member => 
     member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     member.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
+  
   const isAdmin = currentUser?.role === "admin";
 
   if (authLoading || isLoadingData) {
@@ -172,7 +172,7 @@ export default function MembersPage() {
           }}>
             <DialogTrigger asChild>
               <Button>
-                <Icons.Add className="mr-2 h-4 w-4" /> Add Member & Create Account
+                <Icons.Add className="mr-2 h-4 w-4" /> Add Member & Create Account 
               </Button>
             </DialogTrigger>
             <DialogContent className="w-[95vw] max-w-[400px] sm:max-w-[425px]">
@@ -182,7 +182,7 @@ export default function MembersPage() {
                   {editingMember ? "Update member profile details." : "Enter the new member's information. An account will be created for them."}
                 </DialogDescription>
               </DialogHeader>
-              <AddMemberForm
+              <AddMemberForm 
                 onSubmit={editingMember ? handleUpdateMember : handleAddMember}
                 initialDataProp={editingMember}
                 onClose={() => {
@@ -232,10 +232,10 @@ export default function MembersPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredMembers.map((member) => (
-            <MemberCard
-              key={member.uid}
+            <MemberCard 
+              key={member.uid} 
               member={member}
-              onEdit={isAdmin && member.uid !== currentUser.uid ? handleEditMember : undefined}
+              onEdit={isAdmin && member.uid !== currentUser.uid ? handleEditMember : undefined} 
               onDelete={isAdmin && member.uid !== currentUser.uid ? () => handleDeleteMember(member) : undefined}
             />
           ))}
@@ -244,3 +244,5 @@ export default function MembersPage() {
     </div>
   );
 }
+
+    
