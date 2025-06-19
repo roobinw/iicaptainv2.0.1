@@ -19,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Icons } from "@/components/icons";
-import { PanelLeft, LogOut, Settings as SettingsIcon, LifeBuoy, AlertTriangle } from "lucide-react";
+import { PanelLeft, LogOut, Settings as SettingsIcon, LifeBuoy, AlertTriangle, Shield as DirectShieldIcon } from "lucide-react"; // Directly import Shield
 import { useEffect, useState } from "react";
 
 interface NavItem {
@@ -75,7 +75,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   if (authIsLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
+        {/* Use DirectShieldIcon as a fallback if Icons.TeamLogo is part of the issue */}
+        <DirectShieldIcon className="h-12 w-12 animate-spin text-primary" />
          <p className="ml-4 text-lg text-foreground">Loading Application...</p>
       </div>
     );
@@ -89,7 +90,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     if (!user && !isPublicPage && !isAuthFlowPage && !isOnboardingPage) {
        return (
            <div className="flex h-screen items-center justify-center bg-background">
-               <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
+               <DirectShieldIcon className="h-12 w-12 animate-spin text-primary" />
                <p className="ml-4 text-lg text-foreground">Redirecting...</p>
            </div>
        );
@@ -97,7 +98,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     if (user && !user.teamId && !isOnboardingPage) {
       return (
           <div className="flex h-screen items-center justify-center bg-background">
-              <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
+              <DirectShieldIcon className="h-12 w-12 animate-spin text-primary" />
               <p className="ml-4 text-lg text-foreground">Finalizing setup or redirecting...</p>
           </div>
       );
@@ -105,7 +106,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
      if (user && user.teamId && (isAuthFlowPage || isOnboardingPage || (isPublicPage && pathname === "/"))) {
         return (
              <div className="flex h-screen items-center justify-center bg-background">
-                <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
+                <DirectShieldIcon className="h-12 w-12 animate-spin text-primary" />
                 <p className="ml-4 text-lg text-foreground">Redirecting to dashboard...</p>
             </div>
         );
@@ -126,23 +127,24 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       let IconComponent: React.ComponentType<any> | undefined = undefined;
       let iconIsValid = true;
-      let iconErrorMessage = "";
+      let iconErrorMessage = `Icon for '${item.label}' is missing or invalid.`;
 
       if (!Icons || typeof Icons !== 'object') {
         iconIsValid = false;
-        iconErrorMessage = `Icons object is invalid.`;
+        iconErrorMessage = `Icons object is invalid or not loaded.`;
         console.error(`AppLayout (SSR/Client): Icons object is undefined or not an object. Cannot render icon for: ${item.label}`);
       } else if (!(item.icon in Icons)) {
         iconIsValid = false;
-        iconErrorMessage = `Icon key '${item.icon}' not found.`;
+        iconErrorMessage = `Icon key '${item.icon}' not found in Icons object for item: ${item.label}.`;
         console.error(`AppLayout (SSR/Client): Icon key '${item.icon}' not found in Icons object for item: ${item.label}`);
       } else {
-        IconComponent = Icons[item.icon as keyof typeof Icons];
-        if (typeof IconComponent !== 'function') {
-          IconComponent = undefined;
+        const PotentialIconComponent = Icons[item.icon as keyof typeof Icons];
+        if (typeof PotentialIconComponent === 'function') {
+          IconComponent = PotentialIconComponent;
+        } else {
           iconIsValid = false;
-          iconErrorMessage = `Icon for '${item.icon}' is not a component.`;
-          console.error(`AppLayout (SSR/Client): Icon component for key '${item.icon}' (label: ${item.label}) is not a function. Got:`, Icons[item.icon as keyof typeof Icons]);
+          iconErrorMessage = `Icon component for key '${item.icon}' (label: ${item.label}) is not a function. Got: ${typeof PotentialIconComponent}`;
+          console.error(`AppLayout (SSR/Client): Icon component for key '${item.icon}' (label: ${item.label}) is not a function. Got:`, PotentialIconComponent);
         }
       }
       
@@ -164,13 +166,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
               {iconIsValid && IconComponent ? (
                 <IconComponent className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5" />
               ) : (
-                <AlertTriangle className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5 text-destructive" title={iconErrorMessage} />
+                <AlertTriangle className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5 text-destructive" />
               )}
               <span className="sr-only">{item.label}</span>
             </Link>
           </TooltipTrigger>
           <TooltipContent side="right" className="bg-card text-card-foreground border-border">
-            {iconIsValid ? item.label : `Error: ${item.label} (${iconErrorMessage || 'Icon missing'})`}
+            {iconIsValid ? item.label : iconErrorMessage}
           </TooltipContent>
         </Tooltip>
       );
@@ -220,7 +222,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 href="/dashboard"
                 className="text-sidebar-foreground flex justify-center items-center h-10 w-10" 
             >
-              <Icons.TeamLogo className="h-8 w-8 text-sidebar-primary" />
+              <DirectShieldIcon className="h-8 w-8 text-sidebar-primary" /> {/* Use DirectShieldIcon */}
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
@@ -274,7 +276,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                  </SheetHeader>
                  <div className="flex h-10 items-center justify-center mb-4 mt-2">
                      <Link href="/dashboard" className="flex items-center justify-center h-10 w-10" onClick={() => setIsMobileSheetOpen(false)}>
-                        <Icons.TeamLogo className="h-8 w-8 text-sidebar-primary" />
+                        <DirectShieldIcon className="h-8 w-8 text-sidebar-primary" /> {/* Use DirectShieldIcon */}
                         <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
                     </Link>
                   </div>
@@ -337,3 +339,5 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
+    
