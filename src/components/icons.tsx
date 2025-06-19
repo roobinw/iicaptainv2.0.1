@@ -2,61 +2,31 @@
 import {
   LayoutDashboard,
   CalendarDays,
-  Users, // Direct import for "Users"
-  LogOut,
-  PlusCircle,
-  Edit,
-  Trash2,
-  ChevronDown,
-  ChevronRight,
-  MoreHorizontal,
-  Settings, // Direct import for "Settings"
+  Users,
+  Dumbbell,
+  Gavel,
+  MessagesSquare,
+  Shield, // For TeamLogo
+  AlertTriangle, // General fallback, also used by AppLayout directly
+  // For other components that might rely on the full Icons object,
+  // this simplification will cause errors. This is a temporary diagnostic step.
+  // If this works, we know the issue is with one of the REMOVED icons/exports in the original icons.tsx
+  // Other icons like LogOut, PlusCircle, Edit, Trash2, etc., are temporarily removed.
+  // Components needing them will either fail or need temporary adjustments if this diagnostic step is prolonged.
+  Settings,
+  LifeBuoy,
   UserCircle,
-  ClipboardList, // Direct import for "Attendance"
-  AlertCircle,
+  ClipboardList,
   CheckCircle2,
   XCircle,
-  Sun,
-  Moon,
   Search,
-  ArrowLeft,
-  GripVertical,
-  Dumbbell, // Direct import for "Trainings"
   MoreVertical,
   KeyRound,
-  LifeBuoy, // Direct import for "Support"
-  Gavel, // Direct import for "Refereeing"
-  MessageSquare, // For single message icon
-  MessagesSquare, // Direct import for "MessagesSquare"
   Archive,
   ArchiveX,
   Send,
-  MapPin,
-  Shield, // Added Shield for replacement
-  type LucideProps,
-  AlertTriangle, // Keep for fallback in AppLayout
+  AlertCircle, // for AttendanceToggler
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-// interface TeamLogoProps extends Omit<LucideProps, 'className'> {
-//   className?: string;
-// }
-
-// const TeamLogoComponent = ({ className, ...props }: TeamLogoProps) => (
-//   <svg
-//     xmlns="http://www.w3.org/2000/svg"
-//     viewBox="0 0 24 24"
-//     fill="none"
-//     stroke="currentColor"
-//     strokeWidth="2"
-//     strokeLinecap="round"
-//     strokeLinejoin="round"
-//     className={cn("h-6 w-6", className)}
-//     {...props}
-//   >
-//     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-//   </svg>
-// );
 
 export const Icons = {
   // Icons used by AppLayout navItems
@@ -65,39 +35,31 @@ export const Icons = {
   Matches: CalendarDays,
   Trainings: Dumbbell,
   Refereeing: Gavel,
-  Users: Users, // For Members nav & marketing
+  Users: Users,
 
-  // Icons used by Marketing pages features
-  Attendance: ClipboardList,
+  // TeamLogo
+  TeamLogo: Shield,
 
-  // TeamLogo (custom SVG) - Replaced with Shield for diagnostics
-  TeamLogo: Shield, // Was TeamLogoComponent
+  // Common fallback, also used by AppLayout directly if its own dynamic loading fails
+  AlertTriangle: AlertTriangle,
 
-  // Other icons that might be used directly by other components
-  Logout: LogOut,
-  Add: PlusCircle,
-  Edit: Edit,
-  Delete: Trash2,
-  ChevronDown: ChevronDown,
-  ChevronRight: ChevronRight,
-  MoreHorizontal: MoreHorizontal,
-  Settings: Settings, // For user dropdown, SettingsPage
-  User: UserCircle, // Might be used for default avatar placeholder
-  AlertCircle: AlertCircle,
-  AlertTriangle: AlertTriangle, // Keep for AppLayout fallback
+  // Icons needed by other components that would break if not present
+  // These were identified as potentially used by components visible in the authenticated part of the app
+  Settings: Settings,
+  Support: LifeBuoy, // Used in AppLayout user dropdown, but imported directly there. Kept for other uses.
+  User: UserCircle,
+  Attendance: ClipboardList, // For marketing page, but keeping as it's a general icon
   CheckCircle2: CheckCircle2,
   XCircle: XCircle,
-  Sun: Sun,
-  Moon: Moon,
+  AlertCircle: AlertCircle,
   Search: Search,
-  ArrowLeft: ArrowLeft,
-  GripVertical: GripVertical,
-  MoreVertical: MoreVertical,
-  KeyRound: KeyRound, // For SettingsPage
-  Support: LifeBuoy, // For user dropdown
-  MessageSquare: MessageSquare, // For single message icon in Dashboard
+  MoreVertical: MoreVertical, // Used in cards
+  KeyRound: KeyRound, // Settings page
   Archive: Archive,
   ArchiveX: ArchiveX,
   Send: Send,
-  MapPin: MapPin, // No longer in nav, but keep for potential future use
+  Edit: Edit, // Common action
+  Delete: Trash2, // Common action
+  Add: PlusCircle, // Common action
+  LogOut: LogOut, // Used in AppLayout user dropdown, but imported directly there. Kept for other uses.
 };
