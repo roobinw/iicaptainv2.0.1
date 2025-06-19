@@ -47,7 +47,7 @@ export function MemberCard({ member, onEdit, onDelete }: MemberCardProps) {
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full">
       <CardHeader className="items-center text-center pb-3">
         <Avatar className="h-20 w-20 mb-2 border-2 border-primary">
-          <AvatarImage src={member.avatarUrl} alt={member.name} data-ai-hint="member photo"/>
+          <AvatarImage src={member.avatarUrl ?? undefined} alt={member.name} data-ai-hint="member photo"/>
           <AvatarFallback className="text-2xl">{getInitials(member.name)}</AvatarFallback>
         </Avatar>
         <CardTitle>{member.name}</CardTitle>

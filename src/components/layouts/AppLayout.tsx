@@ -14,12 +14,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"; 
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Icons } from "@/components/icons";
-import { PanelLeft, LogOut, Settings as SettingsIcon, LifeBuoy, AlertTriangle } from "lucide-react"; 
+import { PanelLeft, LogOut, Settings as SettingsIcon, LifeBuoy, AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface NavItem {
@@ -32,7 +32,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "Dashboard" },
-  { href: "/messages", label: "Messages", icon: "MessagesSquare" }, 
+  { href: "/messages", label: "Messages", icon: "MessagesSquare" },
   { href: "/matches", label: "Matches", icon: "Matches" },
   { href: "/trainings", label: "Trainings", icon: "Trainings" },
   { href: "/refereeing", label: "Refereeing", icon: "Refereeing" },
@@ -52,16 +52,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
-    if (!authIsLoading) { 
+    if (!authIsLoading) {
       const isMarketingPage = pathname === "/" || pathname.startsWith("/(marketing)");
       const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
       const isOnboardingPage = pathname.startsWith("/onboarding");
 
-      if (!user) { 
+      if (!user) {
         if (!isMarketingPage && !isAuthPage && !isOnboardingPage) {
-          router.replace("/"); 
+          router.replace("/");
         }
-      } else { 
+      } else {
         if (!user.teamId && !isOnboardingPage) {
           router.replace("/onboarding/create-team");
         } else if (user.teamId && (isAuthPage || isOnboardingPage || (isMarketingPage && pathname === "/"))) {
@@ -80,14 +80,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  
+
   if (!authIsLoading) {
-    const isPublicPage = pathname === "/" || pathname.startsWith("/(marketing)"); 
+    const isPublicPage = pathname === "/" || pathname.startsWith("/(marketing)");
     const isAuthFlowPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
     const isOnboardingPage = pathname.startsWith("/onboarding");
 
     if (!user && !isPublicPage && !isAuthFlowPage && !isOnboardingPage) {
-       return ( 
+       return (
            <div className="flex h-screen items-center justify-center bg-background">
                <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
                <p className="ml-4 text-lg text-foreground">Redirecting...</p>
@@ -102,7 +102,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
       );
     }
-     if (user && user.teamId && (isAuthFlowPage || isOnboardingPage || (isPublicPage && pathname === "/"))) { 
+     if (user && user.teamId && (isAuthFlowPage || isOnboardingPage || (isPublicPage && pathname === "/"))) {
         return (
              <div className="flex h-screen items-center justify-center bg-background">
                 <Icons.TeamLogo className="h-12 w-12 animate-spin text-primary" />
@@ -120,45 +120,26 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const renderNavItems = (itemsToRender: NavItem[], isMobileContext = false) => (
     itemsToRender.map((item) => {
-      if (item.adminOnly && user?.role !== "admin") { 
+      if (item.adminOnly && user?.role !== "admin") {
         return null;
       }
 
       let IconComponent: React.ComponentType<any> | undefined = undefined;
-      let iconError = false;
+      let iconIsValid = true;
 
       if (!Icons || typeof Icons !== 'object') {
         console.error(`AppLayout: Icons object is undefined or not an object. Cannot render icon for: ${item.label}`);
-        iconError = true;
+        iconIsValid = false;
       } else if (!(item.icon in Icons)) {
         console.error(`AppLayout: Icon key '${item.icon}' not found in Icons object for item: ${item.label}`);
-        iconError = true;
+        iconIsValid = false;
       } else {
         IconComponent = Icons[item.icon as keyof typeof Icons];
         if (typeof IconComponent !== 'function') {
           console.error(`AppLayout: Icon component for key '${item.icon}' (label: ${item.label}) is not a function. Got:`, IconComponent);
           IconComponent = undefined; // Ensure it's treated as an error
-          iconError = true;
+          iconIsValid = false;
         }
-      }
-
-      if (iconError || !IconComponent) {
-        return (
-          <Tooltip key={item.href} delayDuration={0}>
-            <TooltipTrigger asChild>
-              <div className={cn(
-                "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-10 md:w-10",
-                "bg-destructive text-destructive-foreground" 
-              )}>
-                <AlertTriangle className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5" />
-                <span className="sr-only">Error: {item.label} icon missing</span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side={isMobileContext ? "right" : "right"} className="bg-destructive text-destructive-foreground border-destructive">
-              Error: {item.label} icon missing
-            </TooltipContent>
-          </Tooltip>
-        );
       }
 
       return (
@@ -166,20 +147,24 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <TooltipTrigger asChild>
             <Link
               href={item.href}
-              onClick={() => isMobileContext && setIsMobileSheetOpen(false)} 
+              onClick={() => isMobileContext && setIsMobileSheetOpen(false)}
               className={cn(
-                "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-10 md:w-10", 
+                "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-10 md:w-10",
                 pathname === item.href || (item.href !== "/settings" && pathname.startsWith(item.href)) || (item.href === "/settings" && pathname.startsWith("/settings"))
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground"
               )}
             >
-              <IconComponent className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5" />
+              {iconIsValid && IconComponent ? (
+                <IconComponent className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5" />
+              ) : (
+                <AlertTriangle className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5 text-destructive" />
+              )}
               <span className="sr-only">{item.label}</span>
             </Link>
           </TooltipTrigger>
           <TooltipContent side={isMobileContext ? "right" : "right"} className="bg-card text-card-foreground border-border">
-            {item.label}
+            {iconIsValid ? item.label : `Error: ${item.label} icon missing`}
           </TooltipContent>
         </Tooltip>
       );
@@ -194,23 +179,23 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator className="bg-border" />
-        <DropdownMenuItem 
-            onClick={() => { router.push('/settings'); setIsMobileSheetOpen(false); }} 
+        <DropdownMenuItem
+            onClick={() => { router.push('/settings'); setIsMobileSheetOpen(false); }}
             className="hover:bg-accent/50 cursor-pointer"
         >
             <SettingsIcon className="mr-2 h-5 w-5" />
             <span>Settings</span>
         </DropdownMenuItem>
-        <DropdownMenuItem 
-            onClick={() => { router.push('/support'); setIsMobileSheetOpen(false); }} 
+        <DropdownMenuItem
+            onClick={() => { router.push('/support'); setIsMobileSheetOpen(false); }}
             className="hover:bg-accent/50 cursor-pointer"
         >
             <LifeBuoy className="mr-2 h-5 w-5" />
             <span>Support</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-border"/>
-        <DropdownMenuItem 
-            onClick={() => { logout(); setIsMobileSheetOpen(false);}} 
+        <DropdownMenuItem
+            onClick={() => { logout(); setIsMobileSheetOpen(false);}}
             className="hover:bg-accent/50 cursor-pointer"
         >
             <LogOut className="mr-2 h-5 w-5" />
@@ -221,15 +206,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[100px_1fr] lg:grid-cols-[100px_1fr]"> 
+    <div className="grid min-h-screen w-full md:grid-cols-[100px_1fr] lg:grid-cols-[100px_1fr]">
       <aside className="hidden border-r bg-sidebar md:flex md:flex-col md:justify-between p-2 shadow-lg sticky top-0 h-screen">
-        <div> 
+        <div>
            <div className="flex h-10 items-center justify-center mb-4 mt-2">
-             <Link 
-                href="/dashboard" 
+             <Link
+                href="/dashboard"
                 className="text-sidebar-foreground flex justify-center"
             >
-              <Icons.TeamLogo className="mt-[10px] h-10 w-10" /> 
+              <Icons.TeamLogo className="mt-[10px] h-10 w-10" />
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
@@ -243,9 +228,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
             {renderNavItems(settingsNavItems, false)}
           </nav>
         </div>
-        
+
         {user && (
-            <div className="mt-auto p-1 flex justify-center"> 
+            <div className="mt-auto p-1 flex justify-center">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full w-12 h-12">
@@ -263,7 +248,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </div>
           )}
       </aside>
-      
+
       <main className="flex flex-1 flex-col bg-background overflow-auto">
         <header className="sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b bg-background px-4 md:hidden">
             <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
@@ -271,23 +256,23 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <Button
                     variant="outline"
                     size="icon"
-                    className="shrink-0" 
+                    className="shrink-0"
                 >
                     <PanelLeft className="h-6 w-6" />
                     <span className="sr-only">Toggle navigation menu</span>
                 </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="flex flex-col bg-sidebar p-2 text-sidebar-foreground w-[115px] shadow-xl"> 
+                <SheetContent side="left" className="flex flex-col bg-sidebar p-2 text-sidebar-foreground w-[115px] shadow-xl">
                  <SheetHeader>
-                    <SheetTitle className="sr-only">Navigation Menu</SheetTitle> 
+                    <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
                  </SheetHeader>
                  <div className="flex h-10 items-center justify-center mb-4 mt-2">
                      <Link href="/dashboard" className="flex items-center justify-center" onClick={() => setIsMobileSheetOpen(false)}>
-                        <Icons.TeamLogo className="h-10 w-10 text-sidebar-foreground" /> 
+                        <Icons.TeamLogo className="h-10 w-10 text-sidebar-foreground" />
                         <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
                     </Link>
                   </div>
-                
+
                 <nav className="grid items-start justify-items-center gap-3 px-2 py-4 flex-1 overflow-auto">
                     {renderNavItems(navItems, true)}
                     {(settingsNavItems.some(item => !item.adminOnly || user?.role === "admin")) && (
@@ -317,11 +302,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 )}
                 </SheetContent>
             </Sheet>
-             <div className="flex-1 text-center"> 
+             <div className="flex-1 text-center">
                 {currentTeam && (
                     <h1 className="text-lg font-semibold text-foreground inline-block">{currentTeam.name}</h1>
                 )}
-             </div> 
+             </div>
              {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
