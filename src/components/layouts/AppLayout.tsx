@@ -126,21 +126,27 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       let IconComponent: React.ComponentType<any> | undefined = undefined;
       let iconIsValid = true;
+      let iconErrorMessage = "";
 
       if (!Icons || typeof Icons !== 'object') {
+        iconIsValid = false;
+        iconErrorMessage = `Icons object is invalid.`;
         console.error(`AppLayout (SSR/Client): Icons object is undefined or not an object. Cannot render icon for: ${item.label}`);
-        iconIsValid = false;
       } else if (!(item.icon in Icons)) {
-        console.error(`AppLayout (SSR/Client): Icon key '${item.icon}' not found in Icons object for item: ${item.label}`);
         iconIsValid = false;
+        iconErrorMessage = `Icon key '${item.icon}' not found.`;
+        console.error(`AppLayout (SSR/Client): Icon key '${item.icon}' not found in Icons object for item: ${item.label}`);
       } else {
         IconComponent = Icons[item.icon as keyof typeof Icons];
         if (typeof IconComponent !== 'function') {
-          console.error(`AppLayout (SSR/Client): Icon component for key '${item.icon}' (label: ${item.label}) is not a function. Got:`, IconComponent);
-          IconComponent = undefined; 
+          IconComponent = undefined;
           iconIsValid = false;
+          iconErrorMessage = `Icon for '${item.icon}' is not a component.`;
+          console.error(`AppLayout (SSR/Client): Icon component for key '${item.icon}' (label: ${item.label}) is not a function. Got:`, Icons[item.icon as keyof typeof Icons]);
         }
       }
+      
+      const isActive = pathname === item.href || (item.href !== "/settings" && pathname.startsWith(item.href) && item.href !== "/") || (item.href === "/settings" && pathname.startsWith("/settings"));
 
       return (
         <Tooltip key={item.href} delayDuration={0}>
@@ -150,23 +156,21 @@ export function AppLayout({ children }: { children: ReactNode }) {
               onClick={() => isMobileContext && setIsMobileSheetOpen(false)}
               className={cn(
                 "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-10 md:w-10",
-                pathname === item.href || (item.href !== "/settings" && pathname.startsWith(item.href)) || (item.href === "/settings" && pathname.startsWith("/settings"))
+                isActive
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground"
               )}
             >
               {iconIsValid && IconComponent ? (
-                // DIAGNOSTIC: Temporarily render text (initial) instead of actual icon component for navigation
-                // This is a placeholder that shows the first letter of the label, or the icon label itself if isMobileContext is false (desktop sidebar)
-                <span className={cn("text-xs", isMobileContext ? "" : "md:hidden")}>{item.label.substring(0,1)}</span>
+                <IconComponent className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5" />
               ) : (
-                <AlertTriangle className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5 text-destructive" />
+                <AlertTriangle className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5 text-destructive" title={iconErrorMessage} />
               )}
               <span className="sr-only">{item.label}</span>
             </Link>
           </TooltipTrigger>
-          <TooltipContent side={isMobileContext ? "right" : "right"} className="bg-card text-card-foreground border-border">
-            {iconIsValid ? item.label : `Error: ${item.label} icon missing`}
+          <TooltipContent side="right" className="bg-card text-card-foreground border-border">
+            {iconIsValid ? item.label : `Error: ${item.label} (${iconErrorMessage || 'Icon missing'})`}
           </TooltipContent>
         </Tooltip>
       );
@@ -214,10 +218,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
            <div className="flex h-10 items-center justify-center mb-4 mt-2">
              <Link
                 href="/dashboard"
-                className="text-sidebar-foreground flex justify-center"
+                className="text-sidebar-foreground flex justify-center items-center h-10 w-10" 
             >
-              {/* DIAGNOSTIC: Temporarily render text instead of TeamLogo icon */}
-              <span className="mt-[10px] text-2xl font-bold flex items-center justify-center h-10 w-10">iiC</span>
+              <Icons.TeamLogo className="h-8 w-8 text-sidebar-primary" />
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
@@ -270,9 +273,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
                  </SheetHeader>
                  <div className="flex h-10 items-center justify-center mb-4 mt-2">
-                     <Link href="/dashboard" className="flex items-center justify-center" onClick={() => setIsMobileSheetOpen(false)}>
-                        {/* DIAGNOSTIC: Temporarily render text instead of TeamLogo icon */}
-                        <span className="text-2xl font-bold text-sidebar-foreground flex items-center justify-center h-10 w-10">iiC</span>
+                     <Link href="/dashboard" className="flex items-center justify-center h-10 w-10" onClick={() => setIsMobileSheetOpen(false)}>
+                        <Icons.TeamLogo className="h-8 w-8 text-sidebar-primary" />
                         <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
                     </Link>
                   </div>
@@ -335,4 +337,3 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-    

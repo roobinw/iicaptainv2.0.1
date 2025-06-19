@@ -6,22 +6,27 @@ import { addDays, format } from "date-fns";
 // They can serve as a reference for data structure or for one-time database seeding.
 // The application will fetch and manage data using Firestore services.
 
-const createUsers = (count: number, role: UserRole = "player"): User[] => {
+const createUsers = (count: number, role: UserRole = "member"): User[] => {
   return Array.from({ length: count }, (_, i) => ({
     id: `user-${role}-${i + 1}`, // This ID might differ from Firebase UID
     uid: `firebase-uid-${role}-${i + 1}`, // Example Firebase UID
-    name: `${role === 'admin' ? 'Admin' : 'Player'} ${i + 1}`,
+    name: `${role === 'admin' ? 'Admin' : 'Member'} ${i + 1}`,
     email: `${role}${i + 1}@example.com`,
     role: role,
     avatarUrl: `https://picsum.photos/seed/user${i + 1}/40/40`,
     createdAt: new Date().toISOString(),
+    isTrainingMember: role === 'admin' ? true : Math.random() > 0.3,
+    isMatchMember: role === 'admin' ? true : Math.random() > 0.3,
+    isTeamManager: role === 'admin' ? true : false,
+    isTrainer: false,
+    isCoach: false,
   }));
 };
 
 // Example: mockPlayers and mockAdmins can be used for structure reference
-const _mockPlayers_reference = createUsers(15, "player");
+const _mockMembers_reference = createUsers(15, "member");
 const _mockAdmins_reference = createUsers(2, "admin");
-export const _mockUsers_reference: User[] = [..._mockAdmins_reference, ..._mockPlayers_reference];
+export const _mockUsers_reference: User[] = [..._mockAdmins_reference, ..._mockMembers_reference];
 
 const assignAttendance = (participants: User[]): Record<string, "present" | "absent" | "excused" | "unknown"> => {
   const attendance: Record<string, "present" | "absent" | "excused" | "unknown"> = {};
@@ -45,7 +50,8 @@ export const _mockMatches_reference: Match[] = [
     time: "14:00",
     opponent: "Rival FC",
     location: "Home Ground",
-    attendance: assignAttendance(_mockPlayers_reference),
+    attendance: assignAttendance(_mockMembers_reference.filter(m => m.isMatchMember)),
+    isArchived: false,
     // order: 0, // If using order field
   },
   // ... more match examples
@@ -58,7 +64,8 @@ export const _mockTrainings_reference: Training[] = [
     time: "19:00",
     location: "Training Pitch A",
     description: "Focus on passing drills and set pieces.",
-    attendance: assignAttendance(_mockPlayers_reference),
+    attendance: assignAttendance(_mockMembers_reference.filter(m => m.isTrainingMember)),
+    isArchived: false,
     // order: 0, // If using order field
   },
   // ... more training examples
@@ -72,3 +79,4 @@ export const _mockTrainings_reference: Training[] = [
 // export const addMockTraining = ...
 // export const addMockPlayer = ...
 // export const updatePlayerAttendance = ...
+
