@@ -14,7 +14,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  avatarUrl?: string;
+  avatarUrl?: string | null; // Allow null for avatarUrl
   createdAt?: string; // ISO string from serverTimestamp
   teamId?: string; // ID of the team the user belongs to
 

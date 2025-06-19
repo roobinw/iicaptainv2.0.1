@@ -19,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Icons } from "@/components/icons";
-import { PanelLeft, LogOut, Settings as SettingsIcon, LifeBuoy } from "lucide-react"; 
+import { PanelLeft, LogOut, Settings as SettingsIcon, LifeBuoy, AlertTriangle } from "lucide-react"; 
 import { useEffect, useState } from "react";
 
 interface NavItem {
@@ -36,14 +36,11 @@ const navItems: NavItem[] = [
   { href: "/matches", label: "Matches", icon: "Matches" },
   { href: "/trainings", label: "Trainings", icon: "Trainings" },
   { href: "/refereeing", label: "Refereeing", icon: "Refereeing" },
-  { href: "/members", label: "Members", icon: "Users" }, // Changed from Players to Members
-  // Settings section will be handled separately or items added here with a flag
+  { href: "/members", label: "Members", icon: "Users" },
 ];
 
-// New settings navigation items
 const settingsNavItems: NavItem[] = [
-  // { href: "/settings/locations", label: "Locations", icon: "MapPin", adminOnly: true, isSettingsSection: true }, // Removed
-  // Add future settings links here (e.g., Opponents)
+  // { href: "/settings/locations", label: "Locations", icon: "MapPin", adminOnly: true, isSettingsSection: true },
 ];
 
 
@@ -127,6 +124,28 @@ export function AppLayout({ children }: { children: ReactNode }) {
         return null;
       }
       const IconComponent = Icons[item.icon];
+
+      if (!IconComponent) {
+        console.error(`AppLayout: Icon component for key '${item.icon}' is undefined. Check navItems and Icons export in icons.tsx.`);
+        // Render a fallback or skip
+        return (
+          <Tooltip key={item.href} delayDuration={0}>
+            <TooltipTrigger asChild>
+              <div className={cn(
+                "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-10 md:w-10",
+                "bg-destructive text-destructive-foreground" // Indicate error
+              )}>
+                <AlertTriangle className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5" />
+                <span className="sr-only">Error: {item.label} icon missing</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side={isMobileContext ? "right" : "right"} className="bg-destructive text-destructive-foreground border-destructive">
+              Error: {item.label} icon missing
+            </TooltipContent>
+          </Tooltip>
+        );
+      }
+
       return (
         <Tooltip key={item.href} delayDuration={0}>
           <TooltipTrigger asChild>
@@ -201,7 +220,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
           <nav className="grid items-start justify-items-center gap-3 px-2 py-4">
             {renderNavItems(navItems, false)}
-            {/* Divider for settings if there are settings items */}
             {(settingsNavItems.some(item => !item.adminOnly || user?.role === "admin")) && (
                 <div className="w-full px-2 my-2">
                     <hr className="border-sidebar-border" />
@@ -217,7 +235,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full w-12 h-12">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar desktop"/>
+                      <AvatarImage src={user.avatarUrl ?? undefined} alt={user.name ?? ''} data-ai-hint="user avatar desktop"/>
                       <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                     </Avatar>
                     <span className="sr-only">User Menu</span>
@@ -257,7 +275,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 
                 <nav className="grid items-start justify-items-center gap-3 px-2 py-4 flex-1 overflow-auto">
                     {renderNavItems(navItems, true)}
-                    {/* Divider for settings if there are settings items */}
                     {(settingsNavItems.some(item => !item.adminOnly || user?.role === "admin")) && (
                         <div className="w-full px-2 my-2">
                             <hr className="border-sidebar-border" />
@@ -271,7 +288,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="rounded-full w-12 h-12">
                           <Avatar className="h-10 w-10">
-                            <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar mobile sidebar"/>
+                            <AvatarImage src={user.avatarUrl ?? undefined} alt={user.name ?? ''} data-ai-hint="user avatar mobile sidebar"/>
                             <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                           </Avatar>
                           <span className="sr-only">User Menu</span>
@@ -295,7 +312,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full w-10 h-10">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user avatar mobile top"/>
+                      <AvatarImage src={user.avatarUrl ?? undefined} alt={user.name ?? ''} data-ai-hint="user avatar mobile top"/>
                       <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                     </Avatar>
                     <span className="sr-only">User Menu</span>
@@ -314,8 +331,4 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-    
-
-    
-
     
