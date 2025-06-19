@@ -256,7 +256,7 @@ export function EventCardBase({
                         <div key={member.uid} className="flex items-center justify-between p-2 border rounded-md bg-card hover:bg-secondary/30">
                         <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
-                            <AvatarImage src={member.avatarUrl} alt={member.name} data-ai-hint="team member face"/>
+                            <AvatarImage src={member.avatarUrl ?? undefined} alt={member.name} data-ai-hint="team member face"/>
                             <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
                             </Avatar>
                             <div>

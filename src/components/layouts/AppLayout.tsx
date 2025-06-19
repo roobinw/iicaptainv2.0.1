@@ -123,17 +123,32 @@ export function AppLayout({ children }: { children: ReactNode }) {
       if (item.adminOnly && user?.role !== "admin") { 
         return null;
       }
-      const IconComponent = Icons[item.icon];
 
-      if (!IconComponent) {
-        console.error(`AppLayout: Icon component for key '${item.icon}' is undefined. Check navItems and Icons export in icons.tsx.`);
-        // Render a fallback or skip
+      let IconComponent: React.ComponentType<any> | undefined = undefined;
+      let iconError = false;
+
+      if (!Icons || typeof Icons !== 'object') {
+        console.error(`AppLayout: Icons object is undefined or not an object. Cannot render icon for: ${item.label}`);
+        iconError = true;
+      } else if (!(item.icon in Icons)) {
+        console.error(`AppLayout: Icon key '${item.icon}' not found in Icons object for item: ${item.label}`);
+        iconError = true;
+      } else {
+        IconComponent = Icons[item.icon as keyof typeof Icons];
+        if (typeof IconComponent !== 'function') {
+          console.error(`AppLayout: Icon component for key '${item.icon}' (label: ${item.label}) is not a function. Got:`, IconComponent);
+          IconComponent = undefined; // Ensure it's treated as an error
+          iconError = true;
+        }
+      }
+
+      if (iconError || !IconComponent) {
         return (
           <Tooltip key={item.href} delayDuration={0}>
             <TooltipTrigger asChild>
               <div className={cn(
                 "flex items-center justify-center h-12 w-12 rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:h-10 md:w-10",
-                "bg-destructive text-destructive-foreground" // Indicate error
+                "bg-destructive text-destructive-foreground" 
               )}>
                 <AlertTriangle className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5" />
                 <span className="sr-only">Error: {item.label} icon missing</span>
