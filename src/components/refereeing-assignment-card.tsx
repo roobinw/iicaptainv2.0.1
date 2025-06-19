@@ -75,7 +75,7 @@ export function RefereeingAssignmentCard({ assignment, onEdit, onDelete, onAssig
                       {assignedMembersDetails.map(member => ( 
                         <Badge key={member.uid} variant="secondary" className="flex items-center gap-1 pr-2 text-xs">
                            <Avatar className="h-3.5 w-3.5 -ml-0.5">
-                                <AvatarImage src={member.avatarUrl} alt={member.name} data-ai-hint="member avatar"/> 
+                                <AvatarImage src={member.avatarUrl ?? undefined} alt={member.name} data-ai-hint="member avatar"/> 
                                 <AvatarFallback className="text-xxs">{getInitials(member.name)}</AvatarFallback>
                             </Avatar>
                           {member.name}

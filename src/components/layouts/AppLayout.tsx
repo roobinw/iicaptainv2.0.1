@@ -128,16 +128,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
       let iconIsValid = true;
 
       if (!Icons || typeof Icons !== 'object') {
-        console.error(`AppLayout: Icons object is undefined or not an object. Cannot render icon for: ${item.label}`);
+        console.error(`AppLayout (SSR/Client): Icons object is undefined or not an object. Cannot render icon for: ${item.label}`);
         iconIsValid = false;
       } else if (!(item.icon in Icons)) {
-        console.error(`AppLayout: Icon key '${item.icon}' not found in Icons object for item: ${item.label}`);
+        console.error(`AppLayout (SSR/Client): Icon key '${item.icon}' not found in Icons object for item: ${item.label}`);
         iconIsValid = false;
       } else {
         IconComponent = Icons[item.icon as keyof typeof Icons];
         if (typeof IconComponent !== 'function') {
-          console.error(`AppLayout: Icon component for key '${item.icon}' (label: ${item.label}) is not a function. Got:`, IconComponent);
-          IconComponent = undefined; // Ensure it's treated as an error
+          console.error(`AppLayout (SSR/Client): Icon component for key '${item.icon}' (label: ${item.label}) is not a function. Got:`, IconComponent);
+          IconComponent = undefined; 
           iconIsValid = false;
         }
       }
@@ -156,7 +156,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
               )}
             >
               {iconIsValid && IconComponent ? (
-                <IconComponent className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5" />
+                // DIAGNOSTIC: Temporarily render text (initial) instead of actual icon component for navigation
+                // This is a placeholder that shows the first letter of the label, or the icon label itself if isMobileContext is false (desktop sidebar)
+                <span className={cn("text-xs", isMobileContext ? "" : "md:hidden")}>{item.label.substring(0,1)}</span>
               ) : (
                 <AlertTriangle className="h-[1.8rem] w-[1.8rem] md:h-5 md:w-5 text-destructive" />
               )}
@@ -214,7 +216,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 href="/dashboard"
                 className="text-sidebar-foreground flex justify-center"
             >
-              <Icons.TeamLogo className="mt-[10px] h-10 w-10" />
+              {/* DIAGNOSTIC: Temporarily render text instead of TeamLogo icon */}
+              <span className="mt-[10px] text-2xl font-bold flex items-center justify-center h-10 w-10">iiC</span>
               <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
             </Link>
           </div>
@@ -268,7 +271,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
                  </SheetHeader>
                  <div className="flex h-10 items-center justify-center mb-4 mt-2">
                      <Link href="/dashboard" className="flex items-center justify-center" onClick={() => setIsMobileSheetOpen(false)}>
-                        <Icons.TeamLogo className="h-10 w-10 text-sidebar-foreground" />
+                        {/* DIAGNOSTIC: Temporarily render text instead of TeamLogo icon */}
+                        <span className="text-2xl font-bold text-sidebar-foreground flex items-center justify-center h-10 w-10">iiC</span>
                         <span className="sr-only">{currentTeam?.name || "iiCaptain"}</span>
                     </Link>
                   </div>
