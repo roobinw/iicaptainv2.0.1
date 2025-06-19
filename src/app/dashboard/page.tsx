@@ -167,7 +167,7 @@ export default function DashboardPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Icons.MessageSquare className="h-6 w-6 text-primary" /> Latest Team Message</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Icons.MessagesSquare className="h-6 w-6 text-primary" /> Latest Team Message</CardTitle>
           <CardDescription>
             View the latest active message. All messages can be viewed on the Messages page.
           </CardDescription>
@@ -304,4 +304,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
